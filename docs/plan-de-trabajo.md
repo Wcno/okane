@@ -1,6 +1,7 @@
 # Cronología de implementación de Okane
 
-La [spec #3](https://github.com/Wcno/okane/issues/3) agrupa estos 22 tickets.
+La [spec versionada](spec.md), revisada en el [issue #3](https://github.com/Wcno/okane/issues/3), agrupa estos 22 tickets.
+**Estado: pendiente de revisión del equipo. La implementación no ha comenzado.**
 El orden de esta tabla es una secuencia válida, no la obligación de trabajar en
 serie: cualquier ticket cuyos bloqueos estén terminados puede avanzar en paralelo.
 Los números de issue son identificadores, no posiciones cronológicas.
@@ -50,13 +51,14 @@ funcionales, incluidos los que deban adelantarse respecto del nivel de producto.
   evolución del Patrimonio con datos completos. #25 espera las Categorías
   propias para excluir las archivadas al copiar Presupuestos.
 
-## Estado al preparar esta revisión
+## Estado del plan
 
-Todos los tickets #4–#25 estaban abiertos el 2026-11-15. Los PR previos #1,
-#2 y #26 siguen abiertos; los checks de frontend y convenciones pasaban, y el
-job de despliegue estaba omitido. La implementación del backend aún no existe:
-esta revisión define el trabajo y sus dependencias, no marca tickets terminados.
+Los tickets #4–#25 describen implementación futura y permanecen pendientes de
+revisión del equipo. Esta preparación define el trabajo y sus dependencias;
+no implementa el backend ni marca tickets terminados. El estado operativo de
+los PR y de GitHub se registra en [HANDOFF.md](../HANDOFF.md).
 
-Para comenzar a implementar, el primer ticket disponible es **#4**. La decisión
-sobre integrar los PR previos, proteger `main` y activar Pages sigue separada de
-esta revisión de especificaciones.
+Después de que el equipo apruebe el plan, el primer ticket técnico será **#4**.
+Mientras tanto, los tickets mantienen la etiqueta `needs-team-review`. La
+[agenda de revisión](team-review.md) indica qué decisiones faltan, incluida
+la autorización para iniciar, la protección de `main` y la publicación de la demo.
