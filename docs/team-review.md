@@ -38,6 +38,13 @@ preparation and naming cleanup.
   Remaining Budget calculation and Contributions before portfolio returns.
 - Choose whether to require branch protection and reviewer approvals for future
   changes. The existing CI checks are `frontend` and `conventions`.
+- Review the proposed access limits and quality contract: ten-character
+  passwords, attempt limiting on sign-in, recovery and tokens, session and
+  reset-link lifetimes, a per-token request limit, pagination bounds, and the
+  keyboard, contrast, empty-state and viewport checks for every screen.
+- Review the minimum path for the 28 course cases: 13 tickets, because #9 waits
+  for #17 and #13 waits for #16. Decide whether to accept that path or let #9
+  ship its Remaining Budget without reservations first.
 - Decide separately whether to enable the public demo deployment in GitHub
   Pages. The workflow remains opt-in through `PAGES_ENABLED=true`.
 
