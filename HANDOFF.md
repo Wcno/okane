@@ -4,7 +4,7 @@ Updated: 2026-11-15, America/Panama. Assistant: Claude Code.
 
 ## Current scope
 
-**Spec review pass proposed in a pull request; implementation still awaits the
+**Spec review pass integrated into main; implementation still awaits the
 team's decision.** The user asked for a review of the specs and improvements
 where needed, with every commit under the user's own Git identity. Keep the
 public UI in Spanish and source code in English. Do not implement any ticket in
@@ -34,12 +34,13 @@ public UI in Spanish and source code in English. Do not implement any ticket in
 
 ## Repository and validation
 
-- Working branch: `docs/spec-access-and-quality-contracts`, opened as a pull
-  request against `main`. `main` itself is unchanged at `df2a037`.
+- Working branch: `main`. The review pass was integrated through pull request
+  #33 at the owner's request, and its branch was deleted. No other branches
+  remain, locally or on origin.
 - Documentation only. No application code, frontend behavior or runtime
   configuration changed, and no feature tests were run or claimed.
 - Checked: stories still number 1 to 76, the new plan anchor resolves, and
-  `git diff --check` is clean. CI result is on the pull request.
+  `git diff --check` is clean. CI passed on pull request #33.
 - Commits use the configured human Git identity, with no AI co-author
   trailers or generated-by footers.
 
@@ -59,11 +60,6 @@ attribution; use the configured human Git identity.
 
 ## Next step
 
-1. The owner reviews and merges the pull request, or asks for changes. The
-   assistant does not merge it: merging was denied by the session's permission
-   controls earlier and is the owner's decision.
-2. If the pull request is rejected, remove the criteria appended to #5, #6
-   and #32 so the tickets match `main` again.
-3. Review `docs/team-review.md` with the team and record the decision and
-   owners in #3. #4 is the first technical ticket only after that
-   authorization.
+1. Review `docs/team-review.md` with the team and record the decision and
+   owners in #3.
+2. #4 is the first technical ticket only after that authorization.
