@@ -121,6 +121,8 @@ Main pushes also produce the demo artifact. GitHub Pages deployment remains
 opt-in: the repository must use GitHub Actions as its Pages source and define
 `PAGES_ENABLED=true`. Enabling publication is a separate team decision.
 Dependabot proposes dependency and action updates weekly.
+The Node type definitions stay on the supported Node 24 major; changing the
+runtime major requires an explicit development-environment decision.
 
 ## Switching assistants
 
