@@ -4,6 +4,10 @@ Este documento extiende las matrices de la Asignación 5 (Generalidades del Proy
 
 Los términos en mayúscula inicial (Cuenta, Gasto, Presupuesto, Aporte) están definidos en [GLOSSARY.md](../GLOSSARY.md). Las decisiones de arquitectura están en [docs/adr/](adr/).
 
+Los [contratos verificables](contratos.md) precisan identidad, fechas, cálculos
+e idempotencia sin cambiar estos casos de uso. Los niveles expresan prioridad
+de producto: una dependencia imprescindible puede adelantarse de nivel.
+
 ## Cómo leer la columna "Origen"
 
 | Marca | Significado | Orden de construcción |
@@ -270,10 +274,17 @@ El navegador solo se comunica con `webapp`, que reenvía cada llamada `/api/*` a
 | `assets` | api-db | Activos registrados, con su símbolo y tipo | N2 |
 | `asset_prices` | api-db | Precios de referencia por Activo y fecha | N2 |
 | `categories` | api-db | Categorías de cada Usuario | N3 |
+| `recurring_payment_occurrences` | api-db | Marca única por regla y mes, conservada aunque se elimine el Gasto generado | Apoyo N2 |
+| `budget_months` | api-db | Inicialización mensual por Usuario, incluso cuando el mes termina sin Presupuestos | Apoyo N3 |
 
 No existen tablas de saldos ni de posiciones: ambos se calculan a partir de lo registrado ([ADR 0002](adr/0002-el-saldo-se-deriva-de-los-movimientos.md)). Por eso varios casos originales leen más tablas que la que lista su fila; la columna "BD" conserva la tabla principal, como en la Asignación 5.
 
 Mientras `categories` no exista (nivel 3), las Categorías son un catálogo fijo definido por el sistema.
+
+Los Precios de referencia manuales son propios de cada Usuario; la identidad
+de un Activo distingue proveedor y mercado además del símbolo. Las Cuentas
+conservan la fecha de inicio de su Saldo inicial. Las tablas de apoyo aseguran
+que los reintentos no dupliquen Gastos ni repongan Presupuestos eliminados.
 
 ## Funciones de apoyo sin caso de uso propio
 
@@ -301,3 +312,8 @@ Estos casos conservan su nombre, ruta y endpoint, pero las decisiones de diseño
 | Registrar venta de activos | No puede superar las unidades que hay en la Posición. |
 | Editar y eliminar transacción de inversión | Se rechazan si dejan, en algún momento del historial, más unidades vendidas que poseídas. |
 | Eliminar usuario | Borra también todos los datos financieros del Usuario en `api-service`. Exige volver a escribir la contraseña. |
+
+La búsqueda de Activos se entrega con la primera compra y venta (ticket #11).
+La actualización automática de precios llega después (ticket #23). Los
+Saldos iniciales y el Rendimiento de cada período siguen el
+[ADR 0004](adr/0004-separar-saldos-iniciales-y-rendimiento-mensual.md).
