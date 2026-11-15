@@ -1,3 +1,7 @@
+---
+status: proposed
+---
+
 # Separar los Saldos iniciales y usar el Rendimiento del período
 
 La fórmula del Rendimiento de una Cuenta de inversión es acumulada; sumarla
