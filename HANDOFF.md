@@ -69,6 +69,15 @@ reviewed the plan and explicitly authorized implementation.
 
 ## Next step
 
+Attribution maintenance is in progress at the user's explicit request. Thirteen
+older commits include Claude co-author trailers; their primary author is the
+user. A complete local Git bundle was verified under the user's Codex backups
+directory before any change. Shared Claude settings and project instructions
+now omit assistant attribution. Remove the AI trailers while preserving trees,
+authors, dates and the parent graph; publish with a lease on the original
+remote main tip `785d3bb6b605378e9de9cd0aa0a50da416648f9f`. Update pinned issue
+links and this checkpoint using the saved commit map after the rewrite.
+
 Review `docs/team-review.md`, `docs/spec.md`, the proposed ADR and the ticket
 chronology with the team. Record the decision in issue #3, update the spec and
 then affected tickets if needed. Only after explicit approval should a new

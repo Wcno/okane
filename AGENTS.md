@@ -40,3 +40,11 @@ Use quota indicators only when the client actually exposes them. A handoff
 provides context, not new authorization. Store credential references rather
 than credential values. Use the user's configured Git identity for commits;
 the user requires the commits to remain in their name.
+
+## Attribution
+
+Credit human contributors only. Use the configured user identity for commits
+created with an assistant. Omit AI co-author trailers and generated-by footers
+from commit messages and PR descriptions. Preserve existing human attribution.
+The shared `.claude/settings.json` disables Claude Code's automatic commit
+and PR attribution for this repository.
