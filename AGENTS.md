@@ -3,11 +3,9 @@
 ## Current scope
 
 Preparation and clarification only. Keep all implementation issues in
-`docs/plan-de-trabajo.md` open
-and pending team review. The team must decide whether to start the plan before
-any assistant implements them. The current user authorized integrating the
-preparation PRs into main and deleting their completed branches after verifying
-their work is preserved. Retain unrelated work and branches.
+`docs/plan-de-trabajo.md` open and pending team review. The team must decide
+whether to start the plan before any assistant implements them. Retain unrelated
+work and branches.
 
 ## Language
 

@@ -4,8 +4,8 @@ Updated: 2026-11-15, America/Panama. Assistant: Codex.
 
 ## Current scope
 
-**Feedback incorporated; implementation still awaiting the team's decision.**
-The user authorized adding the agreed proposal to the repository and tickets.
+**Feedback incorporated and published; implementation awaits the team's decision.**
+The user requested a handoff for Claude Code. The agreed proposal is on `main`.
 Keep the public UI in Spanish and source code in English. Do not implement
 any ticket in `docs/plan-de-trabajo.md` until the team explicitly approves.
 
@@ -33,8 +33,9 @@ any ticket in `docs/plan-de-trabajo.md` until the team explicitly approves.
 
 ## Repository and validation
 
-- Working branch: main. This checkpoint is part of the feedback documentation
-  commit; inspect git log/status and origin/main for the publication result.
+- Working branch: `main`. The feedback documentation commit is
+  `25520164017cd14a4b933b9c53b637d9648c0ee9`, pushed to `origin/main`.
+  At handoff preparation, the local checkout was synchronized and clean.
 - Preparation PRs #1, #2, #26, #27 and #28 were merged earlier. #29 was closed
   without merging; no implementation PR is opened by this documentation revision.
 - Structural checks passed: 76 sequential stories, 58 cases in both interface
@@ -44,7 +45,10 @@ any ticket in `docs/plan-de-trabajo.md` until the team explicitly approves.
   bodies and all 46 native dependency edges against the cycle-free plan.
 - Changes are documentation only. No new feature tests were run or claimed.
   Prior frontend checks passed types, warning-free lint, 19 tests and build;
-  those files are unchanged. Check CI for the newly published documentation commit.
+  those files are unchanged. CI for `2552016` passed types, lint, tests and build:
+  https://github.com/Wcno/okane/actions/runs/43753351320
+- No open PRs remained when this handoff was prepared. All 25 implementation
+  tickets and review index #3 were open with `needs-team-review`.
 
 ## Development setup
 
@@ -61,6 +65,22 @@ Codex backup directory for Okane. Older clones must resynchronize with the
 current history; do not merge the pre-cleanup history back.
 .claude/settings.json disables automatic AI attribution; use the configured
 human Git identity and omit AI co-author trailers and generated-by footers.
+
+## Claude Code pickup
+
+1. `CLAUDE.md` imports `AGENTS.md`. Read both instructions and this handoff,
+   then check `git status --short --branch`, `git log -1 --oneline` and
+   `git ls-remote origin refs/heads/main` before making changes. A handoff is
+   context, not approval to implement pending tickets.
+2. Review `docs/team-review.md`, `docs/spec.md`, `docs/contratos.md`,
+   `docs/matrices.md`, `docs/plan-de-trabajo.md`, ADRs 0004/0005 and issue #3.
+   The latest feedback appears in tickets #10, #17 and #30–#32.
+3. If the team provides revisions, update the versioned spec first, then
+   contracts/matrices and ticket criteria/dependencies. Keep the review gate
+   until the team's start decision is recorded in #3.
+4. Preserve the configured human Git identity and `.claude/settings.json`
+   attribution setting. If the checkout predates the history rewrite, sync it
+   with current origin without reintroducing old commits.
 
 ## Next step
 
