@@ -43,8 +43,13 @@ the user requires the commits to remain in their name.
 
 ## Attribution
 
-Credit human contributors only. Use the configured user identity for commits
-created with an assistant. Omit AI co-author trailers and generated-by footers
+Use the configured user identity for commits created with an assistant.
+Omit AI co-author trailers and generated-by footers
 from commit messages and PR descriptions. Preserve existing human attribution.
 The shared `.claude/settings.json` disables Claude Code's automatic commit
 and PR attribution for this repository.
+
+The main history was rewritten on 2026-11-15 to remove old AI co-author
+trailers while preserving file contents and human authorship. Resynchronize
+older clones with the current origin history before contributing; carry over
+any pending work without merging the pre-cleanup history back into main.
