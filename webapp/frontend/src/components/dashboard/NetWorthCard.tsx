@@ -1,55 +1,53 @@
 import { TrendingDown, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
-import { evolucion, hoy, patrimonio } from '../../data/sample'
-import { dinero } from '../../lib/dinero'
-import { useNumeroAnimado } from '../../lib/useNumeroAnimado'
-import { useDatos } from '../../state/store'
-import { GraficoPatrimonio, nombreDeMes } from './GraficoPatrimonio'
-import { Tarjeta } from './Tarjeta'
+import { netWorthHistory, today, netWorth } from '../../data/sample'
+import { formatMoney } from '../../lib/money'
+import { useAnimatedNumber } from '../../lib/useAnimatedNumber'
+import { useData } from '../../state/context'
+import { NetWorthChart } from './NetWorthChart'
+import { monthNames } from '../../data/months'
+import { Card } from './Card'
 
-type Vista = 'grafico' | 'tabla'
+type View = 'chart' | 'table'
 
-/**
- * La segunda respuesta del producto: cuánto varió el Patrimonio este mes y qué
- * parte se debe al Ahorro neto y cuál al Rendimiento.
- */
-export function Patrimonio() {
-  const { estado } = useDatos()
-  const [vista, setVista] = useState<Vista>('grafico')
-  const serie = evolucion(estado)
-  const mesActual = serie[serie.length - 1]
-  const variacion = Math.round((mesActual.ahorroNeto + mesActual.rendimiento) * 100) / 100
-  const mostrado = useNumeroAnimado(patrimonio(estado))
-  const Tendencia = variacion >= 0 ? TrendingUp : TrendingDown
+/** The second product answer: monthly Net Worth change, split into Net Savings and Investment Return. */
+export function NetWorthCard() {
+  const { state } = useData()
+  const [view, setView] = useState<View>('chart')
+  const series = netWorthHistory(state)
+  const currentMonth = series[series.length - 1]
+  const change = Math.round((currentMonth.netSavings + currentMonth.investmentReturn) * 100) / 100
+  const displayed = useAnimatedNumber(netWorth(state))
+  const Trend = change >= 0 ? TrendingUp : TrendingDown
 
   return (
-    <Tarjeta id="patrimonio" titulo="Patrimonio">
+    <Card id="net-worth" title="Patrimonio">
       <p className="mt-1.5 text-[2.3rem] font-semibold leading-none tracking-[-0.03em]">
-        {dinero(mostrado)}
+        {formatMoney(displayed)}
       </p>
 
       <p
         className={`mt-3 inline-flex items-center gap-1.5 text-[0.95rem] font-semibold ${
-          variacion >= 0 ? 'text-good' : 'text-critical'
+          change >= 0 ? 'text-good' : 'text-critical'
         }`}
       >
-        <Tendencia size={17} aria-hidden="true" />
-        <span className="tabular-nums">{dinero(variacion, { signo: true })}</span>
-        <span className="font-medium text-ink-2">en lo que va de {hoy.mes}</span>
+        <Trend size={17} aria-hidden="true" />
+        <span className="tabular-nums">{formatMoney(change, { sign: true })}</span>
+        <span className="font-medium text-ink-2">en lo que va de {today.month}</span>
       </p>
 
       <dl className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-2xl bg-surface-2 px-4 py-3">
           <dt className="text-[0.9rem] text-ink-2">Ahorro neto</dt>
           <dd className="mt-0.5 text-[1.15rem] font-semibold tabular-nums">
-            {dinero(mesActual.ahorroNeto, { signo: true })}
+            {formatMoney(currentMonth.netSavings, { sign: true })}
           </dd>
           <dd className="mt-0.5 text-[0.82rem] leading-snug text-ink-3">Ingresos menos Gastos</dd>
         </div>
         <div className="rounded-2xl bg-surface-2 px-4 py-3">
           <dt className="text-[0.9rem] text-ink-2">Rendimiento</dt>
           <dd className="mt-0.5 text-[1.15rem] font-semibold tabular-nums">
-            {dinero(mesActual.rendimiento, { signo: true })}
+            {formatMoney(currentMonth.investmentReturn, { sign: true })}
           </dd>
           <dd className="mt-0.5 text-[0.82rem] leading-snug text-ink-3">De tus inversiones</dd>
         </div>
@@ -60,29 +58,29 @@ export function Patrimonio() {
         <div role="group" aria-label="Forma de ver la evolución" className="flex rounded-full bg-surface-2 p-0.5">
           {(
             [
-              ['grafico', 'Gráfico'],
-              ['tabla', 'Tabla'],
+              ['chart', 'Gráfico'],
+              ['table', 'Tabla'],
             ] as const
-          ).map(([opcion, texto]) => (
+          ).map(([option, text]) => (
             <button
-              key={opcion}
+              key={option}
               type="button"
-              aria-pressed={vista === opcion}
-              onClick={() => setVista(opcion)}
+              aria-pressed={view === option}
+              onClick={() => setView(option)}
               className={`h-7 rounded-full px-3 text-[0.85rem] transition-colors duration-150 ${
-                vista === opcion
+                view === option
                   ? 'bg-surface font-semibold text-ink shadow-card'
                   : 'font-medium text-ink-2 hover:text-ink'
               }`}
             >
-              {texto}
+              {text}
             </button>
           ))}
         </div>
       </div>
 
-      {vista === 'grafico' ? (
-        <GraficoPatrimonio serie={serie} />
+      {view === 'chart' ? (
+        <NetWorthChart series={series} />
       ) : (
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-[0.9rem]">
@@ -103,24 +101,24 @@ export function Patrimonio() {
               </tr>
             </thead>
             <tbody className="tabular-nums">
-              {serie.map((punto, indice) => (
-                <tr key={punto.mes} className="border-b border-line last:border-0">
+              {series.map((point, index) => (
+                <tr key={point.month} className="border-b border-line last:border-0">
                   <th scope="row" className="py-2 pr-3 text-left font-medium">
-                    {nombreDeMes[punto.mes]}
+                    {monthNames[point.month]}
                   </th>
                   <td className="px-3 py-2 text-right text-ink-2">
-                    {indice === 0 ? '' : dinero(punto.ahorroNeto, { signo: true })}
+                    {index === 0 ? '' : formatMoney(point.netSavings, { sign: true })}
                   </td>
                   <td className="px-3 py-2 text-right text-ink-2">
-                    {indice === 0 ? '' : dinero(punto.rendimiento, { signo: true })}
+                    {index === 0 ? '' : formatMoney(point.investmentReturn, { sign: true })}
                   </td>
-                  <td className="py-2 pl-3 text-right font-semibold">{dinero(punto.patrimonio)}</td>
+                  <td className="py-2 pl-3 text-right font-semibold">{formatMoney(point.netWorth)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </Tarjeta>
+    </Card>
   )
 }

@@ -1,120 +1,120 @@
 import { describe, expect, it } from 'vitest'
 import {
-  comprometido,
-  cuentasParaGastos,
+  committed,
+  expenseAccounts,
   disponible,
-  estadoInicial,
-  evolucion,
-  patrimonio,
-  registrarGasto,
-  restante,
-  saldoCuentasDeGastos,
-  type Estado,
+  initialState,
+  netWorthHistory,
+  netWorth,
+  recordExpense,
+  remainingBudget,
+  spendingAccountBalance,
+  type DemoState,
 } from './sample'
 
-const lineaDe = (estado: Estado, categoria: string) => {
-  const linea = estado.presupuestos.find((candidata) => candidata.categoria === categoria)
-  if (!linea) throw new Error(`No hay línea de presupuesto para ${categoria}`)
-  return linea
+const budgetLineFor = (state: DemoState, category: string) => {
+  const line = state.budgets.find((candidate) => candidate.category === category)
+  if (!line) throw new Error(`No budget line for ${category}`)
+  return line
 }
 
-const saldoDe = (estado: Estado, cuentaId: string) => {
-  const cuenta = estado.cuentas.find((candidata) => candidata.id === cuentaId)
-  if (!cuenta) throw new Error(`No existe la cuenta ${cuentaId}`)
-  return cuenta.saldo
+const accountBalanceFor = (state: DemoState, accountId: string) => {
+  const account = state.accounts.find((candidate) => candidate.id === accountId)
+  if (!account) throw new Error(`Unknown account ${accountId}`)
+  return account.balance
 }
 
-describe('Disponible', () => {
-  it('es el Saldo de las Cuentas de gastos menos lo Comprometido', () => {
-    expect(saldoCuentasDeGastos(estadoInicial)).toBe(972.15)
-    expect(comprometido).toBe(200.25)
-    expect(disponible(estadoInicial)).toBe(771.9)
+describe('Available funds', () => {
+  it('subtracts committed payments from spending Account balances', () => {
+    expect(spendingAccountBalance(initialState)).toBe(972.15)
+    expect(committed).toBe(200.25)
+    expect(disponible(initialState)).toBe(771.9)
   })
 
-  it('resta el Saldo negativo de una tarjeta de crédito', () => {
-    const sinTarjeta: Estado = {
-      ...estadoInicial,
-      cuentas: estadoInicial.cuentas.filter((cuenta) => cuenta.id !== 'tarjeta'),
+  it('includes the negative balance of a credit card', () => {
+    const withoutCreditCard: DemoState = {
+      ...initialState,
+      accounts: initialState.accounts.filter((account) => account.id !== 'credit-card'),
     }
-    expect(disponible(sinTarjeta) - disponible(estadoInicial)).toBeCloseTo(312.45, 2)
+    expect(disponible(withoutCreditCard) - disponible(initialState)).toBeCloseTo(312.45, 2)
   })
 
-  it('no cuenta las Cuentas de ahorro ni de inversión', () => {
-    const soloGastos: Estado = {
-      ...estadoInicial,
-      cuentas: estadoInicial.cuentas.filter((cuenta) => cuenta.tipo === 'gastos'),
+  it('excludes savings and investment Accounts', () => {
+    const spendingOnly: DemoState = {
+      ...initialState,
+      accounts: initialState.accounts.filter((account) => account.type === 'spending'),
     }
-    expect(disponible(soloGastos)).toBe(disponible(estadoInicial))
+    expect(disponible(spendingOnly)).toBe(disponible(initialState))
   })
 })
 
-describe('Restante', () => {
-  it('descuenta lo gastado y lo Comprometido de la Categoría', () => {
-    // 140.00 de Presupuesto, 71.20 gastados y 64.50 del seguro por vencer.
-    expect(restante(lineaDe(estadoInicial, 'Transporte'))).toBe(4.3)
+describe('Remaining Budget', () => {
+  it('subtracts spending and committed payments for the Category', () => {
+    // Budget 140.00, spent 71.20 and insurance payment 64.50 still due.
+    expect(remainingBudget(budgetLineFor(initialState, 'Transporte'))).toBe(4.3)
   })
 
-  it('es negativo cuando la Categoría está excedida', () => {
-    expect(restante(lineaDe(estadoInicial, 'Entretenimiento'))).toBe(-28.4)
+  it('is negative when the Category is over Budget', () => {
+    expect(remainingBudget(budgetLineFor(initialState, 'Entretenimiento'))).toBe(-28.4)
   })
 
-  it('no existe para una Categoría sin Presupuesto', () => {
-    expect(restante(lineaDe(estadoInicial, 'Otros'))).toBeNull()
-  })
-})
-
-describe('registrar un Gasto', () => {
-  const gasto = { monto: 12.5, categoria: 'Alimentación', cuentaId: 'corriente' }
-  const despues = registrarGasto(estadoInicial, gasto)
-
-  it('baja el Saldo de la Cuenta usada y deja las demás intactas', () => {
-    expect(saldoDe(despues, 'corriente')).toBe(1272.1)
-    expect(saldoDe(despues, 'tarjeta')).toBe(saldoDe(estadoInicial, 'tarjeta'))
-    expect(saldoDe(despues, 'ahorro')).toBe(saldoDe(estadoInicial, 'ahorro'))
-  })
-
-  it('baja el Disponible y el Restante de su Categoría en el mismo monto', () => {
-    expect(disponible(despues)).toBe(759.4)
-    expect(restante(lineaDe(despues, 'Alimentación'))).toBe(93.15)
-    expect(restante(lineaDe(despues, 'Transporte'))).toBe(4.3)
-  })
-
-  it('se acepta aunque exceda el Presupuesto o deje el Saldo en negativo', () => {
-    const grande = registrarGasto(estadoInicial, { ...gasto, monto: 2000 })
-    expect(restante(lineaDe(grande, 'Alimentación'))).toBe(-1894.35)
-    expect(saldoDe(grande, 'corriente')).toBe(-715.4)
-  })
-
-  it('no modifica el estado anterior', () => {
-    expect(saldoDe(estadoInicial, 'corriente')).toBe(1284.6)
-    expect(lineaDe(estadoInicial, 'Alimentación').gastado).toBe(214.35)
-  })
-
-  it('no puede salir de una Cuenta de inversión', () => {
-    expect(cuentasParaGastos(estadoInicial).map((cuenta) => cuenta.tipo)).not.toContain('inversion')
+  it('does not exist for a Category without a Budget', () => {
+    expect(remainingBudget(budgetLineFor(initialState, 'Otros'))).toBeNull()
   })
 })
 
-describe('Patrimonio', () => {
-  it('es la suma de los Saldos de todas las Cuentas más el valor de las Posiciones', () => {
-    expect(patrimonio(estadoInicial)).toBe(11513.85)
+describe('recording an Expense', () => {
+  const expense = { amount: 12.5, category: 'Alimentación', accountId: 'checking' }
+  const after = recordExpense(initialState, expense)
+
+  it('reduces the selected Account balance and preserves the others', () => {
+    expect(accountBalanceFor(after, 'checking')).toBe(1272.1)
+    expect(accountBalanceFor(after, 'credit-card')).toBe(accountBalanceFor(initialState, 'credit-card'))
+    expect(accountBalanceFor(after, 'savings')).toBe(accountBalanceFor(initialState, 'savings'))
   })
 
-  it('su variación mensual se explica por completo con Ahorro neto y Rendimiento', () => {
-    const serie = evolucion(estadoInicial)
-    for (let indice = 1; indice < serie.length; indice += 1) {
-      const variacion = serie[indice].patrimonio - serie[indice - 1].patrimonio
-      expect(serie[indice].ahorroNeto + serie[indice].rendimiento).toBeCloseTo(variacion, 2)
+  it('reduces available funds and the Category remaining amount equally', () => {
+    expect(disponible(after)).toBe(759.4)
+    expect(remainingBudget(budgetLineFor(after, 'Alimentación'))).toBe(93.15)
+    expect(remainingBudget(budgetLineFor(after, 'Transporte'))).toBe(4.3)
+  })
+
+  it('accepts an Expense that exceeds the Budget or creates a negative balance', () => {
+    const largeExpense = recordExpense(initialState, { ...expense, amount: 2000 })
+    expect(remainingBudget(budgetLineFor(largeExpense, 'Alimentación'))).toBe(-1894.35)
+    expect(accountBalanceFor(largeExpense, 'checking')).toBe(-715.4)
+  })
+
+  it('preserves the previous state', () => {
+    expect(accountBalanceFor(initialState, 'checking')).toBe(1284.6)
+    expect(budgetLineFor(initialState, 'Alimentación').spent).toBe(214.35)
+  })
+
+  it('excludes investment Accounts from Expense entry', () => {
+    expect(expenseAccounts(initialState).map((account) => account.type)).not.toContain('investment')
+  })
+})
+
+describe('Net Worth', () => {
+  it('adds all Account balances and Position values', () => {
+    expect(netWorth(initialState)).toBe(11513.85)
+  })
+
+  it('reconciles the demo monthly change with Net Savings and Investment Return', () => {
+    const series = netWorthHistory(initialState)
+    for (let index = 1; index < series.length; index += 1) {
+      const change = series[index].netWorth - series[index - 1].netWorth
+      expect(series[index].netSavings + series[index].investmentReturn).toBeCloseTo(change, 2)
     }
   })
 
-  it('un Gasto reduce el Ahorro neto del mes y no toca el Rendimiento', () => {
-    const antes = evolucion(estadoInicial).at(-1)!
-    const despues = evolucion(
-      registrarGasto(estadoInicial, { monto: 40, categoria: 'Salud', cuentaId: 'corriente' }),
+  it('an Expense reduces monthly Net Savings without changing Investment Return', () => {
+    const before = netWorthHistory(initialState).at(-1)!
+    const after = netWorthHistory(
+      recordExpense(initialState, { amount: 40, category: 'Salud', accountId: 'checking' }),
     ).at(-1)!
-    expect(despues.ahorroNeto).toBeCloseTo(antes.ahorroNeto - 40, 2)
-    expect(despues.rendimiento).toBeCloseTo(antes.rendimiento, 2)
-    expect(despues.patrimonio).toBeCloseTo(antes.patrimonio - 40, 2)
+    expect(after.netSavings).toBeCloseTo(before.netSavings - 40, 2)
+    expect(after.investmentReturn).toBeCloseTo(before.investmentReturn, 2)
+    expect(after.netWorth).toBeCloseTo(before.netWorth - 40, 2)
   })
 })
