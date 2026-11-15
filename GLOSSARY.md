@@ -28,6 +28,10 @@ _Avoid_: Cuenta cerrada, cuenta inactiva, cuenta eliminada
 El dinero que hay en una Cuenta en un momento dado. Resulta de su saldo inicial, sus Movimientos y, en una Cuenta de inversión, sus Transacciones de inversión; nunca se escribe a mano, y puede ser negativo.
 _Avoid_: Balance, monto disponible
 
+**Saldo inicial**:
+El dinero que ya existía en una Cuenta al empezar a llevar su registro, con una fecha de inicio. Incorporarlo explica un cambio en la cobertura del Patrimonio, no un Ingreso ni una ganancia de inversión.
+_Avoid_: Ingreso inicial, ganancia inicial, ajuste de saldo
+
 **Movimiento**:
 Todo lo que cambia un Saldo sin ser una operación sobre un Activo: un Ingreso, un Gasto o una Transferencia.
 _Avoid_: Transacción, operación, registro
@@ -75,13 +79,13 @@ Lo que queda por gastar en una Categoría en el mes: su Presupuesto menos lo gas
 _Avoid_: Disponible por categoría, saldo del presupuesto
 
 **Disponible**:
-El dinero que el Usuario puede gastar hasta fin de mes: la suma de los Saldos de sus Cuentas de gastos menos lo Comprometido. No incluye ahorro, inversión ni ingresos que aún no llegan.
+El dinero que el Usuario puede gastar hasta fin de mes: la suma de los Saldos de sus Cuentas de gastos menos lo Comprometido que saldrá de esas mismas Cuentas. No incluye ahorro, inversión ni ingresos que aún no llegan.
 _Avoid_: Saldo disponible, dinero libre, restante
 
 ### Inversión
 
 **Activo**:
-Una acción (incluye fondos cotizados) o una criptomoneda, identificada por su símbolo y elegida del servicio de cotizaciones, nunca escrita como texto libre.
+Una acción (incluye fondos cotizados) o una criptomoneda elegida del catálogo del servicio de cotizaciones. Su identidad distingue también el mercado o proveedor para evitar confundir Activos con el mismo símbolo.
 _Avoid_: Instrumento, título, ticker, moneda
 
 **Transacción de inversión**:
@@ -105,7 +109,7 @@ Una Transferencia hacia una Cuenta de inversión; el saldo inicial de esa Cuenta
 _Avoid_: Depósito, capital, fondeo
 
 **Rendimiento**:
-Lo que las inversiones ganaron o perdieron: el valor actual de una Cuenta de inversión (Posiciones más efectivo) menos su Aporte neto.
+Lo que las inversiones ganaron o perdieron: de forma acumulada, el valor actual de una Cuenta de inversión (Posiciones más efectivo) menos su Aporte neto. El Rendimiento de un mes es la diferencia entre el acumulado al cierre de ese mes y el acumulado al cierre anterior.
 _Avoid_: Ganancia, retorno, utilidad, plusvalía
 
 ### Patrimonio
@@ -119,5 +123,5 @@ La pantalla a la que llega el Usuario al iniciar sesión, que reúne el Disponib
 _Avoid_: Dashboard, inicio, resumen
 
 **Ahorro neto**:
-Los Ingresos menos los Gastos de un mes. Junto con el Rendimiento, explica por completo la variación del Patrimonio en ese mes.
+Los Ingresos menos los Gastos de un mes. Junto con el Rendimiento de ese mes, explica la variación del Patrimonio una vez separadas las incorporaciones de Saldos iniciales.
 _Avoid_: Ahorro, excedente, flujo

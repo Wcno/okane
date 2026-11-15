@@ -27,7 +27,7 @@ Tiene éxito si el Usuario obtiene las dos respuestas al abrir la aplicación, s
 
 ## Positioning
 
-Cada cifra que Okane muestra se puede explicar con lo que el Usuario registró. El Saldo nunca se escribe a mano: sale de los movimientos. El dinero aportado a las inversiones se separa con exactitud de lo que estas ganaron o perdieron, porque todo Aporte es una Transferencia. Por eso la variación del Patrimonio de un mes se descompone sin residuo en Ahorro neto más Rendimiento.
+Cada cifra que Okane muestra se puede explicar con lo que el Usuario registró. El Saldo nunca se escribe a mano: sale del Saldo inicial y los movimientos. El dinero aportado a las inversiones se separa con exactitud de lo que estas ganaron o perdieron, porque todo Aporte es una Transferencia. La variación del Patrimonio de un mes se explica con el Ahorro neto y el Rendimiento de ese mes; incorporar Saldos iniciales de Cuentas se muestra por separado, sin presentarlo como una ganancia.
 
 ## Operating Context
 
@@ -41,6 +41,7 @@ Cada cifra que Okane muestra se puede explicar con lo que el Usuario registró. 
 - 48 casos de uso, definidos con sus rutas y endpoints en `docs/matrices.md`. Los 28 originales del documento del curso se construyen primero.
 - El vocabulario es el de `GLOSSARY.md` y es obligatorio en la interfaz: Disponible, Restante, Comprometido, Aporte, Rendimiento, Patrimonio, Ahorro neto. No se usan los sinónimos que el glosario descarta.
 - Las decisiones de arquitectura están en `docs/adr/`.
+- Las reglas de fechas, precisión, concurrencia y cálculo por período se precisan en `docs/contratos.md`.
 - Sin decidir: el proveedor de cotizaciones para acciones, y si el servicio gratuito entrega precios históricos para reconstruir la evolución del Patrimonio.
 
 ## Brand Commitments
