@@ -27,7 +27,7 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Una credencial de servicio falsa o ausente se rechaza incluso en la red
   interna. Las dos bases de datos y `api-service` no publican puertos externos.
 
-## Acceso, sesiones y límites de uso (propuesto)
+## Acceso, sesiones y límites de uso
 
 - El correo se normaliza a minúsculas y es único sin distinguir mayúsculas.
   La contraseña tiene al menos diez caracteres y pasa los validadores estándar
@@ -45,7 +45,7 @@ los Saldos iniciales y el Rendimiento mensual está en el
   inválidos repetidos desde un mismo origen se limitan como los inicios de sesión.
 - Estos límites se guardan en `webapp-db`; no requieren un quinto contenedor.
 
-## Listados y calidad de la interfaz (propuesto)
+## Listados y calidad de la interfaz
 
 - Todo listado paginado devuelve 50 elementos por defecto y admite hasta 200;
   un tamaño o una página fuera de rango devuelve `400`. La respuesta indica
@@ -204,7 +204,7 @@ los Saldos iniciales y el Rendimiento mensual está en el
   registrar un Gasto siguen visibles. Las preferencias se validan, se conservan
   entre sesiones y se borran al eliminar al Usuario.
 
-## API pública autenticada (contrato propuesto)
+## API pública autenticada
 
 - Única entrada externa: `webapp`, bajo `/api/v1`, con
   `Authorization: Bearer <token>`. Rechaza token ausente, inválido o revocado
