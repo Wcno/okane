@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-15T00:00:00Z",
+  "title": "Design System: Okane",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Tinta",
+        "canonical": "#131316",
+        "tonalRamp": ["#131316", "#2c2c31", "#45454b", "#5f5f66", "#7b7b82", "#a3a3a8", "#cfcfd2", "#f1f1f2"]
+      },
+      "series": {
+        "role": "secondary",
+        "displayName": "Azul de serie",
+        "canonical": "#2a78d6",
+        "tonalRamp": ["#0d366b", "#184f95", "#256abf", "#2a78d6", "#5598e7", "#86b6ef", "#b7d3f6", "#e2eefc"]
+      },
+      "good": {
+        "role": "tertiary",
+        "displayName": "Verde de variación positiva",
+        "canonical": "#006300",
+        "tonalRamp": ["#003300", "#004d00", "#006300", "#0c8a0c", "#2fbd2f", "#72d672", "#b2ebb2", "#e3f8e3"]
+      },
+      "critical": {
+        "role": "tertiary",
+        "displayName": "Rojo crítico",
+        "canonical": "#c22f2f",
+        "tonalRamp": ["#4d1010", "#7a1b1b", "#a12525", "#c22f2f", "#e66767", "#ef9a9a", "#f7c8c8", "#fdecec"]
+      },
+      "page": {
+        "role": "neutral",
+        "displayName": "Página",
+        "canonical": "#f4f4f1",
+        "tonalRamp": ["#101012", "#1a1a1d", "#232327", "#3c3c41", "#d4d3cd", "#e8e7e2", "#f4f4f1", "#ffffff"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "La cifra dominante de la pantalla; una por pantalla." },
+      "headline": { "displayName": "Headline", "purpose": "Título de la página." },
+      "title": { "displayName": "Title", "purpose": "Títulos de tarjeta y nombres de fila." },
+      "body": { "displayName": "Body", "purpose": "Texto corrido y frases explicativas." },
+      "label": { "displayName": "Label", "purpose": "Metadatos de fila y leyendas." }
+    },
+    "shadows": [
+      {
+        "name": "tarjeta",
+        "value": "0 1px 2px rgb(19 19 22 / 0.04), 0 10px 28px -16px rgb(19 19 22 / 0.12)",
+        "purpose": "Tarjetas y elementos activos de navegación en tema claro. Nula en tema oscuro."
+      },
+      {
+        "name": "flotante",
+        "value": "0 2px 6px rgb(19 19 22 / 0.08), 0 18px 40px -14px rgb(19 19 22 / 0.28)",
+        "purpose": "Botón flotante, hoja de registro, etiqueta del gráfico y confirmación emergente."
+      }
+    ],
+    "motion": [
+      { "name": "ease-out-quart", "value": "cubic-bezier(0.25, 1, 0.5, 1)", "purpose": "Suavizado de todos los cambios de estado." },
+      { "name": "control", "value": "150ms", "purpose": "Hover, foco y presión de controles." },
+      { "name": "dato", "value": "500ms", "purpose": "Una cifra que corre a su nuevo valor y un medidor que crece." },
+      { "name": "resaltado", "value": "1400ms", "purpose": "La fila cuya cifra acaba de cambiar se desvanece desde el tono de su Categoría." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "La acción principal de la pantalla; una por vista.",
+      "html": "<button class=\"ds-btn-primary\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M5 12h14M12 5v14\"/></svg>Registrar gasto</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px 0 14px; border: none; border-radius: 9999px; background: var(--primary); color: var(--on-primary); font: 600 15px 'Figtree Variable', system-ui, sans-serif; cursor: pointer; transition: transform 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-primary:hover { transform: translateY(-1px); } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }"
+    },
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Cancelar o volver; acompaña al primario.",
+      "html": "<button class=\"ds-btn-secondary\">Cancelar</button>",
+      "css": ".ds-btn-secondary { height: 48px; padding: 0 28px; border: 1px solid var(--line-strong); border-radius: 9999px; background: var(--surface); color: var(--ink); font: 600 15px 'Figtree Variable', system-ui, sans-serif; cursor: pointer; transition: background-color 150ms; } .ds-btn-secondary:hover { background: var(--surface-2); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de texto, selección o fecha.",
+      "html": "<input class=\"ds-input\" placeholder=\"Supermercado, taxi, farmacia\" />",
+      "css": ".ds-input { height: 44px; width: 260px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); color: var(--ink); font: 400 15px 'Figtree Variable', system-ui, sans-serif; transition: border-color 150ms; } .ds-input::placeholder { color: var(--ink-3); } .ds-input:hover { border-color: var(--ink-3); } .ds-input:focus-visible { outline: none; border-color: var(--ink); box-shadow: 0 0 0 2px color-mix(in oklab, var(--ink) 15%, transparent); }"
+    },
+    {
+      "name": "Elemento de navegación",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Elemento de la barra lateral, en reposo y activo.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-item-active\" href=\"#\">Panel</a><a class=\"ds-nav-item\" href=\"#\">Gastos</a></nav>",
+      "css": ".ds-nav { display: grid; gap: 2px; width: 216px; } .ds-nav-item { display: flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 12px; color: var(--ink-2); font: 500 14px 'Figtree Variable', system-ui, sans-serif; text-decoration: none; transition: background-color 150ms, color 150ms; } .ds-nav-item:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); color: var(--ink); } .ds-nav-item-active, .ds-nav-item-active:hover { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--sombra-tarjeta); }"
+    },
+    {
+      "name": "Ficha de Categoría",
+      "kind": "chip",
+      "refersTo": "category-chip",
+      "description": "Identifica una Categoría con su tono; siempre junto al nombre.",
+      "html": "<span class=\"ds-cat\"><span class=\"ds-cat-chip\"><svg viewBox=\"0 0 24 24\" width=\"19\" height=\"19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\"/></svg></span>Alimentación</span>",
+      "css": ".ds-cat { display: inline-flex; align-items: center; gap: 14px; color: var(--ink); font: 500 15px 'Figtree Variable', system-ui, sans-serif; } .ds-cat-chip { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: color-mix(in oklab, var(--cat-2) 15%, transparent); color: var(--cat-2); }"
+    },
+    {
+      "name": "Tarjeta",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contenedor de un resumen; abre con su título en tinta secundaria.",
+      "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">Patrimonio</h2><p class=\"ds-card-value\">$11,513.85</p></section>",
+      "css": ".ds-card { width: 300px; padding: 20px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: var(--sombra-tarjeta); font-family: 'Figtree Variable', system-ui, sans-serif; } .ds-card-title { margin: 0; color: var(--ink-2); font-size: 15px; font-weight: 500; } .ds-card-value { margin: 6px 0 0; color: var(--ink); font-size: 34px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }"
+    },
+    {
+      "name": "Medidor de Presupuesto",
+      "kind": "custom",
+      "description": "Lo gastado en tono pleno y lo Comprometido en tono atenuado, sobre una pista del mismo tono.",
+      "html": "<div class=\"ds-meter\"><span class=\"ds-meter-spent\"></span><span class=\"ds-meter-committed\"></span></div>",
+      "css": ".ds-meter { display: flex; gap: 2px; width: 280px; height: 8px; overflow: hidden; border-radius: 9999px; background: color-mix(in oklab, var(--cat-3) 17%, var(--surface)); } .ds-meter-spent { width: 51%; border-radius: 9999px; background: var(--cat-3); } .ds-meter-committed { width: 46%; border-radius: 9999px; background: color-mix(in oklab, var(--cat-3) 48%, var(--surface)); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El color es de tus datos",
+    "overview": "Okane usa a propósito el diseño estándar de las aplicaciones de finanzas personales, ejecutado con el acabado de las mejores del género. La interfaz es neutra: página gris cálido, tarjetas blancas, tinta casi negra. Todo el color de la pantalla pertenece a los datos del Usuario: sus Categorías, la serie de su Patrimonio y los estados que debe atender.\n\nLa jerarquía sale del tamaño de las cifras, no de adornos. Cada pantalla tiene una sola cifra dominante y lo demás la explica o la acompaña. La densidad es la de una herramienta que se consulta a diario: filas compactas, mucha información por tarjeta, y aire entre tarjetas.\n\nEl sistema rechaza cuatro parecidos, confirmados por el equipo: un banco (frío, corporativo, azul institucional), una aplicación de cripto (fondo negro, neón), un juego (medallas, rachas, confeti) y una hoja de cálculo (tablas densas sin jerarquía).",
+    "keyCharacteristics": [
+      "Interfaz neutra; el color aparece solo en datos y estados.",
+      "Una cifra dominante por pantalla, en la misma tipografía que todo lo demás.",
+      "Tarjetas blancas de esquinas amplias sobre una página gris cálido.",
+      "Acciones primarias en tinta, con forma de píldora.",
+      "Tema claro y oscuro, según el sistema del Usuario, con tonos elegidos para cada uno.",
+      "El teléfono y la computadora son de primera clase: mismas tarjetas, distinta estructura."
+    ],
+    "rules": [
+      { "name": "The Data Owns Color Rule", "body": "Ningún elemento de la interfaz (botón, enlace, navegación, borde) lleva un tono. Si algo tiene color, es un dato del Usuario o un estado.", "section": "colors" },
+      { "name": "The Entity Keeps Its Hue Rule", "body": "El tono sigue a la Categoría, no a su posición en una lista. El orden de cat-1 a cat-7 es el del conjunto validado y no se reordena ni se amplía; una Categoría adicional usa cat-0.", "section": "colors" },
+      { "name": "The Text Stays Ink Rule", "body": "Los montos, nombres y etiquetas van siempre en tinta. Un tono identifica mediante una marca al lado (ficha, punto, barra), nunca tiñendo el texto. La única excepción es un estado con icono: variación del Patrimonio y \"Excedida\".", "section": "colors" },
+      { "name": "The Proportional Hero Rule", "body": "Las cifras grandes aisladas usan cifras proporcionales. tabular-nums se reserva para montos que se alinean en columna: filas, tablas y ejes.", "section": "typography" },
+      { "name": "The One Family Rule", "body": "No hay fuente de exhibición ni monoespaciada. El énfasis sale del peso (400, 500, 600) y del tamaño.", "section": "typography" },
+      { "name": "The Two Levels Rule", "body": "Solo existen dos niveles: apoyado (tarjeta) y flotante. Una tarjeta nunca contiene otra tarjeta con sombra; lo que va dentro usa superficie hundida.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do dar a cada pantalla una sola cifra dominante en tamaño Display y abrirla en las partes que la producen.",
+      "Do mantener botones, enlaces, navegación y bordes en neutros; el tono es para Categorías, la serie y los estados.",
+      "Do acompañar todo color de estado con icono y texto (\"Excedida\", una flecha de tendencia).",
+      "Do verificar cada pantalla a 390px y a 1440px, en tema claro y oscuro, y comprobar que no haya desplazamiento horizontal.",
+      "Do usar tabular-nums en montos alineados en columna y cifras proporcionales en la cifra dominante.",
+      "Do ofrecer la vista de tabla de cada gráfico.",
+      "Do animar solo cambios de estado: una cifra que corre a su nuevo valor, un medidor que crece, una fila que se resalta al cambiar."
+    ],
+    "donts": [
+      "Don't dar tono a un elemento de la interfaz ni teñir texto con el tono de una Categoría.",
+      "Don't agregar un octavo tono de Categoría ni reordenar los siete.",
+      "Don't usar fondo negro puro, acentos de neón ni resplandores.",
+      "Don't usar azul institucional como color de marca.",
+      "Don't agregar medallas, rachas, confeti ni mascotas.",
+      "Don't presentar datos como una tabla densa sin una cifra que mande.",
+      "Don't poner una tarjeta con sombra dentro de otra, ni usar bordes laterales gruesos como acento.",
+      "Don't usar una segunda familia tipográfica, ni texto con degradado.",
+      "Don't animar la carga de una página."
+    ]
+  }
+}
