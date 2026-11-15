@@ -77,4 +77,4 @@ En cada PR y en cada commit a `main`:
 - **frontend:** instala dependencias exactas del lockfile, verifica tipos, ejecuta lint, pruebas y build.
 - **convenciones:** el título del PR y cada mensaje de commit siguen Conventional Commits.
 
-Cada commit en `main` publica además el build del frontend como artefacto, listo para desplegar. Dependabot propone cada semana las actualizaciones de dependencias y de las acciones de GitHub.
+Cada commit en `main` empaqueta además el build del frontend y, si la CI pasó, lo despliega como demo en GitHub Pages. El despliegue se activa una sola vez: en Settings → Pages elige "GitHub Actions" como fuente y crea la variable de repositorio `PAGES_ENABLED` con valor `true`. Dependabot propone cada semana las actualizaciones de dependencias y de las acciones de GitHub.
