@@ -24,6 +24,11 @@ issues #4–#25. The team will decide whether to start that plan.
   lint warnings. This is preparation of the existing demo, not backend work.
 - Added a versioned `docs/spec.md`, code-language policy, team review agenda,
   development checks, engine ranges, EditorConfig and a rewritten README.
+- Preparation source and documents are published at commit
+  `c350ac5fc11eac8cee4d2897ab4bc6e1a17cbea1` in PR #28.
+- Issue #3 is now the review index for the versioned specification. It and all
+  22 implementation tickets remain open with `needs-team-review`; the old
+  `ready-for-agent` label was removed. The 30 technical dependencies are intact.
 
 ## Validation
 
@@ -31,28 +36,24 @@ issues #4–#25. The team will decide whether to start that plan.
   passed locally. Lint has no warnings.
 - AST audit: English identifiers, all 395 unique protected copy fragments still
   present, 64 stories, acyclic dependency plan and 44 local links verified.
-- PR #27 CI passed before the final preparation changes. Its current state and
-  the final preparation PR must be checked again before merging.
+- Both PR #27 and the initial PR #28 run passed CI. Verify the latest head and
+  checks before each merge, including this checkpoint-only update.
 
 ## Work still in progress
 
-The source cleanup and team-review documents need commits and publication.
-AGENTS.md, CLAUDE.md and HANDOFF.md will be shared. The pre-existing local
-`.codex/hooks.json` is machine-specific, now ignored and preserved unchanged.
-
-The GitHub specification index must link the new versioned spec; its 22 tickets
-must be marked `needs-team-review` instead of `ready-for-agent`. Keep all these
-issues open. The 30 technical dependencies remain unchanged.
+The preparation changes are committed and published. AGENTS.md, CLAUDE.md and
+HANDOFF.md are shared. The pre-existing local `.codex/hooks.json` is
+machine-specific, ignored and preserved unchanged. Integration and completed
+branch cleanup are still pending; keep every implementation issue open.
 
 ## Next steps
 
-1. Commit and push the preparation branch using the configured user identity.
-2. Open its PR and update the spec index and ticket review gates.
-3. Verify checks, merge #1, then retarget and merge #2, #26, #27 and the final
+1. Publish this checkpoint using the configured user identity.
+2. Verify checks, merge #1, then retarget and merge #2, #26, #27 and #28
    preparation PR into main. Update the PR descriptions to their final scope.
-4. Verify main contains every branch tip before deleting completed local and
+3. Verify main contains every branch tip before deleting completed local and
    remote branches. Return the checkout to main and verify its CI.
-5. Replace this checkpoint with the completed preparation status and stop for
+4. Replace this checkpoint with the completed preparation status and stop for
    the team's decision. Do not start the implementation plan.
 
 A backup of original issues, rendered issue drafts and validation reports is in
