@@ -1,18 +1,18 @@
 import { ArrowLeft, Hammer } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
-import { todosLosDestinos } from '../navegacion'
+import { allDestinations } from '../navigation'
 
-/** Pantalla honesta para las rutas de docs/matrices.md que aún no tienen interfaz. */
-export function EnConstruccion() {
+/** Placeholder for the routes in docs/matrices.md that have no implemented screen yet. */
+export function UnderConstruction() {
   const { pathname } = useLocation()
-  const destino = todosLosDestinos.find((candidato) => candidato.ruta === pathname)
-  const titulo = destino?.nombre ?? 'Esta página no existe'
+  const destination = allDestinations.find((candidate) => candidate.path === pathname)
+  const title = destination?.name ?? 'Esta página no existe'
 
   return (
     <>
       <header className="mb-5 lg:mb-7 lg:pr-48">
         <h1 className="text-[1.65rem] font-semibold leading-tight tracking-[-0.025em] lg:text-[1.95rem]">
-          {titulo}
+          {title}
         </h1>
       </header>
 
@@ -21,11 +21,11 @@ export function EnConstruccion() {
           <Hammer size={20} aria-hidden="true" />
         </span>
         <h2 className="mt-4 text-[1.2rem] font-semibold tracking-[-0.01em]">
-          {destino ? 'Esta pantalla todavía no está construida' : 'No hay nada en esta dirección'}
+          {destination ? 'Esta pantalla todavía no está construida' : 'No hay nada en esta dirección'}
         </h2>
         <p className="mt-2 max-w-[60ch] text-ink-2">
-          {destino
-            ? `El Panel es la primera pantalla de Okane. ${destino.nombre} se construirá con el mismo diseño, siguiendo los casos de uso de docs/matrices.md.`
+          {destination
+            ? `El Panel es la primera pantalla de Okane. ${destination.name} se construirá con el mismo diseño, siguiendo los casos de uso de docs/matrices.md.`
             : 'Revisa la dirección o vuelve al Panel para seguir desde ahí.'}
         </p>
         <Link

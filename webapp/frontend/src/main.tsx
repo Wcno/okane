@@ -3,14 +3,14 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
-import { ProveedorDeDatos } from './state/store.tsx'
+import { DataProvider } from './state/store.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter basename={import.meta.env.BASE_URL}>
-      <ProveedorDeDatos>
+      <DataProvider>
         <App />
-      </ProveedorDeDatos>
+      </DataProvider>
     </BrowserRouter>
   </StrictMode>,
 )

@@ -1,168 +1,168 @@
-// Datos de ejemplo para desarrollar la interfaz mientras `api-service` no existe.
-// Ninguna cifra derivada se escribe a mano: el Disponible, el Restante y el
-// Patrimonio se calculan aquí con las reglas del glosario, para que la pantalla
-// muestre números que cuadran entre sí.
+// Demo fixtures used while api-service has not been implemented.
+// Derived amounts are calculated from these fixtures rather than entered manually.
+// Available funds, Remaining Budgets and Net Worth follow the glossary rules
+// so that the demonstration amounts remain internally consistent.
 
-export type TipoCuenta = 'gastos' | 'ahorro' | 'inversion'
+export type AccountType = 'spending' | 'savings' | 'investment'
 
-export interface Cuenta {
+export interface Account {
   id: string
-  nombre: string
-  tipo: TipoCuenta
-  saldo: number
+  name: string
+  type: AccountType
+  balance: number
 }
 
-export interface Posicion {
-  simbolo: string
-  nombre: string
-  unidades: number
-  precioReferencia: number
+export interface Position {
+  symbol: string
+  name: string
+  units: number
+  referencePrice: number
 }
 
-export interface PagoRecurrente {
+export interface RecurringPayment {
   id: string
-  nombre: string
-  categoria: string
-  monto: number
-  dia: number
+  name: string
+  category: string
+  amount: number
+  day: number
 }
 
-export interface LineaPresupuesto {
-  categoria: string
-  /** `null` cuando la Categoría no tiene Presupuesto este mes. */
-  presupuesto: number | null
-  gastado: number
+export interface BudgetLine {
+  category: string
+  /** Null means this Category has no Budget for the month. */
+  budget: number | null
+  spent: number
 }
 
-export interface PuntoPatrimonio {
-  mes: string
-  patrimonio: number
-  ahorroNeto: number
-  rendimiento: number
+export interface NetWorthPoint {
+  month: string
+  netWorth: number
+  netSavings: number
+  investmentReturn: number
 }
 
-/** Lo que cambia al registrar un Gasto. El resto de los datos de ejemplo es fijo. */
-export interface Estado {
-  cuentas: Cuenta[]
-  presupuestos: LineaPresupuesto[]
+/** Only these fields change when recording a demo Expense; the other fixtures are fixed. */
+export interface DemoState {
+  accounts: Account[]
+  budgets: BudgetLine[]
 }
 
-export const hoy = { dia: 15, mes: 'noviembre', mesCorto: 'nov', anio: 2026, diasDelMes: 30 }
+export const today = { day: 15, month: 'noviembre', shortMonth: 'nov', year: 2026, daysInMonth: 30 }
 
-export const estadoInicial: Estado = {
-  cuentas: [
-    { id: 'corriente', nombre: 'Cuenta corriente', tipo: 'gastos', saldo: 1284.6 },
-    { id: 'tarjeta', nombre: 'Tarjeta de crédito', tipo: 'gastos', saldo: -312.45 },
-    { id: 'ahorro', nombre: 'Ahorro', tipo: 'ahorro', saldo: 4150 },
-    { id: 'broker', nombre: 'Bróker', tipo: 'inversion', saldo: 186.2 },
+export const initialState: DemoState = {
+  accounts: [
+    { id: 'checking', name: 'Cuenta corriente', type: 'spending', balance: 1284.6 },
+    { id: 'credit-card', name: 'Tarjeta de crédito', type: 'spending', balance: -312.45 },
+    { id: 'savings', name: 'Ahorro', type: 'savings', balance: 4150 },
+    { id: 'broker', name: 'Bróker', type: 'investment', balance: 186.2 },
   ],
-  presupuestos: [
-    { categoria: 'Vivienda', presupuesto: 650, gastado: 650 },
-    { categoria: 'Alimentación', presupuesto: 320, gastado: 214.35 },
-    { categoria: 'Transporte', presupuesto: 140, gastado: 71.2 },
-    { categoria: 'Servicios', presupuesto: 130, gastado: 18.9 },
-    { categoria: 'Salud', presupuesto: 80, gastado: 12 },
-    { categoria: 'Entretenimiento', presupuesto: 90, gastado: 118.4 },
-    { categoria: 'Educación', presupuesto: 60, gastado: 0 },
-    { categoria: 'Otros', presupuesto: null, gastado: 23.5 },
+  budgets: [
+    { category: 'Vivienda', budget: 650, spent: 650 },
+    { category: 'Alimentación', budget: 320, spent: 214.35 },
+    { category: 'Transporte', budget: 140, spent: 71.2 },
+    { category: 'Servicios', budget: 130, spent: 18.9 },
+    { category: 'Salud', budget: 80, spent: 12 },
+    { category: 'Entretenimiento', budget: 90, spent: 118.4 },
+    { category: 'Educación', budget: 60, spent: 0 },
+    { category: 'Otros', budget: null, spent: 23.5 },
   ],
 }
 
-export const posiciones: Posicion[] = [
-  { simbolo: 'VOO', nombre: 'Vanguard S&P 500 ETF', unidades: 6.5, precioReferencia: 512.4 },
-  { simbolo: 'BTC', nombre: 'Bitcoin', unidades: 0.042, precioReferencia: 68450 },
+export const positions: Position[] = [
+  { symbol: 'VOO', name: 'Vanguard S&P 500 ETF', units: 6.5, referencePrice: 512.4 },
+  { symbol: 'BTC', name: 'Bitcoin', units: 0.042, referencePrice: 68450 },
 ]
 
-export const pagosRecurrentes: PagoRecurrente[] = [
-  { id: 'alquiler', nombre: 'Alquiler', categoria: 'Vivienda', monto: 650, dia: 1 },
-  { id: 'internet', nombre: 'Internet', categoria: 'Servicios', monto: 42.75, dia: 18 },
-  { id: 'luz', nombre: 'Luz', categoria: 'Servicios', monto: 58, dia: 22 },
-  { id: 'gimnasio', nombre: 'Gimnasio', categoria: 'Salud', monto: 35, dia: 25 },
-  { id: 'seguro', nombre: 'Seguro del auto', categoria: 'Transporte', monto: 64.5, dia: 28 },
+export const recurringPayments: RecurringPayment[] = [
+  { id: 'rent', name: 'Alquiler', category: 'Vivienda', amount: 650, day: 1 },
+  { id: 'internet', name: 'Internet', category: 'Servicios', amount: 42.75, day: 18 },
+  { id: 'electricity', name: 'Luz', category: 'Servicios', amount: 58, day: 22 },
+  { id: 'gym', name: 'Gimnasio', category: 'Salud', amount: 35, day: 25 },
+  { id: 'insurance', name: 'Seguro del auto', category: 'Transporte', amount: 64.5, day: 28 },
 ]
 
-export const ingresosDelMes = 1650
+export const monthlyIncome = 1650
 
-/** Patrimonio al cierre de mayo; cada mes siguiente suma Ahorro neto y Rendimiento. */
-const patrimonioAlCierreDeMayo = 9120.4
+/** Net Worth at the May close; each subsequent month adds Net Savings and Investment Return. */
+const closingNetWorthInMay = 9120.4
 
-const mesesCerrados = [
-  { mes: 'jun', ahorroNeto: 380, rendimiento: 74.7 },
-  { mes: 'jul', ahorroNeto: 410.2, rendimiento: -94.55 },
-  { mes: 'ago', ahorroNeto: 362.4, rendimiento: 149.15 },
-  { mes: 'sep', ahorroNeto: 295.1, rendimiento: 62.5 },
-  { mes: 'oct', ahorroNeto: 318.45, rendimiento: -41.2 },
+const closedMonths = [
+  { month: 'jun', netSavings: 380, investmentReturn: 74.7 },
+  { month: 'jul', netSavings: 410.2, investmentReturn: -94.55 },
+  { month: 'ago', netSavings: 362.4, investmentReturn: 149.15 },
+  { month: 'sep', netSavings: 295.1, investmentReturn: 62.5 },
+  { month: 'oct', netSavings: 318.45, investmentReturn: -41.2 },
 ]
 
-export const sumar = (valores: number[]) =>
-  Math.round(valores.reduce((total, valor) => total + valor, 0) * 100) / 100
+export const sum = (values: number[]) =>
+  Math.round(values.reduce((total, value) => total + value, 0) * 100) / 100
 
-export const diasRestantes = hoy.diasDelMes - hoy.dia
+export const remainingDays = today.daysInMonth - today.day
 
-export const pagosPorVencer = pagosRecurrentes.filter((pago) => pago.dia > hoy.dia)
+export const upcomingPayments = recurringPayments.filter((payment) => payment.day > today.day)
 
-/** Comprometido: Pagos recurrentes del mes que aún no han vencido. */
-export const comprometido = sumar(pagosPorVencer.map((pago) => pago.monto))
+/** Committed amount: monthly Recurring Payments that are not yet due. */
+export const committed = sum(upcomingPayments.map((payment) => payment.amount))
 
-export const comprometidoPorCategoria = (categoria: string) =>
-  sumar(pagosPorVencer.filter((pago) => pago.categoria === categoria).map((pago) => pago.monto))
+export const committedByCategory = (category: string) =>
+  sum(upcomingPayments.filter((payment) => payment.category === category).map((payment) => payment.amount))
 
-export const saldoCuentasDeGastos = (estado: Estado) =>
-  sumar(estado.cuentas.filter((cuenta) => cuenta.tipo === 'gastos').map((cuenta) => cuenta.saldo))
+export const spendingAccountBalance = (state: DemoState) =>
+  sum(state.accounts.filter((account) => account.type === 'spending').map((account) => account.balance))
 
-/** Disponible: Saldos de las Cuentas de gastos menos lo Comprometido. */
-export const disponible = (estado: Estado) => sumar([saldoCuentasDeGastos(estado), -comprometido])
+/** Available funds: spending Account balances minus committed payments. */
+export const disponible = (state: DemoState) => sum([spendingAccountBalance(state), -committed])
 
-/** Restante: Presupuesto menos lo gastado y menos lo Comprometido de la Categoría. */
-export const restante = (linea: LineaPresupuesto) =>
-  linea.presupuesto === null
+/** Remaining Budget: Budget less spending and committed payments for the Category. */
+export const remainingBudget = (line: BudgetLine) =>
+  line.budget === null
     ? null
-    : sumar([linea.presupuesto, -linea.gastado, -comprometidoPorCategoria(linea.categoria)])
+    : sum([line.budget, -line.spent, -committedByCategory(line.category)])
 
-export const gastosDelMes = (estado: Estado) =>
-  sumar(estado.presupuestos.map((linea) => linea.gastado))
+export const monthlyExpenses = (state: DemoState) =>
+  sum(state.budgets.map((line) => line.spent))
 
-export const valorPosicion = (posicion: Posicion) =>
-  Math.round(posicion.unidades * posicion.precioReferencia * 100) / 100
+export const positionValue = (position: Position) =>
+  Math.round(position.units * position.referencePrice * 100) / 100
 
-export const valorPosiciones = sumar(posiciones.map(valorPosicion))
+export const positionsValue = sum(positions.map(positionValue))
 
-/** Patrimonio: Saldos de todas las Cuentas más el valor de todas las Posiciones. */
-export const patrimonio = (estado: Estado) =>
-  sumar([...estado.cuentas.map((cuenta) => cuenta.saldo), valorPosiciones])
+/** Net Worth: all Account balances plus all Position values. */
+export const netWorth = (state: DemoState) =>
+  sum([...state.accounts.map((account) => account.balance), positionsValue])
 
-/** Serie mensual del Patrimonio, del cierre de mayo al día de hoy. */
-export const evolucion = (estado: Estado): PuntoPatrimonio[] => {
-  const serie: PuntoPatrimonio[] = [
-    { mes: 'may', patrimonio: patrimonioAlCierreDeMayo, ahorroNeto: 0, rendimiento: 0 },
+/** Monthly Net Worth series from the May close through today. */
+export const netWorthHistory = (state: DemoState): NetWorthPoint[] => {
+  const series: NetWorthPoint[] = [
+    { month: 'may', netWorth: closingNetWorthInMay, netSavings: 0, investmentReturn: 0 },
   ]
-  for (const mes of mesesCerrados) {
-    const anterior = serie[serie.length - 1].patrimonio
-    serie.push({ ...mes, patrimonio: sumar([anterior, mes.ahorroNeto, mes.rendimiento]) })
+  for (const month of closedMonths) {
+    const previous = series[series.length - 1].netWorth
+    series.push({ ...month, netWorth: sum([previous, month.netSavings, month.investmentReturn]) })
   }
-  const cierreAnterior = serie[serie.length - 1].patrimonio
-  const actual = patrimonio(estado)
-  const ahorroNeto = sumar([ingresosDelMes, -gastosDelMes(estado)])
-  // Lo que la variación del Patrimonio no debe al Ahorro neto es Rendimiento.
-  const rendimiento = sumar([actual, -cierreAnterior, -ahorroNeto])
-  serie.push({ mes: hoy.mesCorto, patrimonio: actual, ahorroNeto, rendimiento })
-  return serie
+  const previousClosing = series[series.length - 1].netWorth
+  const currentValue = netWorth(state)
+  const netSavings = sum([monthlyIncome, -monthlyExpenses(state)])
+  // The demo attributes the part of the change not due to Net Savings to Investment Return.
+  const investmentReturn = sum([currentValue, -previousClosing, -netSavings])
+  series.push({ month: today.shortMonth, netWorth: currentValue, netSavings, investmentReturn })
+  return series
 }
 
-/** Cuentas desde las que puede salir un Gasto: la de inversión es cerrada. */
-export const cuentasParaGastos = (estado: Estado) =>
-  estado.cuentas.filter((cuenta) => cuenta.tipo !== 'inversion')
+/** An Expense can use spending or savings Accounts, never an investment Account. */
+export const expenseAccounts = (state: DemoState) =>
+  state.accounts.filter((account) => account.type !== 'investment')
 
-export const registrarGasto = (
-  estado: Estado,
-  gasto: { monto: number; categoria: string; cuentaId: string },
-): Estado => ({
-  cuentas: estado.cuentas.map((cuenta) =>
-    cuenta.id === gasto.cuentaId ? { ...cuenta, saldo: sumar([cuenta.saldo, -gasto.monto]) } : cuenta,
+export const recordExpense = (
+  state: DemoState,
+  expense: { amount: number; category: string; accountId: string },
+): DemoState => ({
+  accounts: state.accounts.map((account) =>
+    account.id === expense.accountId ? { ...account, balance: sum([account.balance, -expense.amount]) } : account,
   ),
-  presupuestos: estado.presupuestos.map((linea) =>
-    linea.categoria === gasto.categoria
-      ? { ...linea, gastado: sumar([linea.gastado, gasto.monto]) }
-      : linea,
+  budgets: state.budgets.map((line) =>
+    line.category === expense.category
+      ? { ...line, spent: sum([line.spent, expense.amount]) }
+      : line,
   ),
 })

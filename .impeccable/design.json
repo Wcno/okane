@@ -96,7 +96,7 @@
       "refersTo": "nav-item-active",
       "description": "Elemento de la barra lateral, en reposo y activo.",
       "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-item-active\" href=\"#\">Panel</a><a class=\"ds-nav-item\" href=\"#\">Gastos</a></nav>",
-      "css": ".ds-nav { display: grid; gap: 2px; width: 216px; } .ds-nav-item { display: flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 12px; color: var(--ink-2); font: 500 14px 'Figtree Variable', system-ui, sans-serif; text-decoration: none; transition: background-color 150ms, color 150ms; } .ds-nav-item:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); color: var(--ink); } .ds-nav-item-active, .ds-nav-item-active:hover { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--sombra-tarjeta); }"
+      "css": ".ds-nav { display: grid; gap: 2px; width: 216px; } .ds-nav-item { display: flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 12px; color: var(--ink-2); font: 500 14px 'Figtree Variable', system-ui, sans-serif; text-decoration: none; transition: background-color 150ms, color 150ms; } .ds-nav-item:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); color: var(--ink); } .ds-nav-item-active, .ds-nav-item-active:hover { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--card-shadow); }"
     },
     {
       "name": "Ficha de Categoría",
@@ -112,7 +112,7 @@
       "refersTo": "card",
       "description": "Contenedor de un resumen; abre con su título en tinta secundaria.",
       "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">Patrimonio</h2><p class=\"ds-card-value\">$11,513.85</p></section>",
-      "css": ".ds-card { width: 300px; padding: 20px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: var(--sombra-tarjeta); font-family: 'Figtree Variable', system-ui, sans-serif; } .ds-card-title { margin: 0; color: var(--ink-2); font-size: 15px; font-weight: 500; } .ds-card-value { margin: 6px 0 0; color: var(--ink); font-size: 34px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }"
+      "css": ".ds-card { width: 300px; padding: 20px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); box-shadow: var(--card-shadow); font-family: 'Figtree Variable', system-ui, sans-serif; } .ds-card-title { margin: 0; color: var(--ink-2); font-size: 15px; font-weight: 500; } .ds-card-value { margin: 6px 0 0; color: var(--ink); font-size: 34px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }"
     },
     {
       "name": "Medidor de Presupuesto",

@@ -1,8 +1,8 @@
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { grupos } from '../navegacion'
+import { navigationGroups } from '../navigation'
 
-/** "Más" en el teléfono: todas las secciones que no caben en la barra inferior. */
+/** Mobile More screen for destinations outside the bottom bar. */
 export function Menu() {
   return (
     <>
@@ -11,22 +11,22 @@ export function Menu() {
       </header>
 
       <div className="space-y-5">
-        {grupos.map((grupo) => (
-          <section key={grupo.titulo ?? 'inicio'} aria-label={grupo.titulo ?? 'Inicio'}>
-            {grupo.titulo && (
-              <h2 className="mb-2 px-1 text-[0.9rem] font-medium text-ink-3">{grupo.titulo}</h2>
+        {navigationGroups.map((group) => (
+          <section key={group.title ?? 'home'} aria-label={group.title ?? 'Inicio'}>
+            {group.title && (
+              <h2 className="mb-2 px-1 text-[0.9rem] font-medium text-ink-3">{group.title}</h2>
             )}
             <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface shadow-card">
-              {grupo.destinos.map((destino) => {
-                const Icono = destino.icono
+              {group.destinations.map((destination) => {
+                const Icon = destination.icon
                 return (
-                  <li key={destino.ruta}>
+                  <li key={destination.path}>
                     <Link
-                      to={destino.ruta}
+                      to={destination.path}
                       className="flex h-14 items-center gap-3.5 px-4 text-[1rem] font-medium transition-colors duration-150 hover:bg-surface-2"
                     >
-                      <Icono size={20} className="text-ink-2" aria-hidden="true" />
-                      <span className="flex-1">{destino.nombre}</span>
+                      <Icon size={20} className="text-ink-2" aria-hidden="true" />
+                      <span className="flex-1">{destination.name}</span>
                       <ChevronRight size={18} className="text-ink-3" aria-hidden="true" />
                     </Link>
                   </li>
