@@ -1,0 +1,176 @@
+import { Ellipsis, Plus, X } from 'lucide-react'
+import { useEffect } from 'react'
+import { Link, NavLink, Outlet } from 'react-router-dom'
+import { destinosDeBarra, grupos, type Destino } from '../navegacion'
+import { useDatos } from '../state/store'
+import { RegistrarGasto } from './RegistrarGasto'
+
+export function Logo() {
+  return (
+    <Link to="/dashboard" className="inline-flex items-center gap-2.5 rounded-lg" aria-label="Okane, ir al Panel">
+      <svg viewBox="0 0 32 32" className="size-8" aria-hidden="true">
+        <rect width="32" height="32" rx="9" className="fill-primary" />
+        <circle cx="16" cy="16" r="7.5" fill="none" strokeWidth="3" className="stroke-on-primary" />
+        <path d="M16 8.5a7.5 7.5 0 0 1 7.5 7.5H16z" className="fill-on-primary" />
+      </svg>
+      <span className="text-[1.2rem] font-semibold tracking-[-0.02em]">Okane</span>
+    </Link>
+  )
+}
+
+function EnlaceLateral({ destino }: { destino: Destino }) {
+  const Icono = destino.icono
+  return (
+    <NavLink
+      to={destino.ruta}
+      className={({ isActive }) =>
+        `flex h-10 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors duration-150 ${
+          isActive
+            ? 'bg-surface font-semibold text-ink shadow-card'
+            : 'font-medium text-ink-2 hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink'
+        }`
+      }
+    >
+      <Icono size={18} strokeWidth={2} aria-hidden="true" />
+      {destino.nombre}
+    </NavLink>
+  )
+}
+
+function BarraLateral() {
+  return (
+    <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line px-4 pb-5 pt-7 lg:flex">
+      <div className="px-2">
+        <Logo />
+      </div>
+      <nav aria-label="Secciones" className="mt-8 flex-1 space-y-6 overflow-y-auto">
+        {grupos.map((grupo) => (
+          <div key={grupo.titulo ?? 'inicio'}>
+            {grupo.titulo && (
+              <h2 className="mb-1.5 px-3 text-[0.8rem] font-medium text-ink-3">{grupo.titulo}</h2>
+            )}
+            <ul className="space-y-0.5">
+              {grupo.destinos.map((destino) => (
+                <li key={destino.ruta}>
+                  <EnlaceLateral destino={destino} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
+      <p className="px-3 text-[0.8rem] leading-snug text-ink-3">
+        Estás viendo datos de ejemplo.
+      </p>
+    </aside>
+  )
+}
+
+function EnlaceDeBarra({ destino }: { destino: Destino }) {
+  const Icono = destino.icono
+  return (
+    <NavLink
+      to={destino.ruta}
+      className={({ isActive }) =>
+        `flex h-full flex-col items-center justify-center gap-1 text-[0.72rem] ${
+          isActive ? 'font-semibold text-ink' : 'font-medium text-ink-3'
+        }`
+      }
+    >
+      <Icono size={21} strokeWidth={2} aria-hidden="true" />
+      {destino.nombre}
+    </NavLink>
+  )
+}
+
+function BarraInferior() {
+  const { abrirFormulario } = useDatos()
+  return (
+    <nav
+      aria-label="Secciones"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+    >
+      <div className="mx-auto grid h-16 max-w-xl grid-cols-5 items-stretch">
+        {destinosDeBarra.izquierda.map((destino) => (
+          <EnlaceDeBarra key={destino.ruta} destino={destino} />
+        ))}
+        <div className="flex items-center justify-center">
+          <button
+            type="button"
+            onClick={abrirFormulario}
+            aria-label="Registrar gasto"
+            className="grid size-13 -translate-y-3 place-items-center rounded-full bg-primary text-on-primary shadow-float transition-transform duration-150 active:scale-95"
+          >
+            <Plus size={26} strokeWidth={2.4} aria-hidden="true" />
+          </button>
+        </div>
+        {destinosDeBarra.derecha.map((destino) => (
+          <EnlaceDeBarra key={destino.ruta} destino={destino} />
+        ))}
+        <EnlaceDeBarra destino={{ ruta: '/menu', nombre: 'Más', icono: Ellipsis }} />
+      </div>
+    </nav>
+  )
+}
+
+function Aviso() {
+  const { aviso, descartarAviso } = useDatos()
+
+  useEffect(() => {
+    if (!aviso) return
+    const temporizador = window.setTimeout(descartarAviso, 7000)
+    return () => window.clearTimeout(temporizador)
+  }, [aviso, descartarAviso])
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="pointer-events-none fixed inset-x-4 bottom-24 z-30 flex justify-center lg:inset-x-auto lg:bottom-8 lg:right-8"
+    >
+      {aviso && (
+        <div className="pointer-events-auto flex max-w-md items-start gap-3 rounded-2xl bg-primary py-3 pl-4 pr-2 text-[0.95rem] text-on-primary shadow-float">
+          <p className="py-0.5">{aviso}</p>
+          <button
+            type="button"
+            onClick={descartarAviso}
+            aria-label="Cerrar aviso"
+            className="grid size-7 shrink-0 place-items-center rounded-full opacity-70 hover:opacity-100 focus-visible:outline-on-primary"
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function AppShell() {
+  const { abrirFormulario } = useDatos()
+  return (
+    <div className="min-h-dvh lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+      <BarraLateral />
+      <div className="relative min-w-0">
+        <header className="flex h-14 items-center px-4 sm:px-6 lg:hidden">
+          <Logo />
+        </header>
+        <div className="absolute right-10 top-9 hidden lg:block">
+          <button
+            type="button"
+            onClick={abrirFormulario}
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary pl-3.5 pr-4.5 text-[0.95rem] font-semibold text-on-primary transition-transform duration-150 hover:-translate-y-px active:translate-y-0"
+          >
+            <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
+            Registrar gasto
+          </button>
+        </div>
+        <main className="mx-auto w-full max-w-[1180px] px-4 pb-28 pt-2 sm:px-6 lg:px-10 lg:pb-14 lg:pt-9">
+          <Outlet />
+        </main>
+      </div>
+      <BarraInferior />
+      <RegistrarGasto />
+      <Aviso />
+    </div>
+  )
+}
