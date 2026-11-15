@@ -2,16 +2,16 @@
 
 Estado: **pendiente de revisión del equipo; implementación sin iniciar**.
 Esta es la fuente versionada de la spec. El [issue #3](https://github.com/Wcno/okane/issues/3)
-coordina su revisión y los 22 tickets derivados (#4–#25).
+coordina su revisión y los tickets derivados enumerados en [plan-de-trabajo.md](plan-de-trabajo.md).
 
 ## Idioma y autorización para implementar
 
 La interfaz pública, validaciones y etiquetas accesibles están en español.
 El código, identificadores, nombres de archivos fuente, comentarios y
 nombres de pruebas se escriben en inglés, según [code-language.md](code-language.md).
-Las precisiones de esta revisión, incluido el ADR 0004, se presentan al equipo
+Las precisiones de esta revisión, incluidos los ADR 0004 y 0005, se presentan al equipo
 antes de implementar. Se conserva el frontend de demostración; ningún ticket
-#4–#25 se considera iniciado ni completado por esta preparación.
+del plan se considera iniciado ni completado por esta preparación.
 
 El flujo es **spec → tickets con criterios y dependencias → revisión del equipo →
 decisión de inicio → implementación**. La agenda está en [team-review.md](team-review.md).
@@ -26,12 +26,12 @@ Con sus inversiones le pasa algo parecido: ve que su patrimonio subió o bajó, 
 
 Okane es una aplicación web que reúne el presupuesto mensual y el portafolio de inversión del Usuario. Al abrirla, el Panel le da dos respuestas sin que calcule nada:
 
-1. **Disponible:** cuánto puede gastar hasta fin de mes, que es el Saldo de sus Cuentas de gastos menos lo Comprometido en Pagos recurrentes por vencer vinculados a esas mismas Cuentas.
+1. **Disponible:** cuánto puede gastar hasta fin de mes, que es el Saldo de sus Cuentas de gastos menos lo Comprometido en Ocurrencias de pago pendientes (incluidas las vencidas) vinculadas a esas mismas Cuentas.
 2. **Variación del Patrimonio:** cuánto cambió este mes y qué parte se debe al Ahorro neto (Ingresos menos Gastos) y cuál al Rendimiento de ese período. Los Saldos iniciales de Cuentas incorporadas se muestran aparte; no son ahorro ni ganancia.
 
 Toda cifra se puede explicar con lo que el Usuario registró. El sistema informa, no autoriza: acepta un gasto que excede el presupuesto o deja un saldo negativo, y lo señala.
 
-El vocabulario es el de `GLOSSARY.md`. Los 48 casos de uso, con sus rutas y endpoints, están en `docs/matrices.md`.
+El vocabulario es el de `GLOSSARY.md`. Los 58 casos de uso, con sus rutas y endpoints, están en `docs/matrices.md`.
 
 ## User Stories
 
@@ -86,12 +86,12 @@ El vocabulario es el de `GLOSSARY.md`. Los 48 casos de uso, con sus rutas y endp
 
 ### Pagos recurrentes
 
-38. Como Usuario, quiero crear un Pago recurrente con monto, Categoría, Cuenta y día del mes, para no registrar a mano mis pagos fijos.
-39. Como Usuario, quiero que el Gasto de un Pago recurrente se cree solo al llegar su fecha, para que mi Saldo esté al día.
-40. Como Usuario, quiero corregir el monto del Gasto generado cuando la factura real fue distinta, para que el registro sea exacto.
-41. Como Usuario, quiero ver los Pagos recurrentes que aún no vencen este mes y su total Comprometido, para saber qué dinero ya no es mío.
+38. Como Usuario, quiero crear un Pago recurrente con monto, Categoría, Cuenta y día del mes, para reservar el dinero de mis pagos fijos.
+39. Como Usuario, quiero confirmar cada pago realizado para crear su Gasto y liberar la reserva una sola vez, sin confundir un vencimiento con un pago real.
+40. Como Usuario, quiero revisar monto, Cuenta y fecha al confirmar un pago, para registrar lo que realmente pagué.
+41. Como Usuario, quiero ver las reservas del mes y las vencidas aún pendientes, para conocer todo mi Comprometido aunque cambie el mes.
 42. Como Usuario, quiero que un pago del día 31 venza el último día en los meses más cortos, para no perder un pago.
-43. Como Usuario, quiero editar o eliminar un Pago recurrente sin que cambien los Gastos que ya generó, para no alterar mi pasado.
+43. Como Usuario, quiero editar o eliminar una regla sin alterar ocurrencias existentes ni Gastos confirmados, para conservar mi pasado y resolver explícitamente los pendientes.
 
 ### Panel
 
@@ -103,9 +103,9 @@ El vocabulario es el de `GLOSSARY.md`. Los 48 casos de uso, con sus rutas y endp
 49. Como Usuario, quiero que esa evolución incluya los meses anteriores a que empecé a usar Okane, si registré sus movimientos, para no ver un gráfico vacío.
 50. Como Usuario, quiero usar el Panel igual de bien en el teléfono y en la computadora, en tema claro u oscuro.
 
-### Ahorro
+### Proyección de ahorro e inversión
 
-51. Como Usuario, quiero proyectar el Saldo de una Cuenta de ahorro a un plazo en meses, con su tasa y un aporte mensual opcional, para planificar una meta.
+51. Como Usuario, quiero proyectar una Cuenta de ahorro, una Cuenta de inversión o mi portafolio con capital, tasa anual hipotética, plazo y aporte mensual editables, para planificar una meta.
 52. Como Usuario, quiero que la Proyección no cree movimientos ni cambie mi Saldo, para no confundir lo que pasó con lo que podría pasar.
 
 ### Portafolio de inversión
@@ -123,12 +123,27 @@ El vocabulario es el de `GLOSSARY.md`. Los 48 casos de uso, con sus rutas y endp
 63. Como Usuario, quiero ver el Rendimiento de mi portafolio separado de mi Aporte neto, para saber cuánto gané o perdí de verdad.
 64. Como Usuario, quiero un panel de inversiones con el valor total, el Aporte neto, el Rendimiento y la distribución por Activo.
 
+### Movimientos, Configuración e integraciones
+
+65. Como Usuario, quiero cancelar una Ocurrencia de pago pendiente y liberar su reserva sin crear un Gasto.
+66. Como Usuario, quiero consultar Ingresos, Gastos, Transferencias, compras, ventas y Dividendos en una sola vista.
+67. Como Usuario, quiero filtrar esa vista por tipo, Cuenta y período, viendo cada Transferencia una sola vez.
+68. Como Usuario, quiero guardar mis filtros y agrupación preferidos para recuperar mi forma de consultar los datos.
+69. Como Usuario, quiero elegir las secciones visibles sin cambiar las reglas financieras ni ocultar las consecuencias al registrar un Gasto.
+70. Como Usuario, quiero comparar hasta tres escenarios de Proyección, incluidas rentabilidades negativas para inversiones.
+71. Como Usuario, quiero distinguir capital aportado, resultado proyectado y evolución mensual de cada escenario.
+72. Como Usuario, quiero crear un token personal con permisos elegidos y ver su secreto una sola vez para integrar mis herramientas.
+73. Como Usuario, quiero consultar y revocar mis tokens para controlar el acceso externo a mis datos.
+74. Como Usuario, quiero leer mis Cuentas, Saldos, Presupuestos y los seis tipos de registros mediante una API autenticada.
+75. Como Usuario, quiero crear esos seis tipos de registros sobre Cuentas existentes mediante la API, con las mismas reglas que la aplicación.
+76. Como Usuario, quiero reintentar una creación desde Google Apps Script sin duplicar registros financieros.
+
 ## Implementation Decisions
 
 **Arquitectura**
 
 - Cuatro contenedores, fijados por el curso y levantados con un solo archivo de Docker Compose: `webapp` (React servido por Django), `webapp-db`, `api-service` (Django REST) y `api-db`, ambas bases en PostgreSQL.
-- El navegador solo habla con `webapp`. Django mantiene la sesión con cookie y reenvía cada llamada financiera `/api/*` a `api-service` por la red interna, obteniendo el Usuario de la sesión y descartando identidades internas enviadas por el navegador (ADR 0001). `api-service` valida la autenticidad de `webapp` mediante una credencial o firma. Las rutas de autenticación y el estado mínimo `/api/health` son excepciones explícitas al requisito de sesión.
+- El navegador solo habla con `webapp`. Django mantiene la sesión con cookie para la aplicación y autentica tokens personales para `/api/v1`; reenvía cada llamada financiera a `api-service` por la red interna, obteniendo el Usuario de la sesión o del token validado y descartando identidades internas enviadas por el cliente (ADR 0001 y propuesta ADR 0005). `api-service` valida la autenticidad de `webapp` mediante una credencial o firma. Las rutas de autenticación y el estado mínimo `/api/health` son excepciones explícitas al requisito de sesión.
 - `api-db` no tiene llave foránea hacia los usuarios: guarda el identificador de Usuario que recibe. Eliminar un Usuario hace que `webapp` pida a `api-service` borrar sus datos.
 - Rutas, endpoints y tablas son los de `docs/matrices.md`; los 28 casos originales de la Asignación 5 conservan nombre, ruta y endpoint.
 
@@ -144,7 +159,7 @@ El vocabulario es el de `GLOSSARY.md`. Los 48 casos de uso, con sus rutas y endp
 **Reglas de cálculo**
 
 - Disponible = suma de los Saldos de las Cuentas de gastos − Comprometido vinculado a esas mismas Cuentas.
-- Comprometido = Pagos recurrentes del mes que aún no vencen.
+- Comprometido = reservas pendientes con vencimiento hasta el fin del mes consultado, incluidas las atrasadas; se evalúan al corte de ese período.
 - Restante = Presupuesto − gastado − Comprometido de la Categoría.
 - Rendimiento de una Cuenta de inversión = valor actual (Posiciones + efectivo) − Aporte neto. El saldo inicial de esa Cuenta cuenta como primer Aporte.
 - Rendimiento del período = Rendimiento acumulado al cierre − Rendimiento acumulado al inicio.
@@ -154,7 +169,7 @@ El vocabulario es el de `GLOSSARY.md`. Los 48 casos de uso, con sus rutas y endp
 
 **Comportamiento**
 
-- El Gasto de un Pago recurrente se genera al llegar su fecha con el monto de la regla y luego es un Gasto cualquiera. Una ocurrencia única por regla y mes evita duplicados incluso con concurrencia o después de borrar el Gasto. Las consultas financieras recuperan los vencimientos debidos desde el inicio de la regla; una regla nueva no rellena fechas anteriores a su inicio.
+- Cada regla reserva una ocurrencia única por mes, sin crear Gastos ni modificar Saldos. Las consultas recuperan reservas desde el inicio de la regla hasta el cierre del mes actual. Solo confirmar crea el Gasto y libera la reserva atómicamente; cancelar libera sin Gasto. Las pendientes vencidas siguen comprometidas al cambiar de mes. Editar la regla afecta solo ocurrencias aún no materializadas; eliminarla detiene las futuras y conserva las existentes. Los estados y fechas permiten reconstruir cortes históricos según los [contratos](contratos.md).
 - El mes actual se inicializa una vez por Usuario; si no tiene Presupuestos, copia los del mes calendario anterior, excepto los de Categorías archivadas. La marca de inicialización se conserva aunque se borren todos los Presupuestos.
 - Mientras las Categorías propias no existan, las Categorías son un catálogo fijo del sistema.
 - El Usuario se identifica con su correo. El registro no exige verificarlo. En desarrollo los correos se imprimen en la consola.
@@ -164,22 +179,41 @@ El vocabulario es el de `GLOSSARY.md`. Los 48 casos de uso, con sus rutas y endp
 - React con TypeScript y Tailwind CSS, siguiendo `DESIGN.md`. Cada pantalla se verifica en teléfono y en PC, en tema claro y oscuro.
 - El Panel y la navegación ya existen con datos de ejemplo. Al conectar la API, las reglas de cálculo que hoy viven en el frontend se eliminan: el frontend muestra lo que `api-service` calcula.
 
+**Vista de Movimientos y Configuración**
+
+- Una entrada principal `/movements` reúne los seis tipos con filtros por tipo, Cuenta y período. Una Transferencia aparece una sola vez con origen y destino; el orden descendente por fecha tiene desempate estable y paginación.
+- Se conservan las rutas originales: `/expenses`, `/incomes`, `/transfers` y `/investments/transactions` abren la misma vista con su filtro. Formularios y modelos especializados permanecen separados.
+- En `/settings`, cada Usuario guarda filtros predeterminados, agrupación por fecha o tipo y secciones visibles. Valores iniciales: todos los tipos, mes actual y fecha descendente. Las preferencias no cambian cálculos, permisos ni confirmación manual de pagos.
+
+**Proyección ampliada**
+
+- Una Cuenta de ahorro parte de su Saldo; una de inversión, de efectivo más Posiciones; el portafolio suma sus Cuentas de inversión sin duplicar Aportes internos. Se muestra fecha y procedencia de la valoración.
+- Se comparan de uno a tres escenarios. Capital inicial, aporte mensual, plazo y tasa anual hipotética son editables. Valores iniciales: capital seleccionado, aporte cero, doce meses y tasa cero hasta introducir un supuesto; la tasa de ahorro guardada puede usarse mediante selección explícita.
+- Se muestran capital aportado, resultado proyectado y serie mensual con la misma convención nominal anual / 12 y aportes al cierre. Se admiten tasas negativas de inversión según los límites de [contratos](contratos.md). No se crean registros reales.
+
+**API pública autenticada**
+
+- `/api/v1` entra por `webapp`; `api-service` permanece interno y valida la identidad reenviada. Los cuatro contenedores se conservan. Véase la propuesta [ADR 0005](adr/0005-public-api-through-webapp.md).
+- Configuración permite crear, listar y revocar tokens personales con permisos `finance:read` y `movements:create`. El secreto se muestra una sola vez y solo se guarda su hash; cada token pertenece a un Usuario.
+- La API consulta Cuentas, Saldos, Presupuestos y Movimientos, y crea los seis tipos sobre Cuentas existentes utilizando las mismas reglas de la aplicación. Cada creación exige una clave de idempotencia; un reintento idéntico devuelve el original y otro contenido con la misma clave produce conflicto.
+- El ticket de API entrega OpenAPI y un ejemplo para Google Apps Script. Esta preparación especifica el contrato; todavía no publica un servicio operativo.
+
 **Orden de construcción**
 
-Los niveles expresan prioridad de producto; las dependencias imprescindibles pueden adelantarse. La cronología de los 22 tickets se mantiene en el [plan de trabajo](plan-de-trabajo.md). La búsqueda de Activos se entrega en #11; #23 añade la actualización automática de precios.
+Los niveles expresan prioridad de producto; las dependencias imprescindibles pueden adelantarse. La cronología de los 25 tickets se mantiene en el [plan de trabajo](plan-de-trabajo.md). La búsqueda de Activos se entrega en #11; #23 añade la actualización automática de precios.
 
 1. Los 28 casos originales.
-2. Lo que la descripción promete y esos casos no cubren: Ingresos, Transferencias, Pagos recurrentes, Panel y corrección del Precio de referencia.
+2. Lo que la descripción y el feedback acordado prometen: Ingresos, Transferencias, reservas y confirmación de pagos, Panel, Movimientos unificados, preferencias, Proyección de inversiones, API pública y corrección del Precio de referencia.
 3. Diferenciadores: Categorías propias, Estado de cuenta, Dividendos, precios automáticos, evolución del Patrimonio. Si falta tiempo, se recorta desde aquí.
 
 ## Testing Decisions
 
 Una buena prueba ejercita el comportamiento que el Usuario observa (una petición y su respuesta, o una pantalla), no la estructura interna, y sigue pasando si el código se reorganiza.
 
-Tres puntos de prueba, confirmados con el equipo:
+Tres puntos de prueba propuestos para revisión del equipo:
 
 1. **API HTTP de `api-service`.** Es el punto principal: todas las reglas financieras se prueban aquí, con peticiones reales contra una base PostgreSQL de prueba y la identidad del Usuario en la petición. Ejemplo: crear dos Cuentas, registrar un Ingreso, un Gasto y un Pago recurrente por vencer, y comprobar el Disponible que devuelve el Panel.
-2. **Superficie HTTP de `webapp`.** Registro, inicio y cierre de sesión, recuperación de contraseña, que una petición sin sesión no llegue a `api-service`, y que el reenvío lleve la identidad correcta.
+2. **Superficie HTTP de `webapp`.** Registro, inicio y cierre de sesión, recuperación de contraseña, que una petición sin sesión ni token válido no llegue a `api-service`, y que el reenvío lleve la identidad correcta.
 3. **Punta a punta en un navegador real.** Unas pocas pruebas que recorren `webapp` y `api-service` juntos por los flujos que definen el producto: registrarse, registrar un Gasto y ver cambiar el Disponible; registrar una compra y ver el Rendimiento.
 
 Dos dependencias se reemplazan en las pruebas: la fecha de hoy (para probar vencimientos y cambios de mes) y el servicio de cotizaciones (para no depender de la red).
@@ -203,6 +237,8 @@ La CI ejecuta las pruebas de cada servicio en cada PR.
 - Verificación del correo al registrarse.
 - Despliegue en un servidor: se decide después de la entrega.
 - Selector manual de tema claro u oscuro; sigue al sistema.
+- OAuth, sincronización automática con Google y escrituras externas para editar/eliminar registros o administrar Cuentas, reglas y Presupuestos.
+- Predicciones de rentabilidad, proyecciones por Activo y análisis histórico de escenarios.
 
 ## Further Notes
 
@@ -212,6 +248,6 @@ La CI ejecuta las pruebas de cada servicio en cada PR.
 
 ## Contratos transversales de la revisión
 
-Los [contratos verificables](contratos.md) precisan aislamiento por Usuario, CSRF, autenticidad de servicio, fechas, cantidades, Cuentas archivadas, borrado entre dos bases, costo promedio, precios manuales por Usuario y conciliación del Patrimonio. Cada ticket incorpora sus criterios comprobables; se conservan las 64 historias y los 48 casos de uso.
+Los [contratos verificables](contratos.md) precisan aislamiento por Usuario, CSRF, autenticidad de servicio, fechas, cantidades, Cuentas archivadas, borrado entre dos bases, costo promedio, precios manuales por Usuario y conciliación del Patrimonio. Cada ticket incorpora sus criterios comprobables; se conservan las 64 historias previas (con las decisiones revisadas) y se añaden 12: 76 historias y 58 casos de uso, incluidos los 28 originales.
 
-Las tablas de apoyo `recurring_payment_occurrences` y `budget_months` conservan las marcas de procesamiento. No son casos de uso nuevos. Las relaciones `Blocked by` se reflejan también como dependencias nativas de GitHub.
+Las tablas de apoyo conservan ocurrencias y sus resoluciones, inicialización mensual, preferencias, tokens e idempotencia; las [matrices](matrices.md) distinguen los diez casos nuevos de sus tablas de apoyo. Las relaciones `Blocked by` se reflejan también como dependencias nativas de GitHub.

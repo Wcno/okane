@@ -31,15 +31,19 @@ Cada cifra que Okane muestra se puede explicar con lo que el Usuario registró. 
 
 ## Operating Context
 
-- El registro es manual. La rapidez para anotar un Gasto es un criterio de diseño de primer nivel.
+- El registro es manual o mediante integraciones autenticadas iniciadas por el Usuario. La rapidez para anotar un Gasto es un criterio de diseño de primer nivel.
 - El sistema informa, no autoriza: acepta gastos que exceden el presupuesto y saldos negativos, y lo señala.
 - Una sola moneda, dólares estadounidenses. La interfaz está en español.
 - El Usuario contrasta sus cifras con las de su banco y su bróker; el Estado de cuenta existe para eso.
 
 ## Capabilities and Constraints
 
-- 48 casos de uso, definidos con sus rutas y endpoints en `docs/matrices.md`. Los 28 originales del documento del curso se construyen primero.
+- 58 casos de uso, definidos con sus rutas y endpoints en `docs/matrices.md`. Los 28 originales del documento del curso se construyen primero.
 - El vocabulario es el de `GLOSSARY.md` y es obligatorio en la interfaz: Disponible, Restante, Comprometido, Aporte, Rendimiento, Patrimonio, Ahorro neto. No se usan los sinónimos que el glosario descarta.
+- Los Pagos recurrentes reservan dinero, incluso vencido, hasta confirmar o cancelar cada ocurrencia; no registran Gastos automáticamente.
+- Una vista reúne los seis tipos de registros y permite filtrar; Configuración personaliza su presentación sin cambiar reglas financieras.
+- La Proyección compara escenarios de ahorro e inversión. La API pública autenticada permite lectura y creación con tokens personales, también desde Google Apps Script.
+- Estas capacidades están especificadas para revisión, todavía no implementadas.
 - Las decisiones de arquitectura están en `docs/adr/`.
 - Las reglas de fechas, precisión, concurrencia y cálculo por período se precisan en `docs/contratos.md`.
 - Sin decidir: el proveedor de cotizaciones para acciones, y si el servicio gratuito entrega precios históricos para reconstruir la evolución del Patrimonio.

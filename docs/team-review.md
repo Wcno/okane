@@ -1,7 +1,7 @@
 # Team review before implementation
 
 Status: **awaiting team decision**. The existing frontend remains a demonstration
-with sample data. Issues #4–#25 describe future work; none is completed by the
+with sample data. Issues #4–#25 and #30–#32 describe future work; none is completed by the
 preparation and naming cleanup.
 
 ## Review order
@@ -9,9 +9,9 @@ preparation and naming cleanup.
 1. Read [PRODUCT.md](../PRODUCT.md) and [GLOSSARY.md](../GLOSSARY.md).
 2. Review the versioned [specification](spec.md), tracked by
    [issue #3](https://github.com/Wcno/okane/issues/3).
-3. Check the [48 use cases](matrices.md), [contracts](contratos.md),
+3. Check the [58 use cases](matrices.md), [contracts](contratos.md),
    [ADRs](adr/) and [code-language policy](code-language.md).
-4. Review the [22 implementation tickets and their order](plan-de-trabajo.md).
+4. Review the [25 implementation tickets and their order](plan-de-trabajo.md).
    Each ticket has acceptance criteria and native GitHub blocking relationships.
 5. Decide whether to approve the plan, revise it, or postpone implementation.
    Record the decision and owners in issue #3 before starting a feature branch.
@@ -19,6 +19,16 @@ preparation and naming cleanup.
 ## Decisions to resolve
 
 - Confirm the scope and December 2026 delivery date, then assign ticket owners.
+- Review the incorporated feedback: reservations remain committed until manual
+  confirmation/cancellation, including overdue amounts; one filtered Movements
+  view includes all six record types; preferences affect presentation only.
+- Review the projection scenarios for savings, an investment account or the full
+  portfolio, with hypothetical returns and no changes to actual financial records.
+- Review proposed ADR 0005 and the public API scope: personal tokens, read access
+  and creation on existing Accounts, retry idempotency, OpenAPI and a Google Apps
+  Script example. OAuth and automatic synchronization are outside this delivery.
+- Confirm the expanded scope of 76 stories, 58 cases and 25 tickets. A feature
+  depending on Dividends cannot be delivered with all six types if #22 is cut.
 - Approve the proposed ADR 0004: opening balances are shown separately from
   savings and monthly Investment Return. Also review decimal precision,
   recurrence retries and monthly Budget initialization.

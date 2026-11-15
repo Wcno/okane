@@ -2,7 +2,8 @@
 
 ## Current scope
 
-Preparation and clarification only. Keep implementation issues #4–#25 open
+Preparation and clarification only. Keep all implementation issues in
+`docs/plan-de-trabajo.md` open
 and pending team review. The team must decide whether to start the plan before
 any assistant implements them. The current user authorized integrating the
 preparation PRs into main and deleting their completed branches after verifying

@@ -1,22 +1,24 @@
 # Contratos verificables de Okane
 
 Estas precisiones completan la [spec #3](https://github.com/Wcno/okane/issues/3)
-y sus tickets. Mantienen los 48 casos de uso de [matrices.md](matrices.md).
+y sus tickets. Precisan los 58 casos de uso de [matrices.md](matrices.md).
 Los términos se definen en [GLOSSARY.md](../GLOSSARY.md); la explicación de
 los Saldos iniciales y el Rendimiento mensual está en el
 [ADR 0004](adr/0004-separar-saldos-iniciales-y-rendimiento-mensual.md).
 
 ## Identidad y aislamiento
 
-- `webapp` obtiene el Usuario de su sesión, elimina cualquier identidad de
-  servicio enviada por el navegador y construye una nueva petición interna.
+- `webapp` obtiene el Usuario de su sesión o del token personal validado en
+  `/api/v1`, elimina cualquier identidad de servicio enviada por el cliente y
+  construye una nueva petición interna.
   `api-service` verifica la autenticidad de `webapp` mediante una credencial
   interna o firma; recibir un identificador de Usuario no basta.
 - Cada lectura, escritura y referencia a otra entidad se limita al Usuario:
   Cuenta, Categoría, Presupuesto, Pago recurrente, Transferencia y Transacción
   de inversión. Usar el identificador de una entidad ajena devuelve `404` y
   no modifica nada. El mismo criterio rige para filtros y agregados.
-- Las peticiones financieras sin sesión devuelven `401`; una petición que
+- Las rutas financieras de sesión sin sesión devuelven `401`; `/api/v1` exige
+  su token aunque exista una cookie. Una petición de sesión que
   cambia datos con CSRF inválido se rechaza en `webapp`. Los errores de
   validación devuelven `400` con campos y mensajes que la interfaz pueda usar.
 - Las rutas públicas de autenticación y el estado mínimo `/api/health` son
@@ -64,34 +66,56 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Archivar retira una Cuenta de los selectores para operaciones nuevas;
   conserva su Saldo, sus Posiciones y su contribución a los totales históricos
   y actuales. Archivar no crea una salida de dinero ni reduce el Patrimonio.
-- Una Cuenta o Categoría con Pagos recurrentes vigentes requiere moverlos o
-  eliminarlos antes de archivarla. Una Cuenta de inversión no admite Ingresos,
-  Gastos ni Pagos recurrentes.
+- Una Cuenta o Categoría con reglas vigentes requiere moverlas o eliminarlas
+  antes de archivarla; también exige confirmar o cancelar sus reservas pendientes.
+  Las ocurrencias históricas impiden el borrado físico de sus referencias.
+  Una Cuenta de inversión no admite Ingresos, Gastos ni Pagos recurrentes.
 - El Estado de cuenta empieza por el Saldo inicial con su fecha. Cada línea
   tiene un orden estable, importe con signo y Saldo resultante; su última
   línea coincide con el Saldo consultado por la API de Cuentas.
 
 ## Pagos recurrentes
 
-- La regla conserva su fecha de inicio. Su primer vencimiento es el primero
-  igual o posterior a esa fecha; un día inexistente se ajusta al último día
-  del mes. Editar la regla se aplica a los vencimientos aún no generados.
-- El procesamiento crea como máximo una ocurrencia por regla y mes, incluso
-  con peticiones concurrentes o reintentos. La ocurrencia y su Gasto se guardan
-  en una transacción. El registro de ocurrencia se conserva aunque se elimine
-  el Gasto: volver a procesar no vuelve a cobrarlo en el registro.
-- Antes de devolver Saldos, Restante, Disponible o Patrimonio se procesan los
-  vencimientos hasta hoy. Recuperarse tras días sin abrir la aplicación genera
-  las ocurrencias debidas desde el inicio de la regla, sin duplicados.
-- El despliegue proporciona un comando de procesamiento reutilizable desde
-  un programador de tareas; una consulta financiera también pone el estado
-  al día. No se necesita un quinto contenedor para cumplir el curso.
-- Comprometido suma los vencimientos futuros del mes, ya descontados los
-  generados. Disponible cuenta solo los vinculados a Cuentas de gastos;
-  Restante incluye los de la Categoría aunque salgan de una Cuenta de ahorro.
-  Los pagos de ahorro se muestran aparte: no reservan dinero de gastos.
-- Un Gasto generado conserva la fecha del vencimiento. Editarlo o borrarlo
-  afecta las cifras como cualquier Gasto y conserva la marca de generación.
+- La regla guarda fecha de inicio, monto, Cuenta, Categoría y día mensual.
+  El primer vencimiento es el primero igual o posterior al inicio; un día
+  inexistente se ajusta al último del mes. No se rellenan meses previos al inicio.
+- Antes de responder cifras financieras se materializan las ocurrencias desde
+  el inicio hasta el fin del mes actual, incluyendo meses sin uso. Una restricción
+  única por regla y mes evita duplicados concurrentes. Se puede reutilizar este
+  proceso desde un comando programado, sin agregar contenedores.
+- Cada ocurrencia conserva una copia de monto, Cuenta, Categoría, vencimiento y
+  fecha de entrada en la reserva. Entra al comienzo de su mes o al inicio de la
+  regla si es posterior. Crear o vencer una reserva no crea Gastos ni cambia Saldo.
+- Estados: `pending`, `confirmed`, `cancelled`. Solo se puede resolver una
+  pendiente. Confirmar revisa monto positivo, Cuenta propia de gastos/ahorro y
+  fecha real (hoy o pasada, nunca anterior a su entrada en la reserva ni al inicio
+  de la Cuenta). Usa la Categoría conservada, crea un Gasto y libera la reserva
+  en una transacción. La fecha propuesta es hoy, no el vencimiento.
+- Cancelar libera sin Gasto, con fecha efectiva de hoy. Confirmaciones repetidas
+  con idénticos datos devuelven el resultado original; datos distintos, confirmar
+  una cancelada o cancelar una confirmada devuelven `409`. Cancelar de nuevo es
+  idempotente. Concurrencia entre confirmar y cancelar solo permite un resultado.
+- Las pendientes vencidas continúan comprometidas en meses siguientes. Cada
+  mes suma las nuevas reservas y el arrastre; no vuelve a contar una ocurrencia
+  dentro del mismo corte. Disponible resta solo las de Cuentas de gastos;
+  Restante resta las de la Categoría, incluidas las de ahorro, y muestra el arrastre.
+- Para el mes actual el corte es hoy; para meses pasados, el último día del mes.
+  Se suma una reserva si entró a más tardar al corte, vence a más tardar al cierre de
+  ese mes y su resolución efectiva aún no ocurrió al corte. Se guardan tanto la
+  fecha efectiva como la fecha de registro de la resolución. Consultar el pasado
+  no utiliza la versión actual de una regla ni crea nuevas reglas históricas.
+- El Gasto confirmado afecta el mes de su fecha real. Pagar en diciembre una
+  reserva de noviembre conserva la reserva en el corte de noviembre y registra
+  el Gasto en diciembre. Una confirmación retroactiva recalcula desde su fecha
+  efectiva: es una corrección explícita del Usuario, nunca un cambio automático.
+- Editar una regla afecta solo ocurrencias no materializadas; eliminarla detiene
+  las futuras y conserva todas las existentes, incluidas las pendientes. Antes de
+  editar/eliminar se materializa el estado debido, sin omitir meses sin uso.
+- Editar o borrar el Gasto confirmado aplica las reglas de Gastos sin reabrir la
+  reserva ni borrar su resolución original. La interfaz advierte este efecto y
+  conserva el vínculo de auditoría incluso tras el borrado del Gasto.
+- Saldo o Disponible negativos se informan, sin bloquear un Gasto válido. No
+  existe una opción de Configuración para activar cobros automáticos o bloqueos.
 
 ## Presupuestos y Proyección
 
@@ -107,13 +131,89 @@ los Saldos iniciales y el Rendimiento mensual está en el
   consultas simultáneas no duplican filas; archivar Categorías las excluye.
 - La Proyección usa una tasa anual nominal: tasa mensual = anual / 12.
   El aporte hipotético se incorpora al final de cada mes, después del interés.
-  Los meses son enteros positivos y el aporte es no negativo. Se redondea solo
-  el resultado final; se devuelve la convención junto con el resultado.
-- Un mes histórico descuenta solo Gastos y vencimientos de ese período; no usa
-  Pagos recurrentes actuales para rehacer automáticamente el pasado.
+  Los meses son enteros positivos y el aporte es no negativo. Se redondean solo
+  las salidas; se devuelve la convención junto con el resultado.
+- Un mes histórico descuenta los Gastos de ese mes y las reservas pendientes
+  al corte, incluido su arrastre, según las fechas de resolución conservadas.
+- La Proyección admite Cuenta de ahorro, Cuenta de inversión o portafolio.
+  Capital inicial editable no negativo, aporte no negativo, plazo entero positivo,
+  de uno a tres escenarios. Una valoración inicial negativa se muestra y exige
+  introducir un capital hipotético válido; un precio desconocido no vale cero.
+  Predeterminados: capital de la selección, aporte cero, doce meses, tasa cero.
+  Ahorro admite tasa no negativa; inversión admite tasa nominal anual mayor que
+  −1200% (factor mensual positivo), incluyendo pérdidas. La interfaz expresa
+  la tasa en porcentaje y la API como razón decimal (12% = `"0.12"`).
+- Cada mes aplica `capital * (1 + annual_rate / 12) + monthly_contribution`.
+  Capital aportado = capital inicial + aportes; resultado = capital final menos
+  capital aportado. Se conserva precisión interna y se redondean solo salidas,
+  incluida cada fila mensual sin realimentar el redondeo al siguiente cálculo.
+  Las simulaciones no modifican Cuentas, tasas guardadas ni registros reales.
 - El importe diario del Disponible divide entre los días desde hoy hasta el
   último del mes, incluido hoy. El último día divide entre uno; un Disponible
   negativo permanece negativo y nunca causa una división entre cero.
+
+## Vista de Movimientos y preferencias
+
+- `GET /api/movements` agrega `income`, `expense`, `transfer`, `buy`,
+  `sell`, `dividend` sin fusionar sus modelos. Cada elemento tiene identidad
+  compuesta por tipo e ID, fecha, monto, Cuentas y detalle específico.
+- Filtra por tipo, Cuenta y rango de fechas inclusivo. Una Transferencia coincide
+  por cualquiera de sus Cuentas y aparece una vez aun cuando ambas coincidan.
+  Orden: fecha descendente y desempate estable por tipo e ID; la paginación
+  mantiene ese orden. Filtros con referencias ajenas devuelven `404`.
+- Las rutas de consulta previas son alias filtrados de `/movements`; sus
+  endpoints y formularios especializados siguen disponibles para el curso.
+- `/settings` guarda preferencias por Usuario: filtros predeterminados,
+  agrupación `date` o `type` y secciones visibles del Panel. Inicialmente
+  todos los tipos, mes actual, orden descendente y todas las secciones disponibles.
+  El mes actual es relativo, no una fecha congelada al guardar. Los filtros
+  explícitos de una URL prevalecen; volver a la vista sin parámetros usa preferencias.
+- Ocultar una sección nunca modifica cálculos ni permisos; las advertencias al
+  registrar un Gasto siguen visibles. Las preferencias se validan, se conservan
+  entre sesiones y se borran al eliminar al Usuario.
+
+## API pública autenticada (contrato propuesto)
+
+- Única entrada externa: `webapp`, bajo `/api/v1`, con
+  `Authorization: Bearer <token>`. Rechaza token ausente, inválido o revocado
+  con `401` y permiso insuficiente con `403`; una cookie no sustituye al token.
+  La identidad del cuerpo o cabeceras del cliente nunca elige al Usuario interno.
+- En `/settings/integrations`, mediante sesión y CSRF, se crean, listan y revocan
+  tokens. Se eligen `finance:read` y/o `movements:create` explícitamente.
+  El secreto aleatorio se muestra solo al crearlo, se almacena únicamente su hash
+  en `webapp-db` y nunca se escribe en logs ni URLs. La lista muestra nombre,
+  prefijo identificador, permisos, creación y revocación, nunca el secreto.
+- Revocar corta las peticiones posteriores; cerrar sesión no revoca tokens.
+  Cambiar/restablecer contraseña revoca todos los tokens. Eliminar al Usuario
+  bloquea tokens junto con las sesiones antes del borrado financiero.
+- Lecturas con `finance:read`: `GET /api/v1/accounts` (incluye Saldos),
+  `GET /api/v1/budgets` (incluye gastado, Comprometido y Restante),
+  `GET /api/v1/movements`. Se aplican aislamiento, filtros y paginación.
+  IDs de Categorías y Activos se obtienen desde la aplicación en esta versión.
+- Escritura con `movements:create`: `POST /api/v1/movements` con unión tipada
+  por `type`. Campos comunes: `type`, `date`, `description` opcional;
+  Ingreso: `account_id, amount`; Gasto añade `category_id`;
+  Transferencia: `source_account_id, destination_account_id, amount`;
+  compra/venta: `account_id, asset_id, units, unit_price` y `commission` opcional;
+  Dividendo: `account_id, asset_id, amount`. Decimales como cadenas.
+- Las escrituras invocan las mismas reglas financieras de la aplicación: fechas,
+  Cuentas propias existentes, Cuenta de inversión cerrada, validación de unidades
+  y atomicidad. No crean Cuentas ni Activos. Registrar un Gasto por API no confirma
+  una reserva; esa relación se resuelve explícitamente desde la aplicación.
+- `Idempotency-Key` es obligatorio. La clave se delimita por Usuario y operación,
+  compartida entre sus tokens. Se guarda huella canónica del contenido y resultado
+  en `api-db`, atómicamente con el registro financiero. Reintentos idénticos,
+  incluso concurrentes o tras una respuesta perdida, devuelven el original;
+  otro contenido con esa clave devuelve `409`. Se conserva durante la vida del
+  Usuario, incluso si luego se elimina el registro. Los permisos se verifican
+  antes de devolver un resultado guardado. Errores de validación no consumen clave.
+- Primera creación: `201`; repetición exitosa: `200`; campo inválido o clave
+  ausente: `400`; referencia ajena: `404`. El cuerpo identifica tipo e ID del
+  registro. El contrato OpenAPI que entregue el ticket documentará los seis
+  esquemas, filtros, paginación, permisos y respuestas con ejemplos verificables.
+- El ejemplo de Google Apps Script usa un token guardado en propiedades del
+  script y conserva la misma clave para reintentar una operación. No se entrega
+  OAuth, sincronización automática, edición/borrado externo ni gestión de reglas.
 
 ## Activos, Posiciones y precios
 
@@ -168,7 +268,8 @@ los Saldos iniciales y el Rendimiento mensual está en el
   para permitir el reintento. Un resultado incierto se reconcilia antes de
   declarar éxito; una sesión anterior no puede crear datos después del borrado.
 - Solo al completar el borrado se elimina el Usuario, se invalidan sus sesiones
-  y se libera su correo. Cada nuevo módulo incorpora sus datos a este contrato.
+  y sus tokens, se borran preferencias e idempotencia, y se libera su correo.
+  Cada nuevo módulo incorpora sus datos a este contrato.
 
 ## Ejemplos para las pruebas HTTP
 
@@ -179,7 +280,12 @@ los Saldos iniciales y el Rendimiento mensual está en el
 | Se incorpora otra Cuenta con Saldo inicial de $500 al escenario anterior | Cierre $1,570; incorporación $500; Ahorro neto $70; Rendimiento $0 |
 | Se archiva una Cuenta con $500 | El Patrimonio permanece igual y la Cuenta deja de ofrecerse para nuevos registros |
 | Disponible: Cuenta de gastos $900, tarjeta −$150 y pagos futuros de gastos $200 | Disponible $550; un pago futuro de ahorro de $50 no lo reduce |
-| Dos procesamientos de la misma regla mensual, incluso después de borrar su Gasto | Una ocurrencia; no se genera un segundo Gasto |
+| Materializar o vencer dos veces la misma regla | Una reserva pendiente, ningún Gasto ni cambio de Saldo |
+| Saldo $1,000, reserva $100; confirmar por $120 dos veces | Un Gasto; Saldo $880, Comprometido $0, Disponible $880 (antes $900) |
+| Presupuesto $300, reserva de noviembre $100 pendiente en diciembre; regla detenida y sin otras reservas; cancelar en diciembre | Noviembre conserva Restante $200; diciembre libera $100 sin Gasto |
+| La reserva anterior se paga en diciembre por $120, con Presupuesto $300 | Noviembre conserva Restante $200; diciembre tiene Gasto $120 y Restante $180, sin doble descuento |
+| Proyección $1,000, un mes, aporte $100, tasa anual −12% | Capital final $1,090; aportado $1,100; resultado −$10 |
+| Reintentar una creación de API con igual clave y contenido | Un registro; otro contenido con la misma clave devuelve `409` |
 | Se inicializa un mes, se borran sus Presupuestos y se consulta de nuevo | El mes permanece vacío |
 | Compra de 2 unidades a $100, venta de 1 a $150 y compra de 1 a $200, sin comisiones | 2 unidades; costo total $300; promedio $150 |
 | Proyección de $1,000 al 12% nominal anual, un mes y aporte final de $100 | Saldo proyectado $1,110; interés $10; sin modificar la Cuenta |

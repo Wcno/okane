@@ -36,6 +36,10 @@ _Avoid_: Ingreso inicial, ganancia inicial, ajuste de saldo
 Todo lo que cambia un Saldo sin ser una operación sobre un Activo: un Ingreso, un Gasto o una Transferencia.
 _Avoid_: Transacción, operación, registro
 
+**Vista de Movimientos**:
+La consulta conjunta de Ingresos, Gastos, Transferencias y Transacciones de inversión, distinguibles por tipo, Cuenta y fecha. Una Transferencia aparece una sola vez, con sus dos Cuentas.
+_Avoid_: Pestaña por tipo, libro único
+
 **Ingreso**:
 Dinero que entra a una Cuenta desde fuera del sistema, como un salario o el interés que paga un banco. No lleva Categoría ni cuenta contra un Presupuesto.
 _Avoid_: Depósito, abono, entrada
@@ -53,7 +57,7 @@ La lista cronológica de todo lo que cambió el Saldo de una Cuenta.
 _Avoid_: Historial, extracto, listado de movimientos
 
 **Proyección**:
-Un cálculo hipotético de cuánto tendrá una Cuenta de ahorro al cabo de un plazo, a partir de su Saldo, su tasa de interés anual y un aporte mensual opcional. Nunca crea Movimientos ni cambia el Saldo.
+Un cálculo hipotético para una Cuenta de ahorro, una Cuenta de inversión o el portafolio completo, a partir de capital, aporte mensual, plazo y tasa anual supuesta. Permite comparar escenarios sin cambiar los registros reales.
 _Avoid_: Simulación, pronóstico, estimado
 
 ### Presupuesto
@@ -67,12 +71,16 @@ El límite de gasto de una sola Categoría en un mes concreto. El total presupue
 _Avoid_: Plan mensual, presupuesto total, límite
 
 **Pago recurrente**:
-Una regla mensual (monto, Categoría, Cuenta y día del mes) que da origen a un Gasto por sí sola cuando llega su fecha. El Gasto resultante es un Gasto cualquiera y puede corregirse.
+Una regla mensual de monto, Categoría, Cuenta y día que reserva dinero para cada vencimiento. Solo la confirmación del Usuario convierte una de sus ocurrencias en un Gasto.
 _Avoid_: Suscripción, pago automático, débito
 
+**Ocurrencia de pago**:
+Un vencimiento concreto de un Pago recurrente, pendiente, confirmado o cancelado. Mientras esté pendiente mantiene su reserva aunque haya vencido; confirmarlo registra el pago real y cancelarlo libera la reserva.
+_Avoid_: Gasto automático, cobro automático
+
 **Comprometido**:
-La suma de los Pagos recurrentes del mes que aún no han vencido.
-_Avoid_: Reservado, pendiente
+La suma de las reservas pendientes con vencimiento hasta el cierre del mes consultado, incluidas las vencidas de meses anteriores. Se libera al confirmar o cancelar cada Ocurrencia de pago.
+_Avoid_: Gasto realizado, saldo descontado
 
 **Restante**:
 Lo que queda por gastar en una Categoría en el mes: su Presupuesto menos lo gastado y menos lo Comprometido en esa Categoría. Si es negativo, la Categoría está excedida.
@@ -119,7 +127,7 @@ Todo lo que el Usuario tiene: la suma de los Saldos de todas sus Cuentas más el
 _Avoid_: Riqueza, capital, valor neto
 
 **Panel**:
-La pantalla a la que llega el Usuario al iniciar sesión, que reúne el Disponible, el Restante por Categoría, los Saldos, los próximos Pagos recurrentes y la evolución del Patrimonio. Es distinta del panel de inversiones.
+La pantalla a la que llega el Usuario al iniciar sesión, que reúne el Disponible, el Restante por Categoría, los Saldos, las reservas pendientes y vencidas y la evolución del Patrimonio. Es distinta del panel de inversiones.
 _Avoid_: Dashboard, inicio, resumen
 
 **Ahorro neto**:

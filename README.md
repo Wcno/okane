@@ -13,20 +13,28 @@ Tecnológica de Panamá, group 1M321.
 
 ## Current status
 
-**Prepared for team review. Implementation of issues #4–#25 has not started.**
+**Prepared for team review. Implementation of issues #4–#25 and #30–#32 has not started.**
 The existing `/dashboard`, navigation and quick expense entry are a frontend
 demonstration with in-memory sample data. Refreshing resets that data.
 
 | Area | Status |
 |---|---|
 | Product, domain glossary, use-case matrices and design system | Documented |
-| Versioned specification and 22 implementation tickets | Awaiting team review |
+| Versioned specification and 25 implementation tickets | Awaiting team review |
 | Existing frontend demonstration | Available with sample data |
 | Backend services, authentication and databases | Planned; not implemented |
 | Docker Compose and full-system tests | Planned in the implementation tickets |
 
 The team will review the specification, dependencies and proposed decisions
 before authorizing implementation. See the [team review guide](docs/team-review.md).
+
+The latest specification includes recurring-payment reservations with manual
+confirmation, one Movements view with filters, savings and investment projection
+scenarios, visual preferences and an authenticated public API for personal scripts.
+These are planned capabilities; the current demo remains unchanged.
+The [implementation order](docs/plan-de-trabajo.md) covers 76 user stories,
+58 use cases (including the 28 original course cases) and 46 dependencies.
+The API ticket includes OpenAPI and a Google Apps Script example for its delivery.
 
 ## Language
 
@@ -78,17 +86,17 @@ keep text files consistent across Windows, macOS and Linux.
 |---|---|
 | [PRODUCT.md](PRODUCT.md) | Audience, product goals and constraints |
 | [GLOSSARY.md](GLOSSARY.md) | Canonical Spanish domain vocabulary |
-| [docs/spec.md](docs/spec.md) | Versioned specification with 64 user stories |
-| [docs/matrices.md](docs/matrices.md) | 48 use cases, routes, endpoints and containers |
+| [docs/spec.md](docs/spec.md) | Versioned specification with 76 user stories |
+| [docs/matrices.md](docs/matrices.md) | 58 use cases, routes, endpoints and containers |
 | [docs/contratos.md](docs/contratos.md) | Testable contracts and numerical examples |
-| [docs/adr/](docs/adr/) | Architecture decisions; ADR 0004 is proposed for review |
-| [docs/plan-de-trabajo.md](docs/plan-de-trabajo.md) | 22 tickets in a valid dependency order |
+| [docs/adr/](docs/adr/) | Architecture decisions; ADRs 0004 and 0005 are proposed for review |
+| [docs/plan-de-trabajo.md](docs/plan-de-trabajo.md) | 25 tickets in a valid dependency order |
 | [docs/team-review.md](docs/team-review.md) | Review agenda and implementation gate |
 | [docs/code-language.md](docs/code-language.md) | English code names and Spanish presentation policy |
 | [DESIGN.md](DESIGN.md) | Visual system for the public interface |
 
 [Issue #3](https://github.com/Wcno/okane/issues/3) is the review index.
-Issues #4–#25 contain acceptance criteria and native GitHub dependencies.
+Issues #4–#25 and #30–#32 contain acceptance criteria and native GitHub dependencies.
 Requirements are clarified in the spec first, then reflected in tickets.
 Implementation starts only after the team records its decision.
 

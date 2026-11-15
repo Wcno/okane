@@ -25,7 +25,9 @@ labels for the public interface.
 | Gasto | Expense |
 | Transferencia | Transfer |
 | Estado de cuenta | AccountStatement |
-| Proyección | SavingsProjection |
+| Proyección | Projection |
+| Vista de Movimientos | MovementFeed |
+| Ocurrencia de pago | RecurringPaymentOccurrence |
 | Categoría | Category |
 | Presupuesto | Budget |
 | Pago recurrente | RecurringPayment |

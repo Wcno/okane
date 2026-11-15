@@ -1,6 +1,6 @@
 # Matrices de casos de uso, navegación y trazabilidad
 
-Este documento extiende las matrices de la Asignación 5 (Generalidades del Proyecto Final). Los 28 casos de uso entregados se conservan sin cambios de nombre, ruta ni endpoint, y se agregan 20 casos nuevos, para un total de 48.
+Este documento extiende las matrices de la Asignación 5 (Generalidades del Proyecto Final). Los 28 casos de uso entregados se conservan sin cambios de nombre, ruta ni endpoint, y se agregan 30 casos nuevos, para un total de 58. Esta revisión añade diez casos a los 48 anteriores.
 
 Los términos en mayúscula inicial (Cuenta, Gasto, Presupuesto, Aporte) están definidos en [GLOSSARY.md](../GLOSSARY.md). Las decisiones de arquitectura están en [docs/adr/](adr/).
 
@@ -27,13 +27,16 @@ de producto: una dependencia imprescindible puede adelantarse de nivel.
 | Gestión de gastos | 4 | | | 4 |
 | Gestión de ingresos | | 4 | | 4 |
 | Gestión de transferencias | | 4 | | 4 |
-| Pagos recurrentes | | 4 | | 4 |
+| Pagos recurrentes | | 6 | | 6 |
 | Panel | | 1 | | 1 |
-| Proyección | 1 | | | 1 |
+| Proyección | 1 | 1 | | 2 |
 | Portafolio de inversión | 8 | 1 | 1 | 10 |
-| **Total** | **28** | **14** | **6** | **48** |
+| Vista de Movimientos | | 1 | | 1 |
+| Configuración | | 1 | | 1 |
+| API pública y tokens | | 5 | | 5 |
+| **Total** | **28** | **24** | **6** | **58** |
 
-El único actor de todos los casos es el Usuario.
+El único actor de todos los casos es el Usuario; sus scripts actúan con su token y sus permisos. Los diez casos nuevos se cuentan una sola vez aunque un caso exponga varios endpoints.
 
 ## Matriz de interfaces y navegación
 
@@ -112,6 +115,8 @@ El único actor de todos los casos es el Usuario.
 | Crear pago recurrente | `/recurring-payments/create` | N2 |
 | Editar pago recurrente | `/recurring-payments/:id/edit` | N2 |
 | Eliminar pago recurrente | `/recurring-payments/:id/delete` | N2 |
+| Confirmar ocurrencia de pago | `/recurring-payments/occurrences/:id/confirm` | N2 |
+| Cancelar ocurrencia de pago | `/recurring-payments/occurrences/:id/cancel` | N2 |
 
 ### Panel
 
@@ -126,6 +131,7 @@ El Panel es la pantalla a la que llega el Usuario al iniciar sesión.
 | Caso de uso | Pantalla / Ruta | Origen |
 |---|---|---|
 | Proyectar saldo de ahorro | `/savings/projection` | A5 |
+| Proyectar inversión y comparar escenarios | `/investments/projection` | N2 |
 
 ### Portafolio de inversión
 
@@ -142,6 +148,24 @@ El Panel es la pantalla a la que llega el Usuario al iniciar sesión.
 | Consultar rendimiento del portafolio | `/investments/performance` | A5 |
 | Corregir precio de referencia | `/investments/assets/:id/price` | N2 |
 
+### Movimientos, Configuración e integraciones
+
+| Caso de uso | Pantalla / Ruta | Origen |
+|---|---|---|
+| Consultar vista de Movimientos | `/movements` | N2 |
+| Configurar preferencias visuales | `/settings` | N2 |
+| Consultar tokens personales | `/settings/integrations` | N2 |
+| Crear token personal | `/settings/integrations` | N2 |
+| Revocar token personal | `/settings/integrations` | N2 |
+| Consultar datos mediante API pública | Cliente externo del Usuario | N2 |
+| Crear registro mediante API pública | Cliente externo del Usuario | N2 |
+
+La navegación principal ofrece Movimientos, no una pestaña por cada tipo.
+Las rutas `/expenses`, `/incomes`, `/transfers` e
+`/investments/transactions` se conservan como alias con filtros de esa vista.
+Los formularios especializados conservan sus rutas. Ambas entradas de Proyección
+usan el mismo comparador con la selección correspondiente.
+
 ## Matriz de trazabilidad
 
 ### Contenedores
@@ -149,11 +173,11 @@ El Panel es la pantalla a la que llega el Usuario al iniciar sesión.
 | Contenedor | Nombre Docker | Tecnología | Responsabilidad |
 |---|---|---|---|
 | WebApp | `webapp` | React + Django | Interfaz web, autenticación, gestión de usuarios y reenvío de las llamadas `/api/*` |
-| BD WebApp | `webapp-db` | PostgreSQL | Almacenamiento de usuarios, credenciales y sesiones |
+| BD WebApp | `webapp-db` | PostgreSQL | Almacenamiento de usuarios, credenciales, sesiones, tokens y preferencias visuales |
 | API Service | `api-service` | Django REST | Procesamiento de cuentas, categorías, presupuestos, movimientos, pagos recurrentes, proyecciones e inversiones |
 | BD API | `api-db` | PostgreSQL | Almacenamiento de información financiera y transacciones |
 
-El navegador solo se comunica con `webapp`, que reenvía cada llamada `/api/*` a `api-service` por la red interna ([ADR 0001](adr/0001-webapp-como-unico-punto-de-entrada.md)). La columna "Docker" indica, igual que en la Asignación 5, qué contenedores procesan y almacenan el caso de uso.
+El navegador y los clientes externos solo se comunican con `webapp`, que autentica la sesión o el token de `/api/v1` y reenvía las llamadas financieras a `api-service` por la red interna ([ADR 0001](adr/0001-webapp-como-unico-punto-de-entrada.md)). La columna "Docker" indica, igual que en la Asignación 5, qué contenedores procesan y almacenan el caso de uso.
 
 ### Autenticación y usuarios
 
@@ -230,6 +254,8 @@ El navegador solo se comunica con `webapp`, que reenvía cada llamada `/api/*` a
 | Crear pago recurrente | Sí | `POST /api/recurring-payments` | `recurring_payments` | api-service, api-db | N2 |
 | Editar pago recurrente | Sí | `PUT /api/recurring-payments/{id}` | `recurring_payments` | api-service, api-db | N2 |
 | Eliminar pago recurrente | Sí | `DELETE /api/recurring-payments/{id}` | `recurring_payments` | api-service, api-db | N2 |
+| Confirmar ocurrencia de pago | Sí | `POST /api/recurring-payments/occurrences/{id}/confirm` | `recurring_payment_occurrences`, `expenses` | api-service, api-db | N2 |
+| Cancelar ocurrencia de pago | Sí | `POST /api/recurring-payments/occurrences/{id}/cancel` | `recurring_payment_occurrences` | api-service, api-db | N2 |
 
 ### Panel
 
@@ -242,6 +268,7 @@ El navegador solo se comunica con `webapp`, que reenvía cada llamada `/api/*` a
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
 | Proyectar saldo de ahorro | Sí | `GET /api/savings/projection` | `accounts` | api-service, api-db | A5 |
+| Proyectar inversión y comparar escenarios | Sí | `POST /api/investments/projection` (cálculo sin persistir) | `accounts`, `investment_transactions`, `asset_prices` | api-service, api-db | N2 |
 
 ### Portafolio de inversión
 
@@ -258,12 +285,31 @@ El navegador solo se comunica con `webapp`, que reenvía cada llamada `/api/*` a
 | Consultar rendimiento del portafolio | Sí | `GET /api/investments/performance` | `investment_transactions` | api-service, api-db | A5 |
 | Corregir precio de referencia | Sí | `PUT /api/investments/assets/{id}/price` | `asset_prices` | api-service, api-db | N2 |
 
+### Movimientos, Configuración e integraciones
+
+| Caso de uso | WebApp | API | BD | Docker | Origen |
+|---|---|---|---|---|---|
+| Consultar vista de Movimientos | Sí | `GET /api/movements` | `incomes`, `expenses`, `transfers`, `investment_transactions` | api-service, api-db | N2 |
+| Configurar preferencias visuales | Sí | `GET, PUT /api/settings/preferences` | `user_preferences` | webapp, webapp-db | N2 |
+| Consultar tokens personales | Sí | `GET /api/settings/tokens` | `personal_access_tokens` | webapp, webapp-db | N2 |
+| Crear token personal | Sí | `POST /api/settings/tokens` | `personal_access_tokens` | webapp, webapp-db | N2 |
+| Revocar token personal | Sí | `DELETE /api/settings/tokens/{id}` | `personal_access_tokens` | webapp, webapp-db | N2 |
+| Consultar datos mediante API pública | Entrada autenticada | `GET /api/v1/accounts`, `GET /api/v1/budgets`, `GET /api/v1/movements` | Tablas financieras anteriores | webapp, api-service, ambas BD | N2 |
+| Crear registro mediante API pública | Entrada autenticada | `POST /api/v1/movements` | Tablas financieras, `idempotency_records` | webapp, api-service, ambas BD | N2 |
+
+Las rutas de Configuración se resuelven en `webapp` con sesión y CSRF.
+La API pública exige token personal; no es acceso anónimo. Los contratos
+tipados, permisos y respuestas se detallan en [contratos.md](contratos.md).
+
 ## Tablas
 
 | Tabla | Base de datos | Qué guarda | Origen |
 |---|---|---|---|
 | `users` | webapp-db | Usuarios y credenciales | A5 |
 | `sessions` | webapp-db | Sesiones activas | A5 |
+| `user_preferences` | webapp-db | Presentación y filtros por Usuario | Apoyo N2 |
+| `personal_access_tokens` | webapp-db | Hash, permisos y ciclo de vida de tokens | Apoyo N2 |
+| `idempotency_records` | api-db | Clave por Usuario/operación, huella y resultado original | Apoyo N2 |
 | `accounts` | api-db | Cuentas, con su tipo, saldo inicial y, en las de ahorro, la tasa de interés anual | A5 |
 | `budgets` | api-db | Presupuestos: una Categoría, un mes y un límite | A5 |
 | `expenses` | api-db | Gastos | A5 |
@@ -274,7 +320,7 @@ El navegador solo se comunica con `webapp`, que reenvía cada llamada `/api/*` a
 | `assets` | api-db | Activos registrados, con su símbolo y tipo | N2 |
 | `asset_prices` | api-db | Precios de referencia por Activo y fecha | N2 |
 | `categories` | api-db | Categorías de cada Usuario | N3 |
-| `recurring_payment_occurrences` | api-db | Marca única por regla y mes, conservada aunque se elimine el Gasto generado | Apoyo N2 |
+| `recurring_payment_occurrences` | api-db | Reserva única por regla y mes, datos originales, estado, fechas de resolución y vínculo al Gasto confirmado | Apoyo N2 |
 | `budget_months` | api-db | Inicialización mensual por Usuario, incluso cuando el mes termina sin Presupuestos | Apoyo N3 |
 
 No existen tablas de saldos ni de posiciones: ambos se calculan a partir de lo registrado ([ADR 0002](adr/0002-el-saldo-se-deriva-de-los-movimientos.md)). Por eso varios casos originales leen más tablas que la que lista su fila; la columna "BD" conserva la tabla principal, como en la Asignación 5.
@@ -291,7 +337,7 @@ que los reintentos no dupliquen Gastos ni repongan Presupuestos eliminados.
 | Función | Dónde aparece | API | Origen |
 |---|---|---|---|
 | Buscar un Activo en el servicio de cotizaciones | Registrar compra de activos | `GET /api/investments/assets/search` | N2 |
-| Generación del Gasto de un Pago recurrente al llegar su fecha | Automática | Sin endpoint | N2 |
+| Materialización de reservas de Pagos recurrentes, sin crear Gastos | Consultas financieras y comando programable | Sin endpoint público propio | N2 |
 | Actualización automática del Precio de referencia | Automática | Sin endpoint; `api-service` consulta el servicio externo | N3 |
 | Evolución mensual del Patrimonio | Consultar panel | `GET /api/net-worth/history` | N3 |
 | Registro rápido de un Gasto desde cualquier pantalla | Todas las pantallas | `POST /api/expenses` | N3 |
