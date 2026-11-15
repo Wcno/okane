@@ -2,65 +2,74 @@
 
 Updated: 2026-11-15, America/Panama. Assistant: Codex.
 
-## Current user instruction
+## Current scope
 
-Prepare and clarify the project for team review. Keep the public UI in Spanish
-and source code in English. Update main and README, finish and merge the
-preparation PRs, then delete branches whose work is preserved. Do not implement
-issues #4–#25. The team will decide whether to start that plan.
+**Preparation is complete. Implementation is awaiting the team's decision.**
+The user requested a Spanish public interface, English source code, an updated
+main branch and README, a spec-first ticket plan, closed preparation PRs and
+cleanup of completed branches. Do not start issues #4–#25 until the team has
+reviewed the plan and explicitly authorized implementation.
 
-## Verified work
+## Verified repository state
 
-- Working branch: `chore/prepare-team-review`, based on `docs/revision-specs`.
-  It includes the existing demo delivery configuration from `ci/despliegue-demo`.
-- Review commit `cad5e477ca333149267ebd22f44854490bd6faa1` is published in PR #27.
-  The specification and all 22 ticket bodies were updated; all 30 native
-  GitHub blocking relationships were created and verified.
-- Preserved 64 user stories, 48 use cases (28 A5, 14 N2, 6 N3), original routes
-  and endpoints. Added numerical contracts and proposed ADR 0004.
-- Current source cleanup uses English names, filenames, comments and test
-  descriptions. Spanish product copy and demo values are preserved.
-- Split context/helpers out of component modules and removed the four previous
-  lint warnings. This is preparation of the existing demo, not backend work.
-- Added a versioned `docs/spec.md`, code-language policy, team review agenda,
-  development checks, engine ranges, EditorConfig and a rewritten README.
-- Preparation source and documents are published at commit
-  `c350ac5fc11eac8cee4d2897ab4bc6e1a17cbea1` in PR #28.
-- Issue #3 is now the review index for the versioned specification. It and all
-  22 implementation tickets remain open with `needs-team-review`; the old
-  `ready-for-agent` label was removed. The 30 technical dependencies are intact.
-- PRs #1, #2, #26 and #27 have been merged into main with their original
-  commits preserved. PR #28 is retargeted to main. Its integration conflict
-  was reconciled locally with Git merge renormalization; the full checks passed.
-- Dependabot PR #29 proposed Node 26 type definitions for a Node 24 runtime.
-  It was closed without merging. Major type-definition updates are now gated
-  to keep the current development environment consistent.
+- Current branch: `main`, synchronized with `origin/main`.
+- Preparation merge: `c04aac908dd4cb07f26cdae22d19dd040f0b39ad` (PR #28).
+  Checkpoint-only commits may follow; use git status and log for the current tip.
+- PRs #1, #2, #26, #27 and #28 are merged and closed. Their original commits
+  are preserved in main. No pull requests remained open at final verification.
+- Completed preparation branches were removed locally and remotely after
+  verifying ancestry. Only main remains locally and on origin.
+- Dependabot PR #29, proposing Node 26 types for a Node 24 runtime, was closed
+  without merging. The bot branch is gone; the development configuration keeps
+  the type definitions on the supported Node major.
+- New local commits use the configured user identity. GitHub merge commits are
+  authored by the repository owner, Wifredo Cano / Wcno.
+
+## Specification and team review
+
+- `docs/spec.md` is the versioned specification: 64 user stories.
+- Issue #3 indexes that specification and its 22 implementation sub-issues,
+  #4–#25. All 23 issues remain open with `needs-team-review` and without
+  `ready-for-agent`; no implementation ticket was completed.
+- `docs/matrices.md` preserves all 48 cases: 28 original, 14 N2 and 6 N3.
+  Original routes and endpoints were preserved.
+- `docs/plan-de-trabajo.md` gives a valid implementation order. Its 30 native
+  GitHub blocking relationships were created, verified and retained.
+- `docs/contratos.md` records testable financial, identity, precision and retry
+  rules. ADR 0004 is proposed for team review, not an approved implementation.
+- `docs/team-review.md` is the review agenda. The workflow is spec -> tickets ->
+  team review -> explicit start decision -> implementation.
+
+## Current development setup
+
+- Existing frontend demonstration only: React, TypeScript, Tailwind and Vite.
+  It uses in-memory sample data; backend services and Docker Compose are still
+  planned rather than implemented.
+- Public copy and accessibility labels remain Spanish. Source names, source
+  filenames, comments and test descriptions are English. See `docs/code-language.md`.
+- Node 24 and npm 11. From `webapp/frontend`, run `npm ci`, then `npm run dev`.
+  `npm run check` runs types, lint, tests and the production build.
+- README, EditorConfig, LF attributes, PR template and development workflow are
+  updated. The pre-existing machine-specific `.codex/hooks.json` is preserved
+  locally and ignored. AGENTS.md and CLAUDE.md share continuity instructions.
 
 ## Validation
 
-- `npm run check --prefix webapp/frontend`: types, lint, all 19 tests and build
-  passed locally. Lint has no warnings.
-- AST audit: English identifiers, all 395 unique protected copy fragments still
-  present, 64 stories, acyclic dependency plan and 44 local links verified.
-- Both PR #27 and the initial PR #28 run passed CI. Verify the latest head and
-  checks before each merge, including this checkpoint-only update.
+- Local full checks passed after integration reconciliation: TypeScript, lint
+  without warnings, all 19 existing tests and the production build.
+- AST audit preserved all 395 unique protected presentation fragments and found
+  English source identifiers. The versioned spec retains 64 stories; the
+  dependency graph is acyclic and local document links were checked.
+- Main preparation CI succeeded:
+  https://github.com/Wcno/okane/actions/runs/43737106013
+  The frontend job passed; conventions is PR-only and demo deployment stayed
+  skipped. Check GitHub for the run on any later checkpoint-only commit.
+- The main tree matched the validated preparation branch before this final
+  checkpoint. No backend code, migrations or Docker implementation were added.
 
-## Work still in progress
+## Next step
 
-The preparation changes are committed and published. AGENTS.md, CLAUDE.md and
-HANDOFF.md are shared. The pre-existing local `.codex/hooks.json` is
-machine-specific, ignored and preserved unchanged. Integration and completed
-branch cleanup are still pending; keep every implementation issue open.
-
-## Next steps
-
-1. Publish the reconciled branch, final development configuration and this checkpoint.
-2. Verify the latest PR #28 checks and merge it into main.
-3. Verify main contains every branch tip before deleting completed local and
-   remote branches. Return the checkout to main and verify its CI.
-4. Replace this checkpoint with the completed preparation status and stop for
-   the team's decision. Do not start the implementation plan.
-
-A backup of original issues, rendered issue drafts and validation reports is in
-this computer's temporary `okane-spec-review-20261115` directory. Quota is not
-reliably exposed here, so checkpoints are saved during work.
+Review `docs/team-review.md`, `docs/spec.md`, the proposed ADR and the ticket
+chronology with the team. Record the decision in issue #3, update the spec and
+then affected tickets if needed. Only after explicit approval should a new
+implementation branch be created; #4 is the first technical ticket at that time.
