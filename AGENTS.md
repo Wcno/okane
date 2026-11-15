@@ -1,0 +1,42 @@
+# Project instructions
+
+## Current scope
+
+Preparation and clarification only. Keep implementation issues #4–#25 open
+and pending team review. The team must decide whether to start the plan before
+any assistant implements them. The current user authorized integrating the
+preparation PRs into main and deleting their completed branches after verifying
+their work is preserved. Retain unrelated work and branches.
+
+## Language
+
+Write source code, identifiers, source filenames, comments, test descriptions
+and new commit messages in English. Keep all public UI copy, accessible labels
+and localized presentation data in Spanish. Follow `docs/code-language.md` for
+the mapping between Spanish domain vocabulary and English code names.
+
+## Spec before tickets before implementation
+
+Use `docs/spec.md` as the versioned specification and issue #3 as its review
+index. Keep `docs/contratos.md`, the ADRs and `docs/plan-de-trabajo.md` consistent
+with it. Clarify requirements in the spec first, then update ticket acceptance
+criteria and native dependencies. Implement approved tickets only after the
+team decision; preparation changes do not complete those tickets.
+
+## Handoff
+
+At the start of a task, read `HANDOFF.md` and compare it with git status, branch
+and recent commits. Verify remote facts needed for the task instead of assuming
+the checkpoint is current.
+
+Update `HANDOFF.md` after each meaningful block of changes, before responding,
+when the user requests a handoff, and when quota or context warnings are exposed.
+Save checkpoints during work because a quota cutoff may arrive without notice.
+Record date, assistant, objective, branch, completed and ongoing work, uncommitted
+files, checks and results, blockers and the next concrete step. Replace stale
+status instead of accumulating conversation transcripts.
+
+Use quota indicators only when the client actually exposes them. A handoff
+provides context, not new authorization. Store credential references rather
+than credential values. Use the user's configured Git identity for commits;
+the user requires the commits to remain in their name.

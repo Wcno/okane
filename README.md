@@ -2,79 +2,132 @@
 
 [![CI](https://github.com/Wcno/okane/actions/workflows/ci.yml/badge.svg)](https://github.com/Wcno/okane/actions/workflows/ci.yml)
 
-Okane es una aplicación web de finanzas personales. Reúne el presupuesto mensual y el portafolio de inversión de una persona para responder dos preguntas:
+Okane is a personal finance web application for a Spanish-speaking public.
+It brings monthly budgeting and an investment portfolio together to answer:
 
-1. ¿Cuánto puedo gastar hasta fin de mes?
-2. ¿A qué se debe la variación de mi patrimonio?
+1. How much can I spend through the end of the month?
+2. What explains the change in my net worth?
 
-Proyecto final de Metodología para el Desarrollo de Sistemas, Universidad Tecnológica de Panamá, grupo 1M321.
+Final project for Metodología para el Desarrollo de Sistemas, Universidad
+Tecnológica de Panamá, group 1M321.
 
-## Estado
+## Current status
 
-| Parte | Estado |
+**Prepared for team review. Implementation of issues #4–#25 has not started.**
+The existing `/dashboard`, navigation and quick expense entry are a frontend
+demonstration with in-memory sample data. Refreshing resets that data.
+
+| Area | Status |
 |---|---|
-| Modelo de dominio, decisiones y matrices | Listo |
-| Panel (`/dashboard`) y navegación, con datos de ejemplo | Listo |
-| Las demás pantallas | Pendientes |
-| `webapp` (Django: autenticación y reenvío a la API) | Pendiente |
-| `api-service` (Django REST) y bases de datos | Pendiente |
-| Docker Compose | Pendiente |
+| Product, domain glossary, use-case matrices and design system | Documented |
+| Versioned specification and 22 implementation tickets | Awaiting team review |
+| Existing frontend demonstration | Available with sample data |
+| Backend services, authentication and databases | Planned; not implemented |
+| Docker Compose and full-system tests | Planned in the implementation tickets |
 
-## Documentación
+The team will review the specification, dependencies and proposed decisions
+before authorizing implementation. See the [team review guide](docs/team-review.md).
 
-| Documento | Contenido |
-|---|---|
-| [GLOSSARY.md](GLOSSARY.md) | El vocabulario del dominio. Es obligatorio en la interfaz y en el código. |
-| [docs/matrices.md](docs/matrices.md) | Los 48 casos de uso con su ruta, endpoint, tabla y contenedor. |
-| [docs/contratos.md](docs/contratos.md) | Reglas verificables, casos límite y ejemplos para las pruebas HTTP. |
-| [docs/plan-de-trabajo.md](docs/plan-de-trabajo.md) | Los 22 tickets en orden de implementación, con sus dependencias. |
-| [docs/adr/](docs/adr/) | Las decisiones de arquitectura difíciles de revertir. |
-| [PRODUCT.md](PRODUCT.md) | Para quién es Okane, qué problema resuelve y sus principios. |
-| [DESIGN.md](DESIGN.md) | El sistema visual: colores, tipografía, componentes y reglas. |
+## Language
 
-## Arquitectura
+- Public UI copy, accessible labels and localized presentation data: **Spanish**.
+- Source code, identifiers, source filenames, comments and test descriptions:
+  **English**.
+- The [domain glossary](GLOSSARY.md) keeps the Spanish product vocabulary;
+  [code-language.md](docs/code-language.md) maps it to English code names.
 
-Cuatro contenedores, fijados por el documento del curso:
+## Run the current demonstration
 
-| Contenedor | Tecnología | Responsabilidad |
-|---|---|---|
-| `webapp` | React + Django | Interfaz, autenticación y reenvío de `/api/*` |
-| `webapp-db` | PostgreSQL | Usuarios, credenciales y sesiones |
-| `api-service` | Django REST | Cuentas, presupuestos, movimientos, proyecciones e inversiones |
-| `api-db` | PostgreSQL | Información financiera |
+Requirements: Git, **Node.js 24** and **npm 11**. The frontend `.nvmrc` declares
+the Node major version; `package.json` declares the supported engine ranges.
+The current demo needs no database configuration.
 
-El navegador solo habla con `webapp` ([ADR 0001](docs/adr/0001-webapp-como-unico-punto-de-entrada.md)).
+From the repository root:
 
-## Ejecutar el frontend
-
-Requiere Node.js 24 (la versión está en `webapp/frontend/.nvmrc`).
-
-```bash
+```shell
 cd webapp/frontend
 npm ci
 npm run dev
 ```
 
-| Comando | Qué hace |
+Open the local URL printed by Vite. The public interface remains in Spanish.
+The rest of the routes are placeholders for the team-approved implementation plan.
+
+## Development checks
+
+Run these commands from `webapp/frontend`:
+
+| Command | Purpose |
 |---|---|
-| `npm run dev` | Servidor de desarrollo |
-| `npm run typecheck` | Verifica los tipos de TypeScript |
-| `npm run lint` | Revisa el código con oxlint |
-| `npm test` | Ejecuta las pruebas con Vitest |
-| `npm run build` | Genera el build de producción en `dist/` |
+| `npm run dev` | Start the frontend development server |
+| `npm run typecheck` | Check TypeScript types |
+| `npm run lint` | Check source with oxlint |
+| `npm test` | Run the existing Vitest tests |
+| `npm run build` | Produce the frontend build in `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run check` | Run types, lint, tests and build together |
 
-## Cómo contribuir
+The existing tests validate the demonstration calculations and money formatting.
+They do not establish that the planned backend exists. Backend HTTP and browser
+tests will be added in their approved tickets. EditorConfig and Git attributes
+keep text files consistent across Windows, macOS and Linux.
 
-1. Toma un issue y crea una rama desde `main`: `feat/registrar-ingresos`, `fix/restante-negativo`.
-2. Escribe commits pequeños con [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/): `tipo(ámbito): descripción`. Tipos: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
-3. Abre un PR hacia `main` con la plantilla. El título también sigue Conventional Commits, porque se convierte en el commit final.
-4. La CI debe pasar y otro integrante debe aprobar el PR antes de integrarlo.
+## Specification and planning
 
-### Qué verifica la CI
+| Document | Purpose |
+|---|---|
+| [PRODUCT.md](PRODUCT.md) | Audience, product goals and constraints |
+| [GLOSSARY.md](GLOSSARY.md) | Canonical Spanish domain vocabulary |
+| [docs/spec.md](docs/spec.md) | Versioned specification with 64 user stories |
+| [docs/matrices.md](docs/matrices.md) | 48 use cases, routes, endpoints and containers |
+| [docs/contratos.md](docs/contratos.md) | Testable contracts and numerical examples |
+| [docs/adr/](docs/adr/) | Architecture decisions; ADR 0004 is proposed for review |
+| [docs/plan-de-trabajo.md](docs/plan-de-trabajo.md) | 22 tickets in a valid dependency order |
+| [docs/team-review.md](docs/team-review.md) | Review agenda and implementation gate |
+| [docs/code-language.md](docs/code-language.md) | English code names and Spanish presentation policy |
+| [DESIGN.md](DESIGN.md) | Visual system for the public interface |
 
-En cada PR y en cada commit a `main`:
+[Issue #3](https://github.com/Wcno/okane/issues/3) is the review index.
+Issues #4–#25 contain acceptance criteria and native GitHub dependencies.
+Requirements are clarified in the spec first, then reflected in tickets.
+Implementation starts only after the team records its decision.
 
-- **frontend:** instala dependencias exactas del lockfile, verifica tipos, ejecuta lint, pruebas y build.
-- **convenciones:** el título del PR y cada mensaje de commit siguen Conventional Commits.
+## Planned architecture
 
-Cada commit en `main` empaqueta además el build del frontend y, si la CI pasó, lo despliega como demo en GitHub Pages. El despliegue se activa una sola vez: en Settings → Pages elige "GitHub Actions" como fuente y crea la variable de repositorio `PAGES_ENABLED` con valor `true`. Dependabot propone cada semana las actualizaciones de dependencias y de las acciones de GitHub.
+The course fixes four containers. This table describes the target architecture,
+not services already running in the repository.
+
+| Container | Technology | Responsibility |
+|---|---|
+| `webapp` | React + Django | Public interface, authentication and `/api/*` forwarding |
+| `webapp-db` | PostgreSQL | Users, credentials and sessions |
+| `api-service` | Django REST | Financial accounts, entries, budgets and investments |
+| `api-db` | PostgreSQL | Financial records |
+
+The browser will communicate only with `webapp`, as specified in
+[ADR 0001](docs/adr/0001-webapp-como-unico-punto-de-entrada.md).
+
+## Contribution and delivery
+
+1. Clarify and approve the spec, then synchronize ticket criteria and dependencies.
+2. After team approval, select an unblocked ticket and branch from current `main`.
+3. Use English branch names and small Conventional Commits, for example
+   `feat(accounts): create spending accounts`.
+4. Open a PR, pass CI and follow the team's review decision before merging.
+5. Delete a completed branch only after its work is preserved in `main`.
+
+CI checks the existing frontend and Conventional Commit titles/messages on PRs.
+Main pushes also produce the demo artifact. GitHub Pages deployment remains
+opt-in: the repository must use GitHub Actions as its Pages source and define
+`PAGES_ENABLED=true`. Enabling publication is a separate team decision.
+Dependabot proposes dependency and action updates weekly.
+The Node type definitions stay on the supported Node 24 major; changing the
+runtime major requires an explicit development-environment decision.
+
+## Switching assistants
+
+Codex reads [AGENTS.md](AGENTS.md); Claude Code imports those instructions from
+[CLAUDE.md](CLAUDE.md). Both use [HANDOFF.md](HANDOFF.md) for the latest checkpoint.
+When switching, ask the next assistant to read it and verify the current state.
+The checkpoint preserves the current restriction: prepare and review first,
+without starting the implementation issues.

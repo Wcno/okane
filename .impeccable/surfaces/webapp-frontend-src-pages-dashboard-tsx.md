@@ -1,7 +1,7 @@
 ---
 version: 1
-slug: "webapp-frontend-src-pages-panel-tsx"
-primary_target: "webapp/frontend/src/pages/Panel.tsx"
+slug: "webapp-frontend-src-pages-dashboard-tsx"
+primary_target: "webapp/frontend/src/pages/Dashboard.tsx"
 related_targets: ["webapp/frontend/src/components/AppShell.tsx"]
 ---
 

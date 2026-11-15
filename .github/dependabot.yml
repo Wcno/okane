@@ -6,11 +6,15 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    # Keep runtime type definitions aligned with the supported Node 24 major.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: chore
       include: scope
     groups:
-      dependencias-menores:
+      minor-dependencies:
         update-types: [minor, patch]
 
   - package-ecosystem: github-actions

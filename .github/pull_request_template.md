@@ -1,19 +1,20 @@
-## Qué cambia
+## What changes
 
-<!-- Lo que el Usuario puede hacer ahora, o lo que cambió por dentro. Una o dos frases. -->
+<!-- Explain the resulting behavior or preparation change in one or two sentences. -->
 
-## Por qué
+## Why
 
-<!-- El ticket o caso de uso que resuelve. Ejemplo: Closes #12 -->
+<!-- Reference the specification or approved ticket. Preparation does not close implementation issues. -->
 
-## Cómo se probó
+## Validation
 
-<!-- Pruebas automáticas agregadas y lo que se revisó a mano. -->
+<!-- Record relevant checks, test results and any manual review. -->
 
-## Revisión
+## Review
 
-- [ ] El título del PR y cada commit siguen Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`…).
-- [ ] La CI pasa: tipos, lint, pruebas y build.
-- [ ] Los términos de la interfaz y del código coinciden con `GLOSSARY.md`.
-- [ ] Si cambia una decisión difícil de revertir, hay un ADR en `docs/adr/`.
-- [ ] Si cambia la interfaz, se revisó en teléfono y en PC, en tema claro y oscuro (adjunta capturas).
+- [ ] The PR title and new commits use Conventional Commits in English.
+- [ ] CI passes: types, lint, tests and build.
+- [ ] Source names use English; public copy and accessibility text use Spanish.
+- [ ] The spec, contracts, ADRs and ticket dependencies agree.
+- [ ] Feature implementation has team approval; preparation PRs keep implementation issues open.
+- [ ] Visible UI changes were reviewed on mobile and desktop, in light and dark modes.

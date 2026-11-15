@@ -1,83 +1,53 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
-import { estadoInicial, registrarGasto, type Estado } from '../data/sample'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { initialState, recordExpense } from '../data/sample'
+import { DataContext, type NewExpense } from './context'
 
-export interface GastoNuevo {
-  monto: number
-  categoria: string
-  cuentaId: string
-}
+export function DataProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState(initialState)
+  const [lastAccountId, setLastAccountId] = useState('checking')
+  const [recentCategory, setRecentCategory] = useState<string | null>(null)
+  const [registrationCount, setRegistrationCount] = useState(0)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [isFormOpen, setIsFormOpen] = useState(false)
 
-interface Almacen {
-  estado: Estado
-  /** Última Cuenta usada: el siguiente Gasto la propone por defecto. */
-  ultimaCuentaId: string
-  /** Categoría del último Gasto registrado, para resaltar qué cambió. */
-  categoriaReciente: string | null
-  /** Cuántos Gastos se han registrado en esta sesión; reinicia el resaltado en cada uno. */
-  registros: number
-  /** Confirmación del último registro, con su consecuencia. */
-  aviso: string | null
-  registrar: (gasto: GastoNuevo, aviso: string) => void
-  descartarAviso: () => void
-  formularioAbierto: boolean
-  abrirFormulario: () => void
-  cerrarFormulario: () => void
-}
-
-const Contexto = createContext<Almacen | null>(null)
-
-export function ProveedorDeDatos({ children }: { children: ReactNode }) {
-  const [estado, setEstado] = useState(estadoInicial)
-  const [ultimaCuentaId, setUltimaCuentaId] = useState('corriente')
-  const [categoriaReciente, setCategoriaReciente] = useState<string | null>(null)
-  const [registros, setRegistros] = useState(0)
-  const [aviso, setAviso] = useState<string | null>(null)
-  const [formularioAbierto, setFormularioAbierto] = useState(false)
-
-  const registrar = useCallback((gasto: GastoNuevo, mensaje: string) => {
-    setEstado((anterior) => registrarGasto(anterior, gasto))
-    setUltimaCuentaId(gasto.cuentaId)
-    setCategoriaReciente(gasto.categoria)
-    setRegistros((cuenta) => cuenta + 1)
-    setAviso(mensaje)
+  const register = useCallback((expense: NewExpense, message: string) => {
+    setState((previous) => recordExpense(previous, expense))
+    setLastAccountId(expense.accountId)
+    setRecentCategory(expense.category)
+    setRegistrationCount((count) => count + 1)
+    setNotice(message)
   }, [])
 
-  const descartarAviso = useCallback(() => setAviso(null), [])
-  const abrirFormulario = useCallback(() => setFormularioAbierto(true), [])
-  const cerrarFormulario = useCallback(() => setFormularioAbierto(false), [])
+  const dismissNotice = useCallback(() => setNotice(null), [])
+  const openForm = useCallback(() => setIsFormOpen(true), [])
+  const closeForm = useCallback(() => setIsFormOpen(false), [])
 
-  const valor = useMemo(
+  const value = useMemo(
     () => ({
-      estado,
-      ultimaCuentaId,
-      categoriaReciente,
-      registros,
-      aviso,
-      registrar,
-      descartarAviso,
-      formularioAbierto,
-      abrirFormulario,
-      cerrarFormulario,
+      state,
+      lastAccountId,
+      recentCategory,
+      registrationCount,
+      notice,
+      register,
+      dismissNotice,
+      isFormOpen,
+      openForm,
+      closeForm,
     }),
     [
-      estado,
-      ultimaCuentaId,
-      categoriaReciente,
-      registros,
-      aviso,
-      registrar,
-      descartarAviso,
-      formularioAbierto,
-      abrirFormulario,
-      cerrarFormulario,
+      state,
+      lastAccountId,
+      recentCategory,
+      registrationCount,
+      notice,
+      register,
+      dismissNotice,
+      isFormOpen,
+      openForm,
+      closeForm,
     ],
   )
 
-  return <Contexto.Provider value={valor}>{children}</Contexto.Provider>
-}
-
-export function useDatos() {
-  const almacen = useContext(Contexto)
-  if (!almacen) throw new Error('useDatos debe usarse dentro de ProveedorDeDatos')
-  return almacen
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>
 }
