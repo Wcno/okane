@@ -26,6 +26,8 @@ Proyecto final de Metodología para el Desarrollo de Sistemas, Universidad Tecno
 |---|---|
 | [GLOSSARY.md](GLOSSARY.md) | El vocabulario del dominio. Es obligatorio en la interfaz y en el código. |
 | [docs/matrices.md](docs/matrices.md) | Los 48 casos de uso con su ruta, endpoint, tabla y contenedor. |
+| [docs/contratos.md](docs/contratos.md) | Reglas verificables, casos límite y ejemplos para las pruebas HTTP. |
+| [docs/plan-de-trabajo.md](docs/plan-de-trabajo.md) | Los 22 tickets en orden de implementación, con sus dependencias. |
 | [docs/adr/](docs/adr/) | Las decisiones de arquitectura difíciles de revertir. |
 | [PRODUCT.md](PRODUCT.md) | Para quién es Okane, qué problema resuelve y sus principios. |
 | [DESIGN.md](DESIGN.md) | El sistema visual: colores, tipografía, componentes y reglas. |
