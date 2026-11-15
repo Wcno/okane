@@ -20,13 +20,14 @@ demonstration with in-memory sample data. Refreshing resets that data.
 | Area | Status |
 |---|---|
 | Product, domain glossary, use-case matrices and design system | Documented |
-| Versioned specification and 25 implementation tickets | Awaiting team review |
+| Versioned specification and 25 implementation tickets | Approved by the team; not started |
 | Existing frontend demonstration | Available with sample data |
 | Backend services, authentication and databases | Planned; not implemented |
 | Docker Compose and full-system tests | Planned in the implementation tickets |
 
-The team will review the specification, dependencies and proposed decisions
-before authorizing implementation. See the [team review guide](docs/team-review.md).
+The team approved the specification, its tickets and their dependencies on
+2026-11-15. Implementation has not started. The decisions still open are in the
+[team review guide](docs/team-review.md).
 
 The latest specification includes recurring-payment reservations with manual
 confirmation, one Movements view with filters, savings and investment projection
@@ -89,7 +90,7 @@ keep text files consistent across Windows, macOS and Linux.
 | [docs/spec.md](docs/spec.md) | Versioned specification with 76 user stories |
 | [docs/matrices.md](docs/matrices.md) | 58 use cases, routes, endpoints and containers |
 | [docs/contratos.md](docs/contratos.md) | Testable contracts and numerical examples |
-| [docs/adr/](docs/adr/) | Architecture decisions; ADRs 0004 and 0005 are proposed for review |
+| [docs/adr/](docs/adr/) | Architecture decisions, ADRs 0001 to 0005 |
 | [docs/plan-de-trabajo.md](docs/plan-de-trabajo.md) | 25 tickets in a valid dependency order |
 | [docs/team-review.md](docs/team-review.md) | Review agenda and implementation gate |
 | [docs/code-language.md](docs/code-language.md) | English code names and Spanish presentation policy |

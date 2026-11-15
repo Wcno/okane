@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Separar los Saldos iniciales y usar el Rendimiento del período

@@ -2,12 +2,12 @@
 
 La [spec versionada](spec.md), revisada en el [issue #3](https://github.com/Wcno/okane/issues/3),
 agrupa **25 tickets, 76 historias y 58 casos de uso** (28 originales, 24 N2 y 6 N3).
-**Estado: pendiente de revisión del equipo. La implementación no ha comenzado.**
+**Estado: aprobado por el equipo el 2026-11-15. La implementación no ha comenzado.**
 
 La revisión de feedback reemplaza los Gastos recurrentes automáticos por reservas
 con confirmación manual, unifica Movimientos, amplía Proyección y añade
 preferencias visuales y API pública autenticada. Los contratos están en
-[contratos.md](contratos.md); el ADR 0005 está propuesto para revisión.
+[contratos.md](contratos.md); el ADR 0005 está aceptado.
 
 El orden es una secuencia válida, no la obligación de trabajar en serie:
 cualquier ticket cuyos bloqueos estén terminados puede avanzar en paralelo.
@@ -78,18 +78,19 @@ arrastran dos tickets de nivel 2:
 La ruta mínima es de **13 tickets**: los once anteriores más #16 y #17. Los otros
 doce (#15, #18–#25 y #30–#32) no bloquean ningún caso original.
 
-Riesgo para la revisión: #17 es uno de los tickets más complejos del plan
-(reservas, arrastre entre meses, confirmación atómica y cortes históricos) y hoy
-bloquea a #9, un caso original. Si el tiempo aprieta, el equipo puede decidir que
-#9 entregue primero el Restante sin reservas y que #17 lo complete después; esa
-decisión cambia la spec y las dependencias, y se registra en #3 antes de empezar.
+Riesgo de calendario: #17 es uno de los tickets más complejos del plan
+(reservas, arrastre entre meses, confirmación atómica y cortes históricos) y
+bloquea a #9, un caso original. El equipo aprobó el plan con esta dependencia.
+Si el tiempo aprieta, cambiarla exige actualizar primero la spec y registrar la
+decisión en #3.
 
 ## Estado del plan
 
 Hay **46 dependencias técnicas nativas sin ciclos**, reflejadas en la tabla y en
-GitHub. Los 25 tickets (#4–#25 y #30–#32) permanecen abiertos con
-`needs-team-review`. Esta preparación no implementa funciones ni completa tickets.
+GitHub. Los 25 tickets (#4–#25 y #30–#32) están abiertos con
+`ready-for-agent`: el equipo los aprobó y ninguno se ha empezado.
 
-Revisar [team-review.md](team-review.md) y registrar la decisión en #3 antes de
-empezar. El primer ticket técnico será **#4** solo después de esa autorización.
+La aprobación está registrada en #3. Quedan por definir los responsables de cada
+ticket y las decisiones abiertas de [team-review.md](team-review.md). El primer
+ticket técnico es **#4**, el único sin bloqueos.
 El estado operativo y las verificaciones se registran en [HANDOFF.md](../HANDOFF.md).

@@ -2,9 +2,10 @@
 
 ## Current scope
 
-Preparation and clarification only. Keep all implementation issues in
-`docs/plan-de-trabajo.md` open and pending team review. The team must decide
-whether to start the plan before any assistant implements them. Retain unrelated
+The team approved the plan on 2026-11-15; the implementation issues in
+`docs/plan-de-trabajo.md` are open and labeled `ready-for-agent`. Approval of
+the plan is not an instruction to start: implement a ticket only when the user
+asks for that ticket, and only when its blockers are closed. Retain unrelated
 work and branches.
 
 ## Language
@@ -19,8 +20,8 @@ the mapping between Spanish domain vocabulary and English code names.
 Use `docs/spec.md` as the versioned specification and issue #3 as its review
 index. Keep `docs/contratos.md`, the ADRs and `docs/plan-de-trabajo.md` consistent
 with it. Clarify requirements in the spec first, then update ticket acceptance
-criteria and native dependencies. Implement approved tickets only after the
-team decision; preparation changes do not complete those tickets.
+criteria and native dependencies. Documentation changes do not complete
+implementation tickets.
 
 ## Handoff
 

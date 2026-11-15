@@ -1,8 +1,9 @@
 # Team review before implementation
 
-Status: **awaiting team decision**. The existing frontend remains a demonstration
-with sample data. Issues #4–#25 and #30–#32 describe future work; none is completed by the
-preparation and naming cleanup.
+Status: **plan approved by the team on 2026-11-15; implementation not started**.
+The team approved issues #4–#25 and #30–#32, which now carry `ready-for-agent`.
+The existing frontend remains a demonstration with sample data; no ticket is
+completed yet. The approval is recorded in issue #3.
 
 ## Review order
 
@@ -16,42 +17,38 @@ preparation and naming cleanup.
 5. Decide whether to approve the plan, revise it, or postpone implementation.
    Record the decision and owners in issue #3 before starting a feature branch.
 
-## Decisions to resolve
+## Decisions still open
 
-- Confirm the scope and December 2026 delivery date, then assign ticket owners.
-- Review the incorporated feedback: reservations remain committed until manual
-  confirmation/cancellation, including overdue amounts; one filtered Movements
-  view includes all six record types; preferences affect presentation only.
-- Review the projection scenarios for savings, an investment account or the full
-  portfolio, with hypothetical returns and no changes to actual financial records.
-- Review proposed ADR 0005 and the public API scope: personal tokens, read access
-  and creation on existing Accounts, retry idempotency, OpenAPI and a Google Apps
-  Script example. OAuth and automatic synchronization are outside this delivery.
-- Confirm the expanded scope of 76 stories, 58 cases and 25 tickets. A feature
-  depending on Dividends cannot be delivered with all six types if #22 is cut.
-- Approve the proposed ADR 0004: opening balances are shown separately from
-  savings and monthly Investment Return. Also review decimal precision,
-  recurrence retries and monthly Budget initialization.
+The approval covers the specification, contracts, ADRs 0004 and 0005, the
+25 tickets and their dependencies. These points were not part of it and still
+need an answer:
+
+- Assign an owner to each ticket and record the owners in issue #3.
 - Agree on the minimal backend/runtime versions and how to authenticate the
   internal `webapp` to `api-service` requests during #4/#5.
-- Review the dependency order, including Recurring Payments before the full
-  Remaining Budget calculation and Contributions before portfolio returns.
 - Choose whether to require branch protection and reviewer approvals for future
   changes. The existing CI checks are `frontend` and `conventions`.
-- Review the proposed access limits and quality contract: ten-character
-  passwords, attempt limiting on sign-in, recovery and tokens, session and
-  reset-link lifetimes, a per-token request limit, pagination bounds, and the
-  keyboard, contrast, empty-state and viewport checks for every screen.
-- Review the minimum path for the 28 course cases: 13 tickets, because #9 waits
-  for #17 and #13 waits for #16. Decide whether to accept that path or let #9
-  ship its Remaining Budget without reservations first.
-- Decide separately whether to enable the public demo deployment in GitHub
-  Pages. The workflow remains opt-in through `PAGES_ENABLED=true`.
+- Decide whether to enable the public demo deployment in GitHub Pages. The
+  workflow remains opt-in through `PAGES_ENABLED=true`.
 
-## Gate for starting implementation
+## Decisions resolved by the approval
 
-Keep the specification and its tickets labeled `needs-team-review` while these
-decisions are pending. After the team approves the plan, update the specification
-first, synchronize affected tickets and dependencies, and explicitly mark the
-approved work ready. The first technical ticket is #4; it is not an instruction
-to implement it before that decision.
+- Scope of 76 stories, 58 cases and 25 tickets, for the December 2026 delivery.
+- Recurring-payment reservations with manual confirmation or cancellation,
+  the unified Movements view with six record types, and presentation-only
+  preferences.
+- Projection scenarios for savings, an investment account or the full portfolio.
+- ADR 0004 (opening balances shown apart from savings and monthly Investment
+  Return) and ADR 0005 (public API through webapp with personal tokens), both
+  now accepted.
+- Access limits, pagination bounds and the interface quality contract in
+  [contratos.md](contratos.md).
+- The dependency order, including the 13-ticket minimum path for the 28 course
+  cases, where #9 waits for #17 and #13 waits for #16.
+
+## Starting implementation
+
+The gate is open: the tickets are approved and labeled `ready-for-agent`. Work
+follows the dependency order in [plan-de-trabajo.md](plan-de-trabajo.md),
+starting with #4, the only ticket without blockers. Any later change of scope
+still goes spec first, then tickets and dependencies.

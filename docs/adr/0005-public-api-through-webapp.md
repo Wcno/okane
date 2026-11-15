@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Public API through the existing webapp boundary

@@ -1,6 +1,6 @@
 # Especificación de Okane
 
-Estado: **pendiente de revisión del equipo; implementación sin iniciar**.
+Estado: **aprobada por el equipo el 2026-11-15; implementación sin iniciar**.
 Esta es la fuente versionada de la spec. El [issue #3](https://github.com/Wcno/okane/issues/3)
 coordina su revisión y los tickets derivados enumerados en [plan-de-trabajo.md](plan-de-trabajo.md).
 
@@ -9,8 +9,8 @@ coordina su revisión y los tickets derivados enumerados en [plan-de-trabajo.md]
 La interfaz pública, validaciones y etiquetas accesibles están en español.
 El código, identificadores, nombres de archivos fuente, comentarios y
 nombres de pruebas se escriben en inglés, según [code-language.md](code-language.md).
-Las precisiones de esta revisión, incluidos los ADR 0004 y 0005, se presentan al equipo
-antes de implementar. Se conserva el frontend de demostración; ningún ticket
+El equipo aprobó los 25 tickets del plan, con las precisiones de esta revisión y
+los ADR 0004 y 0005. Se conserva el frontend de demostración; ningún ticket
 del plan se considera iniciado ni completado por esta preparación.
 
 El flujo es **spec → tickets con criterios y dependencias → revisión del equipo →
@@ -143,7 +143,7 @@ El vocabulario es el de `GLOSSARY.md`. Los 58 casos de uso, con sus rutas y endp
 **Arquitectura**
 
 - Cuatro contenedores, fijados por el curso y levantados con un solo archivo de Docker Compose: `webapp` (React servido por Django), `webapp-db`, `api-service` (Django REST) y `api-db`, ambas bases en PostgreSQL.
-- El navegador solo habla con `webapp`. Django mantiene la sesión con cookie para la aplicación y autentica tokens personales para `/api/v1`; reenvía cada llamada financiera a `api-service` por la red interna, obteniendo el Usuario de la sesión o del token validado y descartando identidades internas enviadas por el cliente (ADR 0001 y propuesta ADR 0005). `api-service` valida la autenticidad de `webapp` mediante una credencial o firma. Las rutas de autenticación y el estado mínimo `/api/health` son excepciones explícitas al requisito de sesión.
+- El navegador solo habla con `webapp`. Django mantiene la sesión con cookie para la aplicación y autentica tokens personales para `/api/v1`; reenvía cada llamada financiera a `api-service` por la red interna, obteniendo el Usuario de la sesión o del token validado y descartando identidades internas enviadas por el cliente (ADR 0001 y ADR 0005). `api-service` valida la autenticidad de `webapp` mediante una credencial o firma. Las rutas de autenticación y el estado mínimo `/api/health` son excepciones explícitas al requisito de sesión.
 - `api-db` no tiene llave foránea hacia los usuarios: guarda el identificador de Usuario que recibe. Eliminar un Usuario hace que `webapp` pida a `api-service` borrar sus datos.
 - Rutas, endpoints y tablas son los de `docs/matrices.md`; los 28 casos originales de la Asignación 5 conservan nombre, ruta y endpoint.
 
@@ -193,12 +193,12 @@ El vocabulario es el de `GLOSSARY.md`. Los 58 casos de uso, con sus rutas y endp
 
 **API pública autenticada**
 
-- `/api/v1` entra por `webapp`; `api-service` permanece interno y valida la identidad reenviada. Los cuatro contenedores se conservan. Véase la propuesta [ADR 0005](adr/0005-public-api-through-webapp.md).
+- `/api/v1` entra por `webapp`; `api-service` permanece interno y valida la identidad reenviada. Los cuatro contenedores se conservan. Véase el [ADR 0005](adr/0005-public-api-through-webapp.md).
 - Configuración permite crear, listar y revocar tokens personales con permisos `finance:read` y `movements:create`. El secreto se muestra una sola vez y solo se guarda su hash; cada token pertenece a un Usuario.
 - La API consulta Cuentas, Saldos, Presupuestos y Movimientos, y crea los seis tipos sobre Cuentas existentes utilizando las mismas reglas de la aplicación. Cada creación exige una clave de idempotencia; un reintento idéntico devuelve el original y otro contenido con la misma clave produce conflicto.
 - El ticket de API entrega OpenAPI y un ejemplo para Google Apps Script. Esta preparación especifica el contrato; todavía no publica un servicio operativo.
 
-**Acceso y calidad transversal (propuesto)**
+**Acceso y calidad transversal**
 
 - Contraseñas de al menos diez caracteres, respuestas de acceso que no revelan si un correo existe y límite de intentos en inicio de sesión, recuperación y tokens. La sesión y el enlace de restablecimiento caducan en plazos configurados. `/api/v1` limita las peticiones por token. Los valores están en [contratos](contratos.md); se aplican en #5, #6 y #32.
 - Los listados se paginan con un tamaño por defecto y un máximo. Toda pantalla se opera con teclado, cumple contraste, tiene estado vacío y de error, y se verifica en teléfono y PC en ambos temas. Es criterio de aceptación de cada ticket con interfaz, no una historia aparte.
@@ -215,7 +215,7 @@ Los niveles expresan prioridad de producto; las dependencias imprescindibles pue
 
 Una buena prueba ejercita el comportamiento que el Usuario observa (una petición y su respuesta, o una pantalla), no la estructura interna, y sigue pasando si el código se reorganiza.
 
-Tres puntos de prueba propuestos para revisión del equipo:
+Tres puntos de prueba aprobados por el equipo:
 
 1. **API HTTP de `api-service`.** Es el punto principal: todas las reglas financieras se prueban aquí, con peticiones reales contra una base PostgreSQL de prueba y la identidad del Usuario en la petición. Ejemplo: crear dos Cuentas, registrar un Ingreso, un Gasto y un Pago recurrente por vencer, y comprobar el Disponible que devuelve el Panel.
 2. **Superficie HTTP de `webapp`.** Registro, inicio y cierre de sesión, recuperación de contraseña, que una petición sin sesión ni token válido no llegue a `api-service`, y que el reenvío lleve la identidad correcta.
@@ -250,7 +250,7 @@ La CI ejecuta las pruebas de cada servicio en cada PR.
 - Entrega: diciembre de 2026. Programan los cuatro integrantes.
 - En #11 se verifica el proveedor para búsqueda y catálogo; en #23/#24 se verifica su capacidad de obtener precios históricos. Un respaldo usa solo la última Transacción de inversión conocida al cierre, nunca una futura, y señala la estimación. Un precio ausente no se convierte en valor cero.
 - Para el uso real hará falta una cuenta de envío de correo; es configuración, no diseño.
-- Los 28 casos originales del curso no se completan solo con tickets de nivel 1: por sus dependencias requieren también #16 y #17, de nivel 2. La [ruta mínima](plan-de-trabajo.md#ruta-mínima-para-los-28-casos-del-curso) son 13 de los 25 tickets; el equipo decide si la acepta o simplifica esas dependencias.
+- Los 28 casos originales del curso no se completan solo con tickets de nivel 1: por sus dependencias requieren también #16 y #17, de nivel 2. La [ruta mínima](plan-de-trabajo.md#ruta-mínima-para-los-28-casos-del-curso) son 13 de los 25 tickets, con las dependencias aprobadas.
 
 ## Contratos transversales de la revisión
 
