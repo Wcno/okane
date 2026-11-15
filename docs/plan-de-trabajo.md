@@ -63,6 +63,27 @@ Los números de issue son identificadores, no posiciones cronológicas.
 - La prioridad N3 no permite recortar un requisito de N2 sin revisar el alcance:
   #22 es necesario para Movimientos y API con los seis tipos acordados.
 
+## Ruta mínima para los 28 casos del curso
+
+Los 28 casos originales de la Asignación 5 se entregan en once tickets: #4, #5,
+#6, #7, #8, #9, #10, #11, #12, #13 y #14. Por sus dependencias, esos once
+arrastran dos tickets de nivel 2:
+
+| Ticket original | Espera a | Motivo |
+|---|---|---|
+| #9 Presupuestos y Restante | #17 Pagos recurrentes | El Restante descuenta las reservas |
+| #13 Panel de inversiones y Rendimiento | #16 Transferencias y Aportes | El Rendimiento resta el Aporte neto |
+| #10 Proyección | #13 | Parte de una valoración real de inversión |
+
+La ruta mínima es de **13 tickets**: los once anteriores más #16 y #17. Los otros
+doce (#15, #18–#25 y #30–#32) no bloquean ningún caso original.
+
+Riesgo para la revisión: #17 es uno de los tickets más complejos del plan
+(reservas, arrastre entre meses, confirmación atómica y cortes históricos) y hoy
+bloquea a #9, un caso original. Si el tiempo aprieta, el equipo puede decidir que
+#9 entregue primero el Restante sin reservas y que #17 lo complete después; esa
+decisión cambia la spec y las dependencias, y se registra en #3 antes de empezar.
+
 ## Estado del plan
 
 Hay **46 dependencias técnicas nativas sin ciclos**, reflejadas en la tabla y en

@@ -198,6 +198,11 @@ El vocabulario es el de `GLOSSARY.md`. Los 58 casos de uso, con sus rutas y endp
 - La API consulta Cuentas, Saldos, Presupuestos y Movimientos, y crea los seis tipos sobre Cuentas existentes utilizando las mismas reglas de la aplicación. Cada creación exige una clave de idempotencia; un reintento idéntico devuelve el original y otro contenido con la misma clave produce conflicto.
 - El ticket de API entrega OpenAPI y un ejemplo para Google Apps Script. Esta preparación especifica el contrato; todavía no publica un servicio operativo.
 
+**Acceso y calidad transversal (propuesto)**
+
+- Contraseñas de al menos diez caracteres, respuestas de acceso que no revelan si un correo existe y límite de intentos en inicio de sesión, recuperación y tokens. La sesión y el enlace de restablecimiento caducan en plazos configurados. `/api/v1` limita las peticiones por token. Los valores están en [contratos](contratos.md); se aplican en #5, #6 y #32.
+- Los listados se paginan con un tamaño por defecto y un máximo. Toda pantalla se opera con teclado, cumple contraste, tiene estado vacío y de error, y se verifica en teléfono y PC en ambos temas. Es criterio de aceptación de cada ticket con interfaz, no una historia aparte.
+
 **Orden de construcción**
 
 Los niveles expresan prioridad de producto; las dependencias imprescindibles pueden adelantarse. La cronología de los 25 tickets se mantiene en el [plan de trabajo](plan-de-trabajo.md). La búsqueda de Activos se entrega en #11; #23 añade la actualización automática de precios.
@@ -245,9 +250,10 @@ La CI ejecuta las pruebas de cada servicio en cada PR.
 - Entrega: diciembre de 2026. Programan los cuatro integrantes.
 - En #11 se verifica el proveedor para búsqueda y catálogo; en #23/#24 se verifica su capacidad de obtener precios históricos. Un respaldo usa solo la última Transacción de inversión conocida al cierre, nunca una futura, y señala la estimación. Un precio ausente no se convierte en valor cero.
 - Para el uso real hará falta una cuenta de envío de correo; es configuración, no diseño.
+- Los 28 casos originales del curso no se completan solo con tickets de nivel 1: por sus dependencias requieren también #16 y #17, de nivel 2. La [ruta mínima](plan-de-trabajo.md#ruta-mínima-para-los-28-casos-del-curso) son 13 de los 25 tickets; el equipo decide si la acepta o simplifica esas dependencias.
 
 ## Contratos transversales de la revisión
 
-Los [contratos verificables](contratos.md) precisan aislamiento por Usuario, CSRF, autenticidad de servicio, fechas, cantidades, Cuentas archivadas, borrado entre dos bases, costo promedio, precios manuales por Usuario y conciliación del Patrimonio. Cada ticket incorpora sus criterios comprobables; se conservan las 64 historias previas (con las decisiones revisadas) y se añaden 12: 76 historias y 58 casos de uso, incluidos los 28 originales.
+Los [contratos verificables](contratos.md) precisan aislamiento por Usuario, CSRF, autenticidad de servicio, fechas, cantidades, Cuentas archivadas, borrado entre dos bases, costo promedio, precios manuales por Usuario, conciliación del Patrimonio, límites de acceso, paginación y calidad de la interfaz. Cada ticket incorpora sus criterios comprobables; se conservan las 64 historias previas (con las decisiones revisadas) y se añaden 12: 76 historias y 58 casos de uso, incluidos los 28 originales.
 
 Las tablas de apoyo conservan ocurrencias y sus resoluciones, inicialización mensual, preferencias, tokens e idempotencia; las [matrices](matrices.md) distinguen los diez casos nuevos de sus tablas de apoyo. Las relaciones `Blocked by` se reflejan también como dependencias nativas de GitHub.

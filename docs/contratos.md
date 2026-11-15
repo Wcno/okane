@@ -27,6 +27,38 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Una credencial de servicio falsa o ausente se rechaza incluso en la red
   interna. Las dos bases de datos y `api-service` no publican puertos externos.
 
+## Acceso, sesiones y límites de uso (propuesto)
+
+- El correo se normaliza a minúsculas y es único sin distinguir mayúsculas.
+  La contraseña tiene al menos diez caracteres y pasa los validadores estándar
+  de Django; se guarda solo su hash y nunca aparece en logs ni respuestas.
+- Un inicio de sesión fallido responde igual exista o no el correo.
+- Tras cinco intentos fallidos seguidos para un mismo correo o desde un mismo
+  origen en quince minutos, `/auth/login` y `/auth/forgot-password` responden
+  `429` con `Retry-After` hasta que termine la ventana. Un intento correcto
+  posterior a la ventana reinicia la cuenta. El límite no bloquea al Usuario
+  de forma permanente ni revela si el correo existe.
+- La sesión caduca tras catorce días sin uso. El enlace de restablecimiento
+  caduca a la hora de emitirse. Ambos plazos se configuran y documentan.
+- `/api/v1` admite hasta 120 peticiones por minuto por token; el exceso recibe
+  `429` con `Retry-After` y no consume claves de idempotencia. Los tokens
+  inválidos repetidos desde un mismo origen se limitan como los inicios de sesión.
+- Estos límites se guardan en `webapp-db`; no requieren un quinto contenedor.
+
+## Listados y calidad de la interfaz (propuesto)
+
+- Todo listado paginado devuelve 50 elementos por defecto y admite hasta 200;
+  un tamaño o una página fuera de rango devuelve `400`. La respuesta indica
+  el total y cómo pedir la página siguiente.
+- Cada pantalla se opera completa con teclado, muestra el foco, y sus controles
+  tienen nombre accesible en español. El texto cumple contraste 4.5:1 y ningún
+  estado se comunica solo con color, según [DESIGN.md](../DESIGN.md).
+- Cada pantalla se verifica a 390 y 1440 px, en tema claro y oscuro, sin
+  desplazamiento horizontal.
+- Un listado sin datos indica el primer paso para llenarlo. Una falla de red
+  o de `api-service` se muestra con un mensaje que dice qué pasó y permite
+  reintentar, sin perder lo que el Usuario había escrito.
+
 ## Fechas y cantidades
 
 - Las fechas financieras son días de calendario en `America/Panama`. Hoy se
@@ -290,6 +322,8 @@ los Saldos iniciales y el Rendimiento mensual está en el
 | Compra de 2 unidades a $100, venta de 1 a $150 y compra de 1 a $200, sin comisiones | 2 unidades; costo total $300; promedio $150 |
 | Proyección de $1,000 al 12% nominal anual, un mes y aporte final de $100 | Saldo proyectado $1,110; interés $10; sin modificar la Cuenta |
 | Se reemplaza una Cuenta propia por un identificador ajeno en una Transferencia | `404`; ninguno de los dos Saldos cambia |
+| Seis inicios de sesión fallidos seguidos con el mismo correo | El sexto devuelve `429` con `Retry-After`, con la misma respuesta para un correo inexistente |
+| Se pide un listado con tamaño de página 500 | `400`; con tamaño omitido devuelve 50 elementos y el total |
 
 Estas pruebas se escriben en los tickets que implementan cada comportamiento,
 por la API HTTP acordada. Esta revisión documenta los criterios; no declara
