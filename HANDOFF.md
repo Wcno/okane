@@ -29,6 +29,12 @@ issues #4–#25. The team will decide whether to start that plan.
 - Issue #3 is now the review index for the versioned specification. It and all
   22 implementation tickets remain open with `needs-team-review`; the old
   `ready-for-agent` label was removed. The 30 technical dependencies are intact.
+- PRs #1, #2, #26 and #27 have been merged into main with their original
+  commits preserved. PR #28 is retargeted to main. Its integration conflict
+  was reconciled locally with Git merge renormalization; the full checks passed.
+- Dependabot PR #29 proposed Node 26 type definitions for a Node 24 runtime.
+  It was closed without merging. Major type-definition updates are now gated
+  to keep the current development environment consistent.
 
 ## Validation
 
@@ -48,9 +54,8 @@ branch cleanup are still pending; keep every implementation issue open.
 
 ## Next steps
 
-1. Publish this checkpoint using the configured user identity.
-2. Verify checks, merge #1, then retarget and merge #2, #26, #27 and #28
-   preparation PR into main. Update the PR descriptions to their final scope.
+1. Publish the reconciled branch, final development configuration and this checkpoint.
+2. Verify the latest PR #28 checks and merge it into main.
 3. Verify main contains every branch tip before deleting completed local and
    remote branches. Return the checkout to main and verify its CI.
 4. Replace this checkpoint with the completed preparation status and stop for
