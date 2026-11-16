@@ -38,6 +38,10 @@ costly later: the team should confirm or correct them before #5 starts.
 - **Runtime versions:** Python 3.14, Django 5.2 LTS, Django REST framework
   3.18, PostgreSQL 17, Node 26 for the frontend build (updated in PR #38).
   Exact versions are pinned in each `requirements.txt` and Dockerfile.
+  Keep both services and `.python-version` on Python 3.14 while using Django
+  5.2 LTS. Dependabot ignores Python major/minor Docker upgrades; patch
+  updates remain eligible. A runtime migration must first establish framework
+  support and run the full service tests on the proposed Python version.
 - **Internal authentication:** a shared key sent by `webapp` in
   `X-Okane-Service-Key` and compared in constant time by `api-service`, as
   described in [contratos.md](contratos.md). A signature per request was the
