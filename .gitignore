@@ -27,3 +27,10 @@ Thumbs.db
 /.codex/hooks.json
 /.claude/settings.local.json
 /.claude/worktrees/
+
+# Per-worktree Compose overrides written by scripts/worktree-stack.sh
+/compose.override.yaml
+
+# Browser test output
+/e2e/playwright-report/
+/e2e/test-results/
