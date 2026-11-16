@@ -24,4 +24,7 @@ class ServiceCredentialMiddleware:
     def is_from_webapp(request):
         presented = request.headers.get(SERVICE_KEY_HEADER, "")
         expected = settings.INTERNAL_SERVICE_KEY
-        return hmac.compare_digest(presented.encode(), expected.encode())
+        # Without a configured key nobody is webapp: never match empty to empty.
+        return bool(expected) and hmac.compare_digest(
+            presented.encode(), expected.encode()
+        )

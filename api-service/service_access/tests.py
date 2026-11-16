@@ -23,7 +23,17 @@ class ServiceCredentialTests(SimpleTestCase):
         # No financial endpoint exists yet, so the router answers, not the guard.
         self.assertEqual(response.status_code, 404)
 
-    def test_health_stays_public_and_read_only(self):
-        with_post = self.client.post("/api/health")
+    def test_health_rejects_writes(self):
+        response = self.client.post("/api/health")
 
-        self.assertEqual(with_post.status_code, 405)
+        self.assertEqual(response.status_code, 405)
+
+    @override_settings(INTERNAL_SERVICE_KEY="")
+    def test_an_empty_configured_key_admits_nobody(self):
+        without_header = self.client.get("/api/accounts")
+        with_empty_header = self.client.get(
+            "/api/accounts", headers={"X-Okane-Service-Key": ""}
+        )
+
+        self.assertEqual(without_header.status_code, 403)
+        self.assertEqual(with_empty_header.status_code, 403)
