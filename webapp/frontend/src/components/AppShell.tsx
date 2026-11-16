@@ -1,11 +1,12 @@
-import { Ellipsis, LogOut, Plus, X } from 'lucide-react'
+import { Ellipsis, Plus, X } from 'lucide-react'
 import { useEffect } from 'react'
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
 import { useSignedInUser } from '../auth/context'
 import { bottomBarDestinations, navigationGroups, type Destination } from '../navigation'
 import { useData } from '../state/context'
 import { ExpenseForm } from './ExpenseForm'
 import { Logo } from './Logo'
+import { SignOutButton } from './SignOutButton'
 
 function SidebarLink({ destination }: { destination: Destination }) {
   const Icon = destination.icon
@@ -54,13 +55,10 @@ function Sidebar() {
           <span className="sr-only">Sesión iniciada como </span>
           {user.email}
         </p>
-        <Link
-          to="/logout"
-          className="flex h-10 items-center gap-3 rounded-xl px-2 text-[0.95rem] font-medium text-ink-2 transition-colors duration-150 hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink"
-        >
-          <LogOut size={18} strokeWidth={2} aria-hidden="true" />
-          Cerrar sesión
-        </Link>
+        <SignOutButton
+          iconSize={18}
+          className="flex h-10 w-full items-center gap-3 rounded-xl px-2 text-left text-[0.95rem] font-medium text-ink-2 transition-colors duration-150 hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink disabled:opacity-70"
+        />
         <p className="px-2 text-[0.8rem] leading-snug text-ink-3">Estás viendo datos de ejemplo.</p>
       </div>
     </aside>

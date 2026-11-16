@@ -13,7 +13,7 @@ export interface AuthStore {
   /** Adopts the session returned by a login or registration. */
   adopt: (session: Session) => void
   /** Closes the session in webapp; rejects with a message to show. */
-  signOut: () => Promise<void>
+  signOut: (beforeForgettingUser?: () => void) => Promise<void>
 }
 
 export const AuthContext = createContext<AuthStore | null>(null)

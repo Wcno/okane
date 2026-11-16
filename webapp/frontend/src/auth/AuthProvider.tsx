@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { endSession, fetchSession, type Session } from './api'
 import { AuthContext, type SessionState } from './context'
 
@@ -24,11 +24,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const adopt = useCallback((session: Session) => setState({ status: 'ready', session }), [])
 
-  const signOut = useCallback(async () => {
-    if (state.status !== 'ready') return
-    await endSession(state.session.csrfToken)
-    setState({ status: 'ready', session: { ...state.session, user: null } })
-  }, [state])
+  const signOut = useCallback(
+    async (beforeForgettingUser?: () => void) => {
+      if (state.status !== 'ready') return
+      await endSession(state.session.csrfToken)
+      // The router navigates inside a transition. Forgetting the User in the
+      // same transition lets a screen that needs a session move away in the
+      // same render, before the guard would send it to /login.
+      const session = state.session
+      startTransition(() => {
+        beforeForgettingUser?.()
+        setState({ status: 'ready', session: { ...session, user: null } })
+      })
+    },
+    [state],
+  )
 
   const value = useMemo(() => ({ state, reload, adopt, signOut }), [state, reload, adopt, signOut])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -6,13 +6,15 @@ async function fillCredentials(page: Page, email: string, password: string) {
   await page.getByLabel('Contraseña').fill(password)
 }
 
-async function signOutFromTheMenu(page: Page) {
-  await page.goto('/menu')
-  // The sidebar link on desktop and the Menu entry on the phone; only one is visible.
-  await page.getByRole('link', { name: 'Cerrar sesión' }).first().click()
-  await expect(page.getByRole('heading', { name: '¿Cerrar tu sesión?' })).toBeVisible()
-  await page.getByRole('button', { name: 'Cerrar sesión' }).click()
-  await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+/**
+ * Opens the screen that holds the in-app sign-out control: the sidebar of any
+ * screen on a PC, the Menú screen on a phone. Only one control is visible.
+ */
+async function openSignOutControl(page: Page, isMobile: boolean) {
+  await page.goto(isMobile ? '/menu' : '/dashboard')
+  const control = page.getByRole('button', { name: 'Cerrar sesión' })
+  await expect(control).toBeVisible()
+  return control
 }
 
 test('a visitor is sent to login and comes back after registering', async ({ page }) => {
@@ -86,17 +88,35 @@ test('login works with the keyboard alone', async ({ page, request }) => {
   await expect(page.getByText(email).first()).toBeAttached()
 })
 
-test('signing out cuts access at once', async ({ page }) => {
+test('one click on the in-app control signs out at once', async ({ page, isMobile }) => {
   await signUp(page.request)
-  await page.goto('/dashboard')
-  await expect(page.getByRole('heading', { name: 'Disponible hasta fin de mes' })).toBeVisible()
+  const control = await openSignOutControl(page, isMobile)
   expect((await page.request.get('/api/accounts')).status()).not.toBe(401)
 
-  await signOutFromTheMenu(page)
+  await control.click()
 
+  await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  await expect(page).toHaveURL(/\/logout$/)
   expect((await page.request.get('/api/accounts')).status()).toBe(401)
   await page.goto('/dashboard')
   await expect(page).toHaveURL(/\/login$/)
+})
+
+test('the in-app sign-out control works with the keyboard alone', async ({ page, isMobile }) => {
+  await signUp(page.request)
+  const control = await openSignOutControl(page, isMobile)
+
+  await page.getByRole('link', { name: 'Okane, ir al Panel' }).first().focus()
+  for (let stops = 0; stops < 40 && !(await control.evaluate((element) => element === document.activeElement)); stops++) {
+    await page.keyboard.press('Tab')
+  }
+  await expect(control).toBeFocused()
+  const outline = await control.evaluate((element) => getComputedStyle(element).outlineStyle)
+  expect(outline).toBe('solid')
+  await page.keyboard.press('Enter')
+
+  await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  expect((await page.request.get('/api/accounts')).status()).toBe(401)
 })
 
 test('opening the logout screen only asks; the session stays open', async ({ page }) => {
