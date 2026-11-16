@@ -17,7 +17,6 @@ class ReceivedRequest:
 class StubApiService:
     status: int = 200
     body: bytes = b"{}"
-    content_type: str = "application/json"
     received: list = field(default_factory=list)
 
     def start(self):
@@ -35,12 +34,12 @@ class StubApiService:
                     )
                 )
                 self.send_response(stub.status)
-                self.send_header("Content-Type", stub.content_type)
+                self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(stub.body)))
                 self.end_headers()
                 self.wfile.write(stub.body)
 
-            do_GET = do_POST = do_PUT = do_PATCH = do_DELETE = answer
+            do_GET = do_POST = answer
 
             def log_message(self, *args):
                 pass

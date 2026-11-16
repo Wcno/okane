@@ -75,3 +75,11 @@ class ForwardingTests(GatewayTestCase):
         self.assertEqual(forwarded.headers["content-type"], "application/json")
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json(), {"id": 1})
+
+    def test_a_path_cannot_climb_out_of_the_api_prefix(self):
+        for path in ("/api/../internal/users", "/api/accounts/../../internal"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+
+                self.assertEqual(response.status_code, 404)
+        self.assertEqual(self.api_service.received, [])

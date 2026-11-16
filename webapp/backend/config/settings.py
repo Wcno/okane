@@ -13,14 +13,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def env(name, default=None):
-    value = os.environ.get(name, default)
+    # An empty value counts as unset, so a blank secret can never be accepted.
+    value = os.environ.get(name) or default
     if value is None:
         raise ImproperlyConfigured(f"Set the {name} environment variable.")
     return value
 
 
 SECRET_KEY = env("DJANGO_SECRET_KEY")
-DEBUG = env("DJANGO_DEBUG", "false").lower() == "true"
+DEBUG = False
 ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 # Where api-service listens on the internal network, and the shared credential

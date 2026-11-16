@@ -9,12 +9,12 @@ from django.views.decorators.http import require_safe
 # static file is a missing asset, not a route the frontend can render. The
 # list is explicit because a route may contain dots, such as a reset token.
 STATIC_FILE = re.compile(
-    r"\.(?:js|mjs|css|map|json|txt|webmanifest|svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf)$"
+    r"\.(?:js|mjs|css|map|json|txt|xml|html?|pdf|wasm|webmanifest|svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf)$"
 )
 
 
 @require_safe
-def application(request):
+def entry_page(request):
     """Answer a client-side route with the built frontend entry page."""
     if STATIC_FILE.search(request.path):
         raise Http404("No such file.")

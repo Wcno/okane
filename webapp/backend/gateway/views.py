@@ -9,11 +9,15 @@ SERVICE_KEY_HEADER = "X-Okane-Service-Key"
 # api-service (docs/contratos.md, "Identidad y aislamiento").
 FORWARDED_REQUEST_HEADERS = ("Accept", "Content-Type")
 
-client = httpx.Client(timeout=10)
+api_service = httpx.Client(timeout=10)
 
 
 def forward(request):
     """Send an `/api/*` call to api-service over the internal network."""
+    # A dot segment would be resolved by the HTTP client and reach a path
+    # outside /api with the service credential attached.
+    if any(segment in (".", "..") for segment in request.path.split("/")):
+        return JsonResponse({"detail": "not_found"}, status=404)
     headers = {
         name: request.headers[name]
         for name in FORWARDED_REQUEST_HEADERS
@@ -23,7 +27,7 @@ def forward(request):
     # get_full_path keeps the query string exactly as the client sent it.
     url = settings.API_SERVICE_URL + request.get_full_path()
     try:
-        upstream = client.request(
+        upstream = api_service.request(
             request.method, url, headers=headers, content=request.body
         )
     except httpx.TransportError:

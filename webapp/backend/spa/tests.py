@@ -22,7 +22,7 @@ class FrontendTestCase(SimpleTestCase):
 
 
 class SinglePageRouteTests(FrontendTestCase):
-    def test_opening_the_dashboard_directly_serves_the_application(self):
+    def test_opening_the_dashboard_directly_serves_the_entry_page(self):
         response = self.client.get("/dashboard")
 
         self.assertEqual(response.status_code, 200)
@@ -35,7 +35,7 @@ class SinglePageRouteTests(FrontendTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode(), INDEX_HTML)
 
-    def test_backend_routes_are_never_answered_with_the_application(self):
+    def test_backend_routes_are_never_answered_with_the_entry_page(self):
         for path in ("/auth/login", "/auth/unknown", "/users/me", "/health/unknown"):
             with self.subTest(path=path):
                 response = self.client.get(path)
@@ -52,7 +52,7 @@ class StaticFileTests(FrontendTestCase):
         self.assertEqual(b"".join(response.streaming_content), b"console.log('okane')")
         self.assertIn("javascript", response["Content-Type"])
 
-    def test_a_missing_file_is_not_answered_with_the_application(self):
+    def test_a_missing_file_is_not_answered_with_the_entry_page(self):
         response = self.client.get("/assets/missing.js")
 
         self.assertEqual(response.status_code, 404)
