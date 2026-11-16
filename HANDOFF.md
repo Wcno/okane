@@ -42,10 +42,10 @@ Stack, in merge order:
   `webapp` publishes a port, on `127.0.0.1` unless `WEBAPP_BIND` says
   otherwise; the other three containers sit on internal networks.
 
-## Decisions taken for the team, to confirm before #5
+## Decisions taken for the team
 
-The team had left both open; #4 could not be built without them. They are
-recorded in `docs/team-review.md`.
+Taken while building #4 and confirmed by the user on 2026-11-16; #5 builds on them.
+They are recorded in `docs/team-review.md`.
 
 - Runtime versions: Python 3.14, Django 5.2 LTS, Django REST framework 3.18,
   PostgreSQL 17, Node 24 for the frontend build.
@@ -95,5 +95,4 @@ attribution; use the configured human Git identity.
 1. Wait for the #5 worker's report, then run gates a to d on its PR.
 2. Clear the PR (comment, `gh pr ready`) and tear down its worktree stack.
 3. The user merges the #5 PR and this checkpoint PR.
-4. The two team decisions above (runtime versions, shared service key) are still unconfirmed by the team; #5 builds on them as recorded in `docs/team-review.md`.
-5. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.
+4. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.
