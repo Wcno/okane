@@ -5,8 +5,8 @@ Updated: 2026-11-16, America/Panama. Assistant: Claude Code.
 ## Current scope
 
 Updated 2026-11-16 by Claude Code (Fable 5.2, orchestrator).
-Objective: first supervised `/ticket-loop` run, limited to #5.
-Checkpoint branch: `docs/handoff-2026-11-16`, with its own PR.
+The first supervised `/ticket-loop` run, limited to #5, is finished.
+Checkpoint branch: `docs/handoff-2026-11-16`, PR #42.
 PR #40 (groundwork) and PR #41 (ticket skills) are merged; `main` is at `ed97fc7`.
 
 ## Ticket loop state
@@ -14,18 +14,16 @@ PR #40 (groundwork) and PR #41 (ticket skills) are merged; `main` is at `ed97fc7
 Stack, in merge order:
 
 - `main`
-  - PR #43 `feat/5-session-auth` (#5 "Registro, inicio y cierre de sesión"): draft, base `main`.
+  - PR #43 `feat/5-session-auth` (#5 "Registro, inicio y cierre de sesión"): cleared and ready for review, base `main`, head `49b5535`.
 
-- The worker finished; all its local gates passed (35 Vitest, 45 webapp, 11 api-service, 38 Playwright).
-- Worktree stack for browser QA: http://localhost:8001, Compose project `okane-agent-a81fa92779601b92c`, worktree `.claude/worktrees/agent-a81fa92779601b92c`.
-- On head `60afc8a`: gate a (CI) passed and gate b (`ui-qa`) returned PASS.
+- Gate a (CI) passed on `49b5535`.
+- Gate b (`ui-qa`) returned PASS on `60afc8a`; `49b5535` changes no frontend source.
   `ui-qa` could not set exact 390 and 1440 px widths or see the light theme; the Playwright suite covers both.
-- Gate c (review) went red once, with three findings sent back to the worker:
-  the reset of the login counters on success has no test inside the window;
-  `WEBAPP_HTTPS=true` does not trust `X-Forwarded-Proto`, so CSRF would reject POSTs behind a TLS proxy, and the Secure cookies are untested;
-  the focus check covers only the first Tab stop.
-- The worker is fixing them; PR #43 then re-enters at gate a.
-- Next ready set after #5: not evaluated; this run is limited to #5.
+- Gate c (review) went red once; the three findings were fixed in `49b5535`.
+- Gate d (orchestrator read) passed.
+- The worktree stack is down with its volumes and the worktree is removed.
+- Nothing is in flight. The main Compose stack still runs on port 8000.
+- Tickets blocked by #5 can stack on `feat/5-session-auth` before it merges.
 
 ### Decisions the user made on the #5 worker's questions (2026-11-16)
 
@@ -107,7 +105,11 @@ attribution; use the configured human Git identity.
 
 ## Next step
 
-1. When the worker reports its push, rerun gates a to d on PR #43 (gate c red count: 1 of 3).
-2. Clear the PR (comment, `gh pr ready`), then `docker compose down --volumes` in the worktree and remove it.
-3. The user merges PR #43 and the checkpoint PR #42.
-4. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.
+1. The user merges PR #43 with a merge commit, and the checkpoint PR #42.
+2. Run `/ticket-loop` again for the next tickets; evaluate the ready set from `docs/plan-de-trabajo.md` and the issues' native blockers.
+3. Friction seen in this run, to fix in the runbook or agents in a small PR:
+   the harness locks a worker's worktree, so removal needs `git worktree unlock` first;
+   the worker should stop and report a contract edit before opening the PR instead of after;
+   `ui-qa` cannot set exact viewport widths or the colour scheme in Chrome.
+4. `docs/team-review.md` still says the team should confirm the runtime and service-key decisions before #5.
+5. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.
