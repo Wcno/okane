@@ -6,7 +6,7 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
-    # Keep runtime type definitions aligned with the supported Node 24 major.
+    # Keep runtime type definitions aligned with the supported Node 26 major.
     ignore:
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
