@@ -61,8 +61,9 @@ docker compose up --build --wait
 ```
 
 Open <http://localhost:8000>. [.env.example](.env.example) documents every
-variable; its values are placeholders for local use, so replace the secrets
-before exposing the system to anyone else.
+variable Compose reads. Its values are placeholders for local use and the
+system listens only on this computer; replace the secrets before setting
+`WEBAPP_BIND=0.0.0.0` to reach it from other devices.
 
 | Address | Answer |
 |---|---|

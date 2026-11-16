@@ -4,50 +4,87 @@ Updated: 2026-11-15, America/Panama. Assistant: Claude Code.
 
 ## Current scope
 
-**The team approved the plan; implementation has not started.** The owner
-reported the approval of the issues on 2026-11-15 and asked to record it, to
-keep everything on `main`, to clean up other branches and to implement nothing
-for now. Keep the public UI in Spanish and source code in English. Start a
-ticket only when the user asks for it and its blockers are closed.
+**Ticket #4, the four-container skeleton, is implemented in pull request #36
+on branch `feat/container-skeleton`.** The owner asked for the implementation
+after asking which issue came first. No other ticket is started. Keep the
+public UI in Spanish and source code in English. Start a ticket only when the
+user asks for it and its blockers are closed.
 
 ## Completed in this revision
 
-- Integrated the spec review pass through pull request #33: access, session
-  and usage limits, pagination bounds, interface quality checks and the
-  13-ticket minimum path for the 28 course cases.
-- Recorded the team's approval in `docs/spec.md`, `docs/contratos.md`,
-  `docs/plan-de-trabajo.md`, `docs/team-review.md`, `README.md` and
-  `AGENTS.md`. ADRs 0004 and 0005 moved from proposed to accepted.
-- Relabeled issue #3 and the 25 tickets (#4–#25, #30–#32) from
-  `needs-team-review` to `ready-for-agent`, updated their status paragraph and
-  left a decision comment on #3. All remain open; none is started.
-- Counts are unchanged: 76 stories, 58 cases (28 A5, 24 N2, 6 N3), 25 tickets
-  and 46 native dependencies.
+- `api-service/`: Django REST project. `/api/health` is public, read-only and
+  reports the database state; every other path requires the service
+  credential in `X-Okane-Service-Key` and answers `403` without it.
+- `webapp/backend/`: Django project that serves the built frontend with
+  WhiteNoise, answers client-side routes with the entry page, forwards
+  `/api/*` to `api-service` and exposes `/health`. Backend prefixes (`api`,
+  `auth`, `users`, `health`) and missing static files never get the frontend.
+- `compose.yaml`, both Dockerfiles, `.env.example` and
+  `scripts/smoke-test.sh`. Only `webapp` publishes a port, on `127.0.0.1`
+  unless `WEBAPP_BIND` says otherwise; the other three containers sit on
+  internal networks.
+- CI jobs `api-service`, `webapp` (Django checks and tests against
+  PostgreSQL) and `compose` (build, start, smoke test). Dependabot also
+  watches pip, Docker and Compose images.
+- README, `docs/contratos.md`, `docs/plan-de-trabajo.md`, `docs/spec.md` and
+  `docs/team-review.md` describe the running system.
+
+- A two-axis code review ran on the branch. Fixed from it: a blank
+  `INTERNAL_SERVICE_KEY` no longer admits requests, and `/api/../x` no longer
+  reaches paths outside `/api` on `api-service`.
+
+## Decisions taken for the team, to confirm before #5
+
+The team had left both open; #4 could not be built without them. They are
+recorded in `docs/team-review.md`.
+
+- Runtime versions: Python 3.14, Django 5.2 LTS, Django REST framework 3.18,
+  PostgreSQL 17, Node 24 for the frontend build.
+- Internal authentication: a shared key in `X-Okane-Service-Key`.
+- `webapp` has no Django contrib apps yet, so #5 can still choose its user
+  model before the first migration.
+
+## Notes for #5
+
+- `webapp` keeps Django's CSRF middleware, as the contract requires for
+  session writes. Nothing issues the CSRF cookie yet, so a `POST` to `/api/*`
+  in the running stack answers `403` until #5 delivers the token to the
+  frontend. The forwarding tests use Django's test client, which skips CSRF.
+- The gateway returns only the status, body and `Content-Type` of
+  `api-service`. Add other response headers when an endpoint needs them.
+- Health and settings code is duplicated between the two services because
+  they are separate build contexts. Extract it if a third copy appears.
 
 ## Still open
 
-Not covered by the approval and listed in `docs/team-review.md`:
-
+- Pull request #36 is not merged; #4 closes when it is.
 - Ticket owners are not assigned or recorded in #3.
-- Backend/runtime versions and the internal `webapp` to `api-service`
-  authentication mechanism for #4/#5.
-- Branch protection on `main` is not enabled.
+- Branch protection on `main` is not enabled. The checks to require would be
+  `frontend`, `api-service`, `webapp`, `compose` and `conventions`.
 - The demo deployment is opt-in and off: `PAGES_ENABLED` is not set.
 
 ## Repository and validation
 
-- Only `main` exists, locally and on origin. No open pull requests.
-- Documentation only. No application code, frontend behavior or runtime
-  configuration changed, and no feature tests were run or claimed.
-- CI (`frontend`, `conventions`) passes on the pull requests and on `main`.
+- Branches: `main` and `feat/container-skeleton`, both on origin.
+- CI on #36 passed: `frontend`, `conventions`, `api-service` (7 tests),
+  `webapp` (12 tests) and `compose` (8 smoke checks on the running stack).
+- Nobody has opened the served Panel in a browser from the Compose stack;
+  the smoke test checks the entry page and its script, and the frontend
+  code did not change.
+- This machine has Python 3.14 but no Docker and no PostgreSQL. Locally only
+  the tests without the `database` tag run
+  (`python manage.py test --exclude-tag database`); the database tests and
+  the Compose stack were verified in CI, not locally. Local `npm run lint` is
+  blocked by a Windows policy on the oxlint binary.
 - Commits use the configured human Git identity, with no AI co-author
   trailers or generated-by footers.
 
 ## Development setup
 
-Only the frontend demonstration exists, with in-memory fixtures. Backend
-services, databases and Docker Compose remain planned. Node 24 / npm 11:
-in webapp/frontend run npm ci, npm run dev, or npm run check.
+Full system: copy `.env.example` to `.env`, then
+`docker compose up --build --wait` and open port 8000. Frontend only: Node 24
+/ npm 11, in `webapp/frontend` run `npm ci`, `npm run dev` or `npm run check`.
+Service tests: see "Development checks" in the README.
 
 ## Attribution and existing clones
 
@@ -59,6 +96,7 @@ attribution; use the configured human Git identity.
 
 ## Next step
 
-1. Assign owners and settle the open points above; record them in #3.
-2. When the user asks to start, begin with #4, the only ticket without
-   blockers.
+1. Review and merge pull request #36; confirm or correct the two decisions
+   above.
+2. When the user asks, start #5 (sign-up, login and sessions), which only
+   depended on #4.
