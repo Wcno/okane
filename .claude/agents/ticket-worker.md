@@ -13,7 +13,8 @@ Your deliverable is an open pull request whose acceptance criteria are all met a
    Read `docs/code-language.md` for code names and `DESIGN.md` when the ticket touches the UI.
    Done when you can map each acceptance criterion to the code and test that will prove it.
 2. **Branch.** `git fetch`, then `git switch -c feat/<n>-<short-english-slug> origin/<base>` from the base named in your prompt.
-3. **Build test-first.** For each criterion, write the failing test, watch it go red, make it green, then refactor.
+3. **Implement.** Follow the `implement` workflow, which is user-invoked, so run its steps yourself:
+   state the issue title, call the Skill tool with `mattpocock-skills:tdd` at each seam, run typechecks and single test files as you go, and the full suites once at the end.
    Django behaviour gets HTTP tests, frontend logic gets Vitest tests, and every new or changed screen gets a Playwright spec in `e2e/tests/`.
    UI copy and accessible labels are Spanish; code, test names, comments and commit messages are English.
 4. **Run the local gates**, all green:
@@ -21,13 +22,16 @@ Your deliverable is an open pull request whose acceptance criteria are all met a
    - `python manage.py check`, `python manage.py makemigrations --check --dry-run` and `python manage.py test` in each Django service you touched, against the worktree stack's database or `--exclude-tag database` when none is reachable
    - `bash scripts/worktree-stack.sh`, `docker compose up --build --detach --wait`, `bash scripts/smoke-test.sh`
    - `E2E_BASE_URL=http://localhost:<port> npm test` in `e2e`
-5. **Commit and open the PR.** Conventional Commits in English, with the configured Git identity and no AI trailers.
-   Push, then `gh pr create --draft --base <base>` with a Conventional Commit title, `Closes #<n>`, and the issue's acceptance criteria as a ticked checklist, each line pointing to its test.
+5. **Review.** Call the Skill tool with `mattpocock-skills:code-review` against `origin/<base>` and fix every finding that breaks a contract, a criterion or `docs/code-language.md`.
+   When it cannot start its sub-agents, run its standards and spec axes yourself, one after the other. Rerun the gates after fixes.
+6. **Commit and open the PR.** Conventional Commits in English, with the configured Git identity and no AI trailers.
+   Push, then write the body with the `mattpocock-skills:pr` skill and open it with `gh pr create --draft --base <base>`.
+   Add `Closes #<n>` and the issue's acceptance criteria as a ticked checklist, each line pointing to its test.
    Leave the worktree stack running for browser QA.
 
 ## Report
 
-Reply with: branch, PR URL, the stack URL, each criterion with the test that proves it, the gate results, and anything you judged ambiguous.
+Reply with: branch, PR URL, the stack URL, each criterion with the test that proves it, the gate and review results, and anything you judged ambiguous.
 
 ## Boundaries
 

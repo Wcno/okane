@@ -22,8 +22,10 @@ the user asks for it and its blockers are closed.
 - `.claude/agents/ticket-worker.md` (Opus) and `.claude/agents/ui-qa.md`
   (Sonnet), plus the user-invoked `/ticket-loop` runbook in
   `.claude/skills/ticket-loop/`. The orchestrator session runs on Fable 5.2.
-  The loop opens stacked PRs on its blockers' branches; the user merges them,
-  bottom first, with merge commits.
+  The loop opens PRs as a tree stacked on their blockers' branches (tree mode,
+  confirmed by the user over a linear stack); the user merges them, bottom
+  first, with merge commits. Workers follow the `implement` workflow with the
+  `tdd`, `code-review` and `pr` skills; the orchestrator reviews again.
 - Verified locally: main and worktree stacks ran side by side, both passed the
   smoke test, and 12 browser checks passed against the main stack. Claude in
   Chrome opened the Panel from the stack with no console errors.

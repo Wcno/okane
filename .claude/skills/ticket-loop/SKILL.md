@@ -8,6 +8,8 @@ argument-hint: "[issue numbers to limit the run, or empty for every ready ticket
 You are the orchestrator. Workers build, gates judge, you decide, and the user merges.
 Run this in a session on the most capable model; workers and gates run on the cheaper models their agent files name.
 Invoking this skill is the user's request to implement the tickets in scope, as `AGENTS.md` requires.
+Every task uses the skill that fits its goal: building follows `implement` with `mattpocock-skills:tdd`, reviewing uses `mattpocock-skills:code-review`, PR bodies use `mattpocock-skills:pr`.
+For a task no skill covers, such as a restack or a checkpoint, use your own judgment.
 
 ## Stacking
 
@@ -32,7 +34,7 @@ Work continues without waiting for merges: each ticket's PR is based on the bran
 5. **Gate each PR as its worker reports**, in order. A gate that goes red sends the findings back to that worker with `SendMessage`, and the PR re-enters at gate a.
    - a. **CI**: `gh pr checks <pr> --watch`. All of `frontend`, `api-service`, `webapp`, `compose` and `conventions` pass.
    - b. **Browser QA**: spawn `ui-qa` with the PR number and the stack URL from the worker's report. One `ui-qa` at a time, since they share Chrome. It returns `PASS`.
-   - c. **Review**: run the `mattpocock-skills:code-review` skill on the PR branch against its base, for the standards and spec axes. No finding left that breaks a contract, a criterion or `docs/code-language.md`.
+   - c. **Review**: run the `mattpocock-skills:code-review` skill yourself on the PR branch against its base, independent of the worker's own review. No finding left that breaks a contract, a criterion or `docs/code-language.md`.
    - d. **Your read**: the diff stays inside the ticket, every acceptance criterion is ticked with a test, and the PR body is accurate.
 6. **Clear.** Comment on the PR with the gate results and its place in the stack (`Stacked on #<base pr>`, merge that first), then mark it ready with `gh pr ready <pr>`.
    Keep its worktree stack running only while a later gate needs it; then `docker compose down --volumes` and remove the worktree.
