@@ -4,6 +4,7 @@ import {
   Calculator,
   ChartLine,
   House,
+  KeyRound,
   PiggyBank,
   ReceiptText,
   Repeat,
@@ -54,7 +55,10 @@ export const navigationGroups: NavigationGroup[] = [
   },
 ]
 
-export const allDestinations = navigationGroups.flatMap((group) => group.destinations)
+/** Reached from the User's own block of the sidebar and of Menú, not from the sections. */
+export const changePassword: Destination = { path: '/profile/change-password', name: 'Cambiar contraseña', icon: KeyRound }
+
+export const allDestinations =navigationGroups.flatMap((group) => group.destinations)
 
 /** Destinations that fit in the mobile bottom bar; the rest appear under the Spanish More label. */
 export const bottomBarDestinations = { left: [dashboard, spending], right: [budgets] }

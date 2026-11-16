@@ -2,7 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useSignedInUser } from '../auth/context'
 import { SignOutButton } from '../components/SignOutButton'
-import { navigationGroups } from '../navigation'
+import { changePassword, navigationGroups } from '../navigation'
 
 /** Mobile More screen for destinations outside the bottom bar, and the session. */
 export function Menu() {
@@ -46,6 +46,14 @@ export function Menu() {
               <span className="sr-only">Sesión iniciada como </span>
               {user.email}
             </p>
+            <Link
+              to={changePassword.path}
+              className="flex h-14 items-center gap-3.5 border-b border-line px-4 text-[1rem] font-medium transition-colors duration-150 hover:bg-surface-2 focus-visible:-outline-offset-2"
+            >
+              <changePassword.icon size={20} className="text-ink-2" aria-hidden="true" />
+              <span className="flex-1">{changePassword.name}</span>
+              <ChevronRight size={18} className="text-ink-3" aria-hidden="true" />
+            </Link>
             <SignOutButton
               iconSize={20}
               className="flex h-14 w-full items-center gap-3.5 px-4 text-left text-[1rem] font-medium transition-colors duration-150 hover:bg-surface-2 focus-visible:-outline-offset-2 disabled:opacity-70"
