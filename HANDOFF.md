@@ -1,15 +1,31 @@
 # Okane handoff
 
-Updated: 2026-11-15, America/Panama. Assistant: Codex.
+Updated: 2026-11-16, America/Panama. Assistant: Claude Code.
 
 ## Current scope
 
-**Pull request #36 is merged into main as e60c1bb. Ticket #4 is closed.**
-The owner explicitly requested this integration. No other ticket is started. Keep the
-public UI in Spanish and source code in English. Start a ticket only when the
-user asks for it and its blockers are closed.
+Updated 2026-11-16 by Claude Code (Opus 5.5). Objective: groundwork for
+autonomous ticket runs. Branch `chore/autonomous-groundwork`, delivered as one
+PR. #4 is closed; no implementation ticket is started. Start a ticket only when
+the user asks for it and its blockers are closed.
 
 ## Completed in this revision
+
+- `scripts/worktree-stack.sh` lets a git worktree run its own Compose stack
+  beside the main checkout through ignored `.env` and `compose.override.yaml`.
+  `compose.yaml` keeps the container names the course requires.
+- `scripts/smoke-test.sh` works under any project name and checks the
+  container names in `compose.yaml` itself.
+- `e2e/` holds Playwright tests on desktop and mobile widths. The first spec
+  checks the Spanish shell, console errors, failed requests and horizontal
+  overflow. CI runs it in the `compose` job; Dependabot watches `/e2e`.
+- `.claude/agents/ticket-worker.md` (Opus) and `.claude/agents/ui-qa.md`
+  (Sonnet), plus the user-invoked `/ticket-loop` runbook in
+  `.claude/skills/ticket-loop/`. The orchestrator session runs on Fable 5.2.
+- Verified locally: main and worktree stacks ran side by side, both passed the
+  smoke test, and 12 browser checks passed against the main stack.
+
+## Previous revision: container skeleton (#4)
 
 - `api-service/`: Django REST project. `/api/health` is public, read-only and
   reports the database state; every other path requires the service
@@ -18,19 +34,9 @@ user asks for it and its blockers are closed.
   WhiteNoise, answers client-side routes with the entry page, forwards
   `/api/*` to `api-service` and exposes `/health`. Backend prefixes (`api`,
   `auth`, `users`, `health`) and missing static files never get the frontend.
-- `compose.yaml`, both Dockerfiles, `.env.example` and
-  `scripts/smoke-test.sh`. Only `webapp` publishes a port, on `127.0.0.1`
-  unless `WEBAPP_BIND` says otherwise; the other three containers sit on
-  internal networks.
-- CI jobs `api-service`, `webapp` (Django checks and tests against
-  PostgreSQL) and `compose` (build, start, smoke test). Dependabot also
-  watches pip, Docker and Compose images.
-- README, `docs/contratos.md`, `docs/plan-de-trabajo.md`, `docs/spec.md` and
-  `docs/team-review.md` describe the running system.
-
-- A two-axis code review ran on the branch. Fixed from it: a blank
-  `INTERNAL_SERVICE_KEY` no longer admits requests, and `/api/../x` no longer
-  reaches paths outside `/api` on `api-service`.
+- `compose.yaml`, both Dockerfiles, `.env.example` and the smoke test. Only
+  `webapp` publishes a port, on `127.0.0.1` unless `WEBAPP_BIND` says
+  otherwise; the other three containers sit on internal networks.
 
 ## Decisions taken for the team, to confirm before #5
 
@@ -56,32 +62,21 @@ recorded in `docs/team-review.md`.
 
 ## Still open
 
-- PR CI and the post-merge main CI both passed.
 - Ticket owners are not assigned or recorded in #3.
-- Branch protection on `main` is not enabled. The checks to require would be
-  `frontend`, `api-service`, `webapp`, `compose` and `conventions`.
+- Branch protection on `main` is not enabled and needs a repository admin.
+  The checks to require: `frontend`, `api-service`, `webapp`, `compose`,
+  `conventions`.
 - The demo deployment is opt-in and off: `PAGES_ENABLED` is not set.
-
-## Repository and validation
-
-- Current branch: `main`, synchronized with origin. Both local and remote `feat/container-skeleton` branches are retained.
-- CI on #36 passed: `frontend`, `conventions`, `api-service` (7 tests),
-  `webapp` (12 tests) and `compose` (8 smoke checks on the running stack).
-- Nobody has opened the served Panel in a browser from the Compose stack;
-  the smoke test checks the entry page and its script, and the frontend
-  code did not change.
-- This machine has Python 3.14 but no Docker and no PostgreSQL. Locally only
-  the tests without the `database` tag run
-  (`python manage.py test --exclude-tag database`); the database tests and
-  the Compose stack were verified in CI, not locally. Local `npm run lint` is
-  blocked by a Windows policy on the oxlint binary.
-- Commits use the configured human Git identity, with no AI co-author
-  trailers or generated-by footers.
+- The Claude in Chrome extension was not connected on 2026-11-16, so the
+  `ui-qa` Chrome pass is untested. Playwright covers the automated checks.
+- This machine has Docker, Node 26 and Python 3.14. Its origin uses HTTPS
+  through the `gh` credential helper, because the SSH agent is not reachable
+  from assistant shells.
 
 ## Development setup
 
 Full system: copy `.env.example` to `.env`, then
-`docker compose up --build --wait` and open port 8000. Frontend only: Node 24
+`docker compose up --build --wait` and open port 8000. Frontend only: Node 26
 / npm 11, in `webapp/frontend` run `npm ci`, `npm run dev` or `npm run check`.
 Service tests: see "Development checks" in the README.
 
@@ -93,18 +88,9 @@ Older clones must resynchronize with the current history; do not merge the
 pre-cleanup history back. `.claude/settings.json` disables automatic AI
 attribution; use the configured human Git identity.
 
-## Integration checkpoint
-
-- Objective: integrate #36. GitHub confirms MERGED and #4 CLOSED.
-- Verified exact PR head ae3a544: all five CI jobs passed, no review threads,
-  no submitted reviews, no merge conflicts, and no native blockers for #4.
-- Main merge commit e60c1bb uses the configured human Git identity.
-- Pre-merge worktree was clean; origin was fetched; diff whitespace check passed.
-- Main CI run: https://github.com/Wcno/okane/actions/runs/43801591808 (success).
-- This checkpoint is committed after the merge; no unrelated or pending implementation files. No integration blockers.
-
 ## Next step
 
-1. Integration is complete. Confirm or correct the two decisions above before #5.
-2. When the user asks, start #5 (sign-up, login and sessions), which only
-   depended on #4.
+1. Merge the groundwork PR once CI passes.
+2. Confirm or correct the two decisions above before #5.
+3. Connect the Chrome extension, switch the session to Fable 5.2 and run
+   `/ticket-loop 5` as the first supervised run.

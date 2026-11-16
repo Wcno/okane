@@ -1,7 +1,9 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /webapp/frontend
+    directories:
+      - /webapp/frontend
+      - /e2e
     schedule:
       interval: weekly
       day: monday

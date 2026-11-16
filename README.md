@@ -117,7 +117,33 @@ python manage.py test
 ```
 
 Without PostgreSQL, `python manage.py test --exclude-tag database` runs the
-tests that do not touch the database. Browser tests arrive with their tickets.
+tests that do not touch the database.
+
+Browser tests use Playwright against a running stack, on desktop and mobile
+widths. CI runs them after the smoke test and keeps the report when one fails.
+
+```shell
+docker compose up --build --detach --wait
+cd e2e
+npm ci
+npx playwright install chromium
+npm test
+```
+
+Set `E2E_BASE_URL` to test a stack on another port.
+
+### Parallel stacks in worktrees
+
+The main checkout runs the stack with the container names the course requires.
+A git worktree can run its own stack beside it:
+
+```shell
+bash scripts/worktree-stack.sh
+docker compose up --build --detach --wait
+```
+
+The script writes an ignored `.env` with a unique project name and free port,
+and an ignored `compose.override.yaml` that drops the fixed container names.
 
 ## Documentation
 
@@ -201,3 +227,9 @@ Codex reads [AGENTS.md](AGENTS.md); Claude Code imports it through
 checkpoint and verify it against the repository. An assistant starts a ticket
 only when asked. Commits stay under the contributor's own Git identity, with no
 AI co-author trailers.
+
+In Claude Code, `/ticket-loop [issues]` runs ready tickets autonomously: a
+`ticket-worker` builds each one in its own worktree, then CI, a `ui-qa` browser
+pass in Chrome and a code review gate it before the orchestrator merges. The
+agents live in [.claude/agents](.claude/agents) and the runbook in
+[.claude/skills/ticket-loop](.claude/skills/ticket-loop/SKILL.md).

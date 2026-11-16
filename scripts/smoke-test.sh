@@ -25,11 +25,25 @@ contains() {
   grep -q -- "$2" <<<"$1"
 }
 
-running=$(docker ps --format '{{.Names}}')
-for name in webapp webapp-db api-service api-db; do
-  grep -qx -- "$name" <<<"$running" || fail "container $name is not running"
+services="webapp webapp-db api-service api-db"
+
+# The course fixes the container names. They are read from compose.yaml alone,
+# so a local compose.override.yaml for a parallel worktree cannot hide a change.
+declared=$(docker compose -f compose.yaml config --format json | python3 -c '
+import json, sys
+for name, service in json.load(sys.stdin)["services"].items():
+    print(name, service.get("container_name", ""))
+')
+for name in $services; do
+  grep -qx -- "$name $name" <<<"$declared" || fail "compose.yaml does not name the $name container $name"
 done
-pass "the four containers run with their documented names"
+pass "compose.yaml declares the four documented container names"
+
+running=$(docker compose ps --status running --format '{{.Service}}')
+for name in $services; do
+  grep -qx -- "$name" <<<"$running" || fail "service $name is not running"
+done
+pass "the four services run"
 
 # Ask Compose where webapp is published, so WEBAPP_PORT in .env is honoured.
 published=$(docker compose port webapp 8000) || fail "webapp publishes no port"
@@ -67,7 +81,7 @@ done
 pass "backend routes and missing files are never answered with the frontend"
 
 for name in api-service webapp-db api-db; do
-  ports=$(docker port "$name")
+  ports=$(docker port "$(docker compose ps --quiet "$name")")
   [ -z "$ports" ] || fail "$name publishes a port: $ports"
 done
 pass "only webapp publishes a port"
