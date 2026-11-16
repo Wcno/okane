@@ -9,6 +9,8 @@ from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 
+from config.https import https_settings
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -29,13 +31,20 @@ ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 API_SERVICE_URL = env("API_SERVICE_URL", "http://api-service:8000")
 INTERNAL_SERVICE_KEY = env("INTERNAL_SERVICE_KEY")
 
-INSTALLED_APPS = []
+INSTALLED_APPS = [
+    "django.contrib.contenttypes",
+    "django.contrib.auth",
+    "django.contrib.sessions",
+    "users",
+]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -54,6 +63,32 @@ DATABASES = {
     }
 }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Users live in webapp-db and sign in with their email (docs/contratos.md,
+# "Acceso, sesiones y límites de uso").
+AUTH_USER_MODEL = "users.User"
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 10},
+    },
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+# A session ends after SESSION_IDLE_DAYS without use: every request renews it.
+SESSION_COOKIE_AGE = int(env("SESSION_IDLE_DAYS", "14")) * 24 * 60 * 60
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+# The frontend reads the CSRF token from /auth/session, so no cookie needs to
+# be readable from JavaScript.
+CSRF_COOKIE_HTTPONLY = True
+CSRF_FAILURE_VIEW = "users.views.csrf_failure"
+CSRF_COOKIE_SAMESITE = "Lax"
+# HTTPS through a TLS-terminating proxy: see config/https.py.
+globals().update(https_settings(env("DJANGO_HTTPS", "false").lower() == "true"))
 
 LANGUAGE_CODE = "es"
 TIME_ZONE = "America/Panama"

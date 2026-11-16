@@ -31,7 +31,10 @@ los Saldos iniciales y el Rendimiento mensual está en el
   `api-service` la compara en tiempo constante y responde `403` si falta, no
   coincide o no hay clave configurada. La única ruta de `api-service` que no
   la exige es `/api/health`, porque la comprobación de estado del contenedor
-  la consulta sin credencial. `webapp` copia al reenvío solo `Accept` y `Content-Type`: ni
+  la consulta sin credencial. Junto a la credencial, `webapp` envía el
+  identificador del Usuario autenticado en `X-Okane-User-Id`, un entero positivo;
+  `api-service` responde `403` si falta o está mal formado.
+  `webapp` copia al reenvío solo `Accept` y `Content-Type`: ni
   cookies, ni tokens, ni cabeceras internas del cliente llegan a `api-service`.
 - Si `api-service` no responde, `webapp` contesta `502` e indica qué servicio
   falló. `/health` informa el estado de `webapp` y `webapp-db`; `/api/health`,

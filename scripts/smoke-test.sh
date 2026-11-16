@@ -71,7 +71,10 @@ asset=${scripts%%$'\n'*}
 [ "$(status_of "$base$asset")" = "200" ] || fail "$asset was not served"
 pass "the built assets are served"
 
-for route in /auth/unknown /api/unknown /api/../health /assets/missing.js; do
+[ "$(status_of "$base/api/accounts")" = "401" ] || fail "/api/accounts without a session should answer 401"
+pass "financial calls without a session answer 401"
+
+for route in /auth/unknown /api/../health /assets/missing.js; do
   [ "$(status_of "$base$route")" = "404" ] || fail "$route should answer 404"
   page=$(curl -s --path-as-is "$base$route")
   if contains "$page" 'id="root"'; then

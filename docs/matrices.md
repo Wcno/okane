@@ -191,6 +191,10 @@ El navegador y los clientes externos solo se comunican con `webapp`, que autenti
 | Cerrar sesión | Sí | `POST /auth/logout` | `sessions` | webapp, webapp-db | A5 |
 | Eliminar usuario | Sí | `DELETE /users/me` | `users` | webapp, webapp-db | A5 |
 
+Las pantallas de esta sección consultan además `GET /auth/session`, que no es un caso de uso propio.
+Devuelve quién inició sesión (o `null` si nadie) y el token CSRF que el navegador envía en cada escritura, porque la cookie CSRF es HttpOnly.
+Es una de las rutas de autenticación exceptuadas del requisito de sesión.
+
 ### Gestión de cuentas
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |

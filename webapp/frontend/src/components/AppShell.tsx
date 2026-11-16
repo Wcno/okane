@@ -1,22 +1,12 @@
 import { Ellipsis, Plus, X } from 'lucide-react'
 import { useEffect } from 'react'
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
+import { useSignedInUser } from '../auth/context'
 import { bottomBarDestinations, navigationGroups, type Destination } from '../navigation'
 import { useData } from '../state/context'
 import { ExpenseForm } from './ExpenseForm'
-
-export function Logo() {
-  return (
-    <Link to="/dashboard" className="inline-flex items-center gap-2.5 rounded-lg" aria-label="Okane, ir al Panel">
-      <svg viewBox="0 0 32 32" className="size-8" aria-hidden="true">
-        <rect width="32" height="32" rx="9" className="fill-primary" />
-        <circle cx="16" cy="16" r="7.5" fill="none" strokeWidth="3" className="stroke-on-primary" />
-        <path d="M16 8.5a7.5 7.5 0 0 1 7.5 7.5H16z" className="fill-on-primary" />
-      </svg>
-      <span className="text-[1.2rem] font-semibold tracking-[-0.02em]">Okane</span>
-    </Link>
-  )
-}
+import { Logo } from './Logo'
+import { SignOutButton } from './SignOutButton'
 
 function SidebarLink({ destination }: { destination: Destination }) {
   const Icon = destination.icon
@@ -38,6 +28,7 @@ function SidebarLink({ destination }: { destination: Destination }) {
 }
 
 function Sidebar() {
+  const { user } = useSignedInUser()
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line px-4 pb-5 pt-7 lg:flex">
       <div className="px-2">
@@ -59,9 +50,17 @@ function Sidebar() {
           </div>
         ))}
       </nav>
-      <p className="px-3 text-[0.8rem] leading-snug text-ink-3">
-        Estás viendo datos de ejemplo.
-      </p>
+      <div className="space-y-3 border-t border-line px-1 pt-4">
+        <p className="truncate px-2 text-[0.87rem] text-ink-2" title={user.email}>
+          <span className="sr-only">Sesión iniciada como </span>
+          {user.email}
+        </p>
+        <SignOutButton
+          iconSize={18}
+          className="flex h-10 w-full items-center gap-3 rounded-xl px-2 text-left text-[0.95rem] font-medium text-ink-2 transition-colors duration-150 hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink disabled:opacity-70"
+        />
+        <p className="px-2 text-[0.8rem] leading-snug text-ink-3">Estás viendo datos de ejemplo.</p>
+      </div>
     </aside>
   )
 }
