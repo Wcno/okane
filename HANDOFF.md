@@ -1,12 +1,11 @@
 # Okane handoff
 
-Updated: 2026-11-15, America/Panama. Assistant: Claude Code.
+Updated: 2026-11-15, America/Panama. Assistant: Codex.
 
 ## Current scope
 
-**Ticket #4, the four-container skeleton, is implemented in pull request #36
-on branch `feat/container-skeleton`.** The owner asked for the implementation
-after asking which issue came first. No other ticket is started. Keep the
+**Pull request #36 is merged into main as e60c1bb. Ticket #4 is closed.**
+The owner explicitly requested this integration. No other ticket is started. Keep the
 public UI in Spanish and source code in English. Start a ticket only when the
 user asks for it and its blockers are closed.
 
@@ -57,7 +56,7 @@ recorded in `docs/team-review.md`.
 
 ## Still open
 
-- Pull request #36 is not merged; #4 closes when it is.
+- PR CI and the post-merge main CI both passed.
 - Ticket owners are not assigned or recorded in #3.
 - Branch protection on `main` is not enabled. The checks to require would be
   `frontend`, `api-service`, `webapp`, `compose` and `conventions`.
@@ -65,7 +64,7 @@ recorded in `docs/team-review.md`.
 
 ## Repository and validation
 
-- Branches: `main` and `feat/container-skeleton`, both on origin.
+- Current branch: `main`, synchronized with origin. Both local and remote `feat/container-skeleton` branches are retained.
 - CI on #36 passed: `frontend`, `conventions`, `api-service` (7 tests),
   `webapp` (12 tests) and `compose` (8 smoke checks on the running stack).
 - Nobody has opened the served Panel in a browser from the Compose stack;
@@ -94,9 +93,18 @@ Older clones must resynchronize with the current history; do not merge the
 pre-cleanup history back. `.claude/settings.json` disables automatic AI
 attribution; use the configured human Git identity.
 
+## Integration checkpoint
+
+- Objective: integrate #36. GitHub confirms MERGED and #4 CLOSED.
+- Verified exact PR head ae3a544: all five CI jobs passed, no review threads,
+  no submitted reviews, no merge conflicts, and no native blockers for #4.
+- Main merge commit e60c1bb uses the configured human Git identity.
+- Pre-merge worktree was clean; origin was fetched; diff whitespace check passed.
+- Main CI run: https://github.com/Wcno/okane/actions/runs/43801591808 (success).
+- This checkpoint is committed after the merge; no unrelated or pending implementation files. No integration blockers.
+
 ## Next step
 
-1. Review and merge pull request #36; confirm or correct the two decisions
-   above.
+1. Integration is complete. Confirm or correct the two decisions above before #5.
 2. When the user asks, start #5 (sign-up, login and sessions), which only
    depended on #4.
