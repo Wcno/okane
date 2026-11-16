@@ -74,8 +74,11 @@ system listens only on this computer; replace the secrets before setting
 
 A session ends after `SESSION_IDLE_DAYS` days without use, 14 by default;
 `docker compose exec webapp python manage.py clearsessions` deletes the expired ones.
-Set `WEBAPP_HTTPS=true` when `webapp` is served over HTTPS, so its cookies
-travel only over HTTPS.
+Set `WEBAPP_HTTPS=true` when `webapp` is served over HTTPS.
+The flag assumes a reverse proxy that terminates TLS, forwards `Host` and sets
+`X-Forwarded-Proto`, stripping any value the client sent.
+`webapp` then trusts that header for CSRF origin checks and sends its cookies
+only over HTTPS.
 After five failed sign-ins in a row for one email or from one address within
 15 minutes, `/auth/login` answers `429` with `Retry-After` until the window ends.
 

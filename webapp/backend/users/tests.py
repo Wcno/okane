@@ -167,6 +167,8 @@ class LoginTests(AuthTestCase):
         self.assertTrue(cookie["httponly"])
         self.assertEqual(cookie["samesite"], "Lax")
         self.assertEqual(cookie["max-age"], 14 * 24 * 60 * 60)
+        # WEBAPP_HTTPS is off by default, so local http:// keeps working.
+        self.assertFalse(cookie["secure"])
         self.assertTrue(self.client.cookies["csrftoken"]["httponly"])
 
     def test_logging_in_without_a_csrf_token_is_rejected(self):
@@ -241,6 +243,26 @@ class LoginRateLimitTests(AuthTestCase):
         self.assertEqual(self.login_from("203.0.113.7").status_code, 200)
 
         self.fail_logins(4)
+        self.assertEqual(self.login_from("203.0.113.7").status_code, 200)
+
+    def test_a_success_inside_the_window_resets_the_email_count(self):
+        for number in range(4):
+            self.fail_logins(1, origin=f"203.0.113.{number + 1}")
+        self.assertEqual(self.login_from("198.51.100.1").status_code, 200)
+
+        for number in range(4):
+            self.fail_logins(1, origin=f"203.0.113.{number + 11}")
+
+        self.assertEqual(self.login_from("198.51.100.2").status_code, 200)
+
+    def test_a_success_inside_the_window_resets_the_origin_count(self):
+        for number in range(4):
+            self.fail_logins(1, email=f"intento{number}@example.com")
+        self.assertEqual(self.login_from("203.0.113.7").status_code, 200)
+
+        for number in range(4, 8):
+            self.fail_logins(1, email=f"intento{number}@example.com")
+
         self.assertEqual(self.login_from("203.0.113.7").status_code, 200)
 
     def test_failures_spread_over_more_than_the_window_do_not_add_up(self):

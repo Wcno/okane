@@ -9,6 +9,8 @@ from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 
+from config.https import https_settings
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -85,10 +87,8 @@ SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = True
 CSRF_FAILURE_VIEW = "users.views.csrf_failure"
 CSRF_COOKIE_SAMESITE = "Lax"
-# Behind HTTPS in production, cookies travel only over HTTPS.
-SERVES_HTTPS = env("DJANGO_HTTPS", "false").lower() == "true"
-SESSION_COOKIE_SECURE = SERVES_HTTPS
-CSRF_COOKIE_SECURE = SERVES_HTTPS
+# HTTPS through a TLS-terminating proxy: see config/https.py.
+globals().update(https_settings(env("DJANGO_HTTPS", "false").lower() == "true"))
 
 LANGUAGE_CODE = "es"
 TIME_ZONE = "America/Panama"

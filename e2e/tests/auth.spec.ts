@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { PASSWORD, signUp, uniqueEmail } from './support/session.js'
 
 async function fillCredentials(page: Page, email: string, password: string) {
@@ -136,8 +136,15 @@ for (const colorScheme of ['light', 'dark'] as const) {
   test.describe(`${colorScheme} theme`, () => {
     test.use({ colorScheme })
 
-    for (const route of ['/login', '/register', '/logout']) {
-      test(`${route} fits the viewport and shows its focus`, async ({ page }) => {
+    const screens = [
+      { route: '/login', signedIn: false, controls: credentialControls('Iniciar sesión') },
+      { route: '/register', signedIn: false, controls: credentialControls('Crear usuario') },
+      { route: '/logout', signedIn: true, controls: (page: Page) => [page.getByRole('button', { name: 'Cerrar sesión' })] },
+    ]
+
+    for (const { route, signedIn, controls } of screens) {
+      test(`${route} fits the viewport and shows focus on every control`, async ({ page }) => {
+        if (signedIn) await signUp(page.request)
         await page.goto(route)
         await expect(page.getByRole('main')).toBeVisible()
         await expect(page.locator('html')).toHaveAttribute('lang', 'es')
@@ -148,9 +155,30 @@ for (const colorScheme of ['light', 'dark'] as const) {
         expect(overflow).toBeLessThanOrEqual(0)
 
         await page.keyboard.press('Tab')
-        const outline = await page.evaluate(() => getComputedStyle(document.activeElement!).outlineStyle)
-        expect(outline).toBe('solid')
+        await expectVisibleFocus(page.getByRole('link', { name: 'Okane, ir al Panel' }))
+        for (const control of controls(page)) {
+          await page.keyboard.press('Tab')
+          await expectVisibleFocus(control)
+        }
       })
     }
   })
+}
+
+function credentialControls(submit: string) {
+  return (page: Page) => [
+    page.getByLabel('Correo'),
+    page.getByLabel('Contraseña'),
+    page.getByRole('button', { name: submit }),
+  ]
+}
+
+/** Focused, with an outline or a ring (DESIGN.md: buttons use an outline, fields a ring). */
+async function expectVisibleFocus(control: Locator) {
+  await expect(control).toBeFocused()
+  const indicator = await control.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { outline: style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0, ring: style.boxShadow !== 'none' }
+  })
+  expect(indicator.outline || indicator.ring).toBe(true)
 }
