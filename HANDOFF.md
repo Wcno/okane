@@ -22,8 +22,12 @@ the user asks for it and its blockers are closed.
 - `.claude/agents/ticket-worker.md` (Opus) and `.claude/agents/ui-qa.md`
   (Sonnet), plus the user-invoked `/ticket-loop` runbook in
   `.claude/skills/ticket-loop/`. The orchestrator session runs on Fable 5.2.
+  The loop opens stacked PRs on its blockers' branches; the user merges them,
+  bottom first, with merge commits.
 - Verified locally: main and worktree stacks ran side by side, both passed the
-  smoke test, and 12 browser checks passed against the main stack.
+  smoke test, and 12 browser checks passed against the main stack. Claude in
+  Chrome opened the Panel from the stack with no console errors.
+- PR #40 CI passed on every job, including the new browser tests.
 
 ## Previous revision: container skeleton (#4)
 
@@ -67,8 +71,6 @@ recorded in `docs/team-review.md`.
   The checks to require: `frontend`, `api-service`, `webapp`, `compose`,
   `conventions`.
 - The demo deployment is opt-in and off: `PAGES_ENABLED` is not set.
-- The Claude in Chrome extension was not connected on 2026-11-16, so the
-  `ui-qa` Chrome pass is untested. Playwright covers the automated checks.
 - This machine has Docker, Node 26 and Python 3.14. Its origin uses HTTPS
   through the `gh` credential helper, because the SSH agent is not reachable
   from assistant shells.
@@ -90,7 +92,7 @@ attribution; use the configured human Git identity.
 
 ## Next step
 
-1. Merge the groundwork PR once CI passes.
+1. The user reviews and merges PR #40. Tickets may already stack on it.
 2. Confirm or correct the two decisions above before #5.
-3. Connect the Chrome extension, switch the session to Fable 5.2 and run
-   `/ticket-loop 5` as the first supervised run.
+3. Switch the session to Fable 5.2 and run `/ticket-loop 5` as the first
+   supervised run.

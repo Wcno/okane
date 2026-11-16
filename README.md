@@ -230,6 +230,9 @@ AI co-author trailers.
 
 In Claude Code, `/ticket-loop [issues]` runs ready tickets autonomously: a
 `ticket-worker` builds each one in its own worktree, then CI, a `ui-qa` browser
-pass in Chrome and a code review gate it before the orchestrator merges. The
-agents live in [.claude/agents](.claude/agents) and the runbook in
+pass in Chrome and a code review gate it before its PR is marked ready. PRs are
+stacked on the PRs of their blockers, so work continues while reviews wait.
+Merge a stack from the bottom with "Create a merge commit"; squashing rewrites
+the commits the PRs above it share. The agents live in
+[.claude/agents](.claude/agents) and the runbook in
 [.claude/skills/ticket-loop](.claude/skills/ticket-loop/SKILL.md).
