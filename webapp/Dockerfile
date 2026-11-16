@@ -1,5 +1,5 @@
 # Build the React frontend, then serve it from the Django backend.
-FROM node:24-slim AS frontend
+FROM node:26-slim AS frontend
 
 WORKDIR /frontend
 
