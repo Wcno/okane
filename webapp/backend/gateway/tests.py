@@ -98,9 +98,11 @@ class SessionRequiredTests(SessionGatewayTestCase):
         self.assertEqual(self.api_service.received, [])
 
     def test_the_public_api_does_not_accept_a_session_cookie(self):
-        response = self.client.get("/api/v1/accounts")
+        for path in ("/api/v1", "/api/v1/", "/api/v1/accounts"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
 
-        self.assertEqual(response.status_code, 401)
+                self.assertEqual(response.status_code, 401)
         self.assertEqual(self.api_service.received, [])
 
 

@@ -2,12 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/context'
 import { AuthLayout } from '../components/AuthLayout'
+import { primaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
 
 type Progress = { status: 'closing' } | { status: 'closed' } | { status: 'failed'; message: string }
-
-const buttonClassName =
-  'inline-flex h-12 w-full items-center justify-center rounded-full bg-primary text-[1rem] font-semibold text-on-primary transition-transform duration-150 hover:-translate-y-px active:scale-[0.98]'
 
 /** Opening /logout closes the session at once; the screen confirms it. */
 export function Logout() {
@@ -34,7 +32,7 @@ export function Logout() {
     return (
       <AuthLayout title="No pudimos cerrar tu sesión">
         <FormAlert>{progress.message}</FormAlert>
-        <button type="button" onClick={close} className={`${buttonClassName} mt-5`}>
+        <button type="button" onClick={close} className={`${primaryButtonClassName} mt-5`}>
           Reintentar
         </button>
       </AuthLayout>
@@ -54,7 +52,7 @@ export function Logout() {
         {progress.status === 'closed' ? 'Sesión cerrada.' : 'Cerrando sesión.'}
       </p>
       {progress.status === 'closed' && (
-        <Link to="/login" className={buttonClassName}>
+        <Link to="/login" className={primaryButtonClassName}>
           Iniciar sesión de nuevo
         </Link>
       )}

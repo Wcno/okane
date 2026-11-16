@@ -6,7 +6,7 @@ export function Register() {
   const location = useLocation()
   return (
     <AuthLayout title="Crear tu usuario" intro="Con tu correo y una contraseña empiezas a llevar tus finanzas en Okane.">
-      <CredentialsForm form="register" />
+      <CredentialsForm mode="register" />
       <AuthSwitch question="¿Ya tienes usuario?" to="/login" state={location.state}>
         Inicia sesión
       </AuthSwitch>

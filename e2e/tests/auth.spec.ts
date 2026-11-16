@@ -21,7 +21,7 @@ test('a visitor is sent to login and comes back after registering', async ({ pag
   await page.getByRole('link', { name: 'Regístrate' }).click()
   await expect(page.getByRole('heading', { name: 'Crear tu usuario' })).toBeVisible()
   await fillCredentials(page, email, PASSWORD)
-  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  await page.getByRole('button', { name: 'Crear usuario' }).click()
 
   await expect(page).toHaveURL(/\/budgets$/)
   await expect(page.getByRole('heading', { name: 'Presupuestos' })).toBeVisible()
@@ -32,7 +32,7 @@ test('registering with an email already in use says what happened', async ({ pag
 
   await page.goto('/register')
   await fillCredentials(page, email.toUpperCase(), PASSWORD)
-  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  await page.getByRole('button', { name: 'Crear usuario' }).click()
 
   await expect(page.getByText('Ya existe un usuario con este correo. Inicia sesión o regístrate con otro correo.')).toBeVisible()
   await expect(page.getByLabel('Correo')).toBeFocused()
@@ -42,7 +42,7 @@ test('registering with an email already in use says what happened', async ({ pag
 test('a short password is explained before it is sent', async ({ page }) => {
   await page.goto('/register')
   await fillCredentials(page, uniqueEmail(), 'corta')
-  await page.getByRole('button', { name: 'Crear cuenta' }).click()
+  await page.getByRole('button', { name: 'Crear usuario' }).click()
 
   await expect(page.getByText('La contraseña debe tener al menos 10 caracteres. Te faltan 5.')).toBeVisible()
   await expect(page.getByLabel('Contraseña')).toBeFocused()

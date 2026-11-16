@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { AuthLayout } from '../components/AuthLayout'
+import { primaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
 import { useAuth } from './context'
 import { afterSignIn } from './redirect'
@@ -15,7 +16,7 @@ export function SessionGate() {
         <button
           type="button"
           onClick={reload}
-          className="mt-5 h-12 w-full rounded-full bg-primary text-[1rem] font-semibold text-on-primary transition-transform duration-150 hover:-translate-y-px active:scale-[0.98]"
+          className={`${primaryButtonClassName} mt-5`}
         >
           Reintentar
         </button>

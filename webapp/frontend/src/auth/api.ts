@@ -1,4 +1,4 @@
-import type { CredentialErrors, Credentials, CredentialsForm } from './validation'
+import type { CredentialErrors, Credentials, CredentialsMode } from './validation'
 
 export interface SessionUser {
   id: number
@@ -23,16 +23,22 @@ interface SessionBody {
 
 const toSession = (body: SessionBody): Session => ({ user: body.user, csrfToken: body.csrf_token })
 
-export class SessionUnavailableError extends Error {}
+/** An auth call that did not complete; its message is ready to show. */
+export class AuthRequestError extends Error {}
+
+const CREDENTIALS_PATH: Record<CredentialsMode, string> = {
+  login: '/auth/login',
+  register: '/auth/register',
+}
 
 export async function fetchSession(): Promise<Session> {
   let response: Response
   try {
     response = await fetch('/auth/session', { headers: { Accept: 'application/json' } })
   } catch {
-    throw new SessionUnavailableError(CONNECTION_LOST)
+    throw new AuthRequestError(CONNECTION_LOST)
   }
-  if (!response.ok) throw new SessionUnavailableError(SERVER_FAILED)
+  if (!response.ok) throw new AuthRequestError(SERVER_FAILED)
   return toSession(await response.json())
 }
 
@@ -55,13 +61,13 @@ async function readErrors(response: Response): Promise<CredentialErrors> {
 }
 
 export async function submitCredentials(
-  form: CredentialsForm,
+  mode: CredentialsMode,
   credentials: Credentials,
   csrfToken: string,
 ): Promise<CredentialsOutcome> {
   let response: Response
   try {
-    response = await post(`/auth/${form}`, csrfToken, credentials)
+    response = await post(CREDENTIALS_PATH[mode], csrfToken, credentials)
   } catch {
     return { ok: false, errors: { form: [CONNECTION_LOST] } }
   }
@@ -75,10 +81,10 @@ export async function endSession(csrfToken: string): Promise<void> {
   try {
     response = await post('/auth/logout', csrfToken)
   } catch {
-    throw new SessionUnavailableError(CONNECTION_LOST)
+    throw new AuthRequestError(CONNECTION_LOST)
   }
   if (!response.ok) {
     const errors = await readErrors(response)
-    throw new SessionUnavailableError(errors.form?.[0] ?? SERVER_FAILED)
+    throw new AuthRequestError(errors.form?.[0] ?? SERVER_FAILED)
   }
 }

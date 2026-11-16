@@ -6,7 +6,7 @@ export function Login() {
   const location = useLocation()
   return (
     <AuthLayout title="Iniciar sesión" intro="Entra con el correo y la contraseña de tu usuario.">
-      <CredentialsForm form="login" />
+      <CredentialsForm mode="login" />
       <AuthSwitch question="¿Todavía no tienes usuario?" to="/register" state={location.state}>
         Regístrate
       </AuthSwitch>

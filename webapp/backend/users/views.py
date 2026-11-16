@@ -8,7 +8,6 @@ import json
 
 from django.contrib.auth import authenticate, login, logout, password_validation
 from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
@@ -18,7 +17,6 @@ from users import throttling
 from users.models import User, normalize_email
 
 INVALID_EMAIL = "Escribe un correo válido, por ejemplo ana@ejemplo.com."
-MISSING_PASSWORD = "Escribe una contraseña de al menos 10 caracteres."
 EMAIL_TAKEN = (
     "Ya existe un usuario con este correo. Inicia sesión o regístrate con otro correo."
 )
@@ -77,16 +75,14 @@ def register(request):
 
     errors = {}
     try:
-        validate_email(email)
+        # The field's validators check both the format and the column length.
+        User._meta.get_field("email").run_validators(email)
     except ValidationError:
         errors["email"] = [INVALID_EMAIL]
-    if not password:
-        errors["password"] = [MISSING_PASSWORD]
-    else:
-        try:
-            password_validation.validate_password(password, User(email=email))
-        except ValidationError as error:
-            errors["password"] = list(error.messages)
+    try:
+        password_validation.validate_password(password, User(email=email))
+    except ValidationError as error:
+        errors["password"] = list(error.messages)
     if errors:
         return validation_errors(errors)
 

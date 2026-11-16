@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Logo } from './AppShell'
+import { Logo } from './Logo'
 
 /** Frame of the screens a visitor sees without a session: logo and one card. */
 export function AuthLayout({ title, intro, children }: { title: string; intro?: ReactNode; children: ReactNode }) {

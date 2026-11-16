@@ -72,7 +72,8 @@ system listens only on this computer; replace the secrets before setting
 | `/api/health` | The readiness of `api-service` and `api-db`, forwarded by `webapp` |
 | `/health` | The readiness of `webapp` and `webapp-db` |
 
-A session ends after `SESSION_IDLE_DAYS` days without use, 14 by default.
+A session ends after `SESSION_IDLE_DAYS` days without use, 14 by default;
+`docker compose exec webapp python manage.py clearsessions` deletes the expired ones.
 Set `WEBAPP_HTTPS=true` when `webapp` is served over HTTPS, so its cookies
 travel only over HTTPS.
 After five failed sign-ins in a row for one email or from one address within

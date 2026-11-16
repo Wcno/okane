@@ -14,7 +14,7 @@ FORWARDED_REQUEST_HEADERS = ("Accept", "Content-Type")
 PUBLIC_PATHS = frozenset({"/api/health"})
 # The public API authenticates personal tokens (#32); a session cookie never
 # substitutes for one.
-TOKEN_API_PREFIX = "/api/v1/"
+TOKEN_API = "/api/v1"
 
 api_service = httpx.Client(timeout=10)
 
@@ -37,7 +37,8 @@ def forward(request):
     }
     headers[SERVICE_KEY_HEADER] = settings.INTERNAL_SERVICE_KEY
     if request.path not in PUBLIC_PATHS:
-        if request.path.startswith(TOKEN_API_PREFIX) or not request.user.is_authenticated:
+        is_token_api = request.path == TOKEN_API or request.path.startswith(TOKEN_API + "/")
+        if is_token_api or not request.user.is_authenticated:
             return authentication_required()
         headers[USER_ID_HEADER] = str(request.user.pk)
 

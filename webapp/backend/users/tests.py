@@ -68,8 +68,8 @@ class RegisterTests(AuthTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("10", " ".join(response.json()["errors"]["password"]))
 
-    def test_a_common_or_numeric_password_is_rejected(self):
-        for password in ("password123", "8462095713"):
+    def test_a_common_numeric_or_empty_password_is_rejected(self):
+        for password in ("password123", "8462095713", ""):
             with self.subTest(password=password):
                 response = self.register(password=password)
 
@@ -84,6 +84,12 @@ class RegisterTests(AuthTestCase):
             response.json()["errors"],
             {"email": ["Escribe un correo válido, por ejemplo ana@ejemplo.com."]},
         )
+
+    def test_an_email_longer_than_the_column_is_rejected_as_invalid(self):
+        response = self.register(f"{'a' * 64}@{'b' * 63}.{'c' * 63}.{'d' * 63}.com")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("email", response.json()["errors"])
 
     def test_the_password_never_appears_in_the_response(self):
         response = self.register(password=PASSWORD)
@@ -147,6 +153,12 @@ class LoginTests(AuthTestCase):
             },
         )
         self.assertIsNone(self.client.get("/auth/session").json()["user"])
+
+    def test_an_overlong_email_gets_the_usual_failure(self):
+        response = self.login("a" * 300 + "@example.com")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("no coinciden", response.json()["errors"]["form"][0])
 
     def test_the_session_cookie_is_http_only_and_same_site(self):
         self.login()

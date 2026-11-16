@@ -17,8 +17,15 @@ MAX_FAILURES = 5
 WINDOW = timedelta(minutes=15)
 
 
+KEY_LENGTH = LoginFailure._meta.get_field("key").max_length
+
+
 def _keys(email, origin):
-    return ((LoginFailure.Scope.EMAIL, email), (LoginFailure.Scope.ORIGIN, origin))
+    # No real email is longer than the column; a longer one still counts.
+    return (
+        (LoginFailure.Scope.EMAIL, email[:KEY_LENGTH]),
+        (LoginFailure.Scope.ORIGIN, origin),
+    )
 
 
 def seconds_until_allowed(email, origin):

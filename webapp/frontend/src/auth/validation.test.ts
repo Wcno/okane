@@ -16,7 +16,7 @@ describe('validateCredentials', () => {
 
   it('asks for the password when it is empty', () => {
     expect(validateCredentials('login', { email: 'ana@ejemplo.com', password: '' })).toEqual({
-      password: ['Escribe tu contraseña.'],
+      password: ['Escribe la contraseña de tu usuario.'],
     })
   })
 
