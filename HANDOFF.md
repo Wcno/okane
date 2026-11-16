@@ -14,8 +14,8 @@ api-service PostgreSQL tests (43); webapp PostgreSQL tests (49); API migration
 check (no changes); isolated Compose build and smoke test (all pass).
 Windows Node is 24; container build uses required Node 26.
 
-Verified browser coverage: 44 existing E2E tests passed; 8 new account lifecycle tests passed at 390/1440 in light/dark after fixing test setup and navigation synchronization. E2E TypeScript check passed. In progress: PR publication.
-Files included in the completion commit: inherited frontend accounts files, App/buttons/Logout, new
+Verified browser coverage: 44 existing E2E tests passed; 8 new account lifecycle tests passed at 390/1440 in light/dark after fixing test setup and navigation synchronization. E2E TypeScript check passed. Published PR #45: https://github.com/Wcno/okane/pull/45 (open, ready for independent review, not merged). Implementation head: dfab1c4. Remote CI not yet verified.
+Committed files (working tree clean apart from ignored local artifacts): inherited frontend accounts files, App/buttons/Logout, new
 accounts E2E test, this handoff.
 Local isolated stack: WSL LabDocker, project okane-7-codex, port 8077.
 Ignored .env and compose.override.yaml contain local setup; no secrets committed.
@@ -25,4 +25,5 @@ positions, recurring-rule blockers and historical valuation belong to subsequent
 tickets, which must register sources and preserve archived references. Current
 archive tests retain balances and their sum; no claim of a complete wealth module.
 Next: independent PR review and CI assessment. Do not merge.
+
 
