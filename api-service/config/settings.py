@@ -30,6 +30,7 @@ INTERNAL_SERVICE_KEY = env("INTERNAL_SERVICE_KEY")
 INSTALLED_APPS = [
     "rest_framework",
     "health",
+    "accounts",
 ]
 
 MIDDLEWARE = [
@@ -61,6 +62,7 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
     "UNAUTHENTICATED_USER": None,
+    "EXCEPTION_HANDLER": "config.rest.exception_handler",
 }
 
 LANGUAGE_CODE = "es"
