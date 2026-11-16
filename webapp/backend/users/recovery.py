@@ -7,7 +7,9 @@ seconds after it was issued.
 """
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC
+from threading import BoundedSemaphore
 
 from django.conf import settings
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
@@ -39,6 +41,31 @@ class ResetTokenGenerator(PasswordResetTokenGenerator):
 
 
 token_generator = ResetTokenGenerator()
+
+# Bound outstanding delivery work per web process. Transport latency must not
+# become a public signal of whether an email is registered.
+_delivery_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="reset-mail")
+_delivery_slots = BoundedSemaphore(32)
+
+
+def queue_reset_link(user):
+    """Queue identical work for known and unknown emails without waiting on SMTP."""
+    if not _delivery_slots.acquire(blocking=False):
+        logger.warning("Password reset delivery queue is full.")
+        return
+    try:
+        _delivery_pool.submit(_deliver_reset_link, user)
+    except RuntimeError:
+        _delivery_slots.release()
+        logger.exception("Password reset delivery queue is shutting down.")
+
+
+def _deliver_reset_link(user):
+    try:
+        if user is not None:
+            send_reset_link(user)
+    finally:
+        _delivery_slots.release()
 
 
 def _lifetime():
