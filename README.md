@@ -77,7 +77,7 @@ it with `docker compose down`; add `--volumes` to delete the databases too.
 
 ## Run only the frontend
 
-Requirements: Git, **Node.js 24** and **npm 11**. The frontend `.nvmrc` declares
+Requirements: Git, **Node.js 26** and **npm 11**. The frontend `.nvmrc` declares
 the Node major version. The demo needs no database or configuration.
 
 ```shell

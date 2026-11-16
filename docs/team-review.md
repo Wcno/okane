@@ -36,8 +36,8 @@ so its pull request chose the options below. They are easy to change now and
 costly later: the team should confirm or correct them before #5 starts.
 
 - **Runtime versions:** Python 3.14, Django 5.2 LTS, Django REST framework
-  3.18, PostgreSQL 17, Node 24 for the frontend build. Exact versions are
-  pinned in each `requirements.txt` and Dockerfile.
+  3.18, PostgreSQL 17, Node 26 for the frontend build (updated in PR #38).
+  Exact versions are pinned in each `requirements.txt` and Dockerfile.
 - **Internal authentication:** a shared key sent by `webapp` in
   `X-Okane-Service-Key` and compared in constant time by `api-service`, as
   described in [contratos.md](contratos.md). A signature per request was the
