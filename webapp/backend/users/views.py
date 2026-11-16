@@ -207,8 +207,12 @@ def reset_password(request):
 
     # The new hash ends every session of the User and the link itself, since
     # both are signed with the old one. This browser is signed out cleanly.
+    previous_hash = user.password
     user.set_password(password)
-    user.save(update_fields=["password"])
+    # Compare and replace atomically: concurrent requests may have validated
+    # the same token, but only one can consume the original password hash.
+    if not User.objects.filter(pk=user.pk, password=previous_hash).update(password=user.password):
+        return validation_errors({"form": [RESET_LINK_UNUSABLE]})
     if request.user.pk == user.pk:
         logout(request)
     # Using a link is the correct attempt that restarts both counts: whoever

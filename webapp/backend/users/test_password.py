@@ -1,17 +1,61 @@
 import contextlib
 import io
 import re
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 from django.core import mail
-from django.test import Client, override_settings
+from django.db import connections
+from django.test import Client, TransactionTestCase, override_settings, skipUnlessDBFeature
 
 from config.mail import mail_settings
 from users.tests import PASSWORD, AuthTestCase
+from users import recovery
+from users.models import User
 
 NEW_PASSWORD = "staple-battery-horse"
 RESET_LINK = re.compile(r"http://okane\.test/reset-password/(\S+)")
+
+
+@override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
+class ConcurrentResetTests(TransactionTestCase):
+    @skipUnlessDBFeature("has_select_for_update")
+    def test_simultaneous_requests_can_only_consume_a_link_once(self):
+        user = User.objects.create_user("concurrent@example.com", PASSWORD)
+        token = f"{user.pk}-{recovery.token_generator.make_token(user)}"
+        validated = Barrier(2)
+        original_lookup = recovery.user_for_token
+
+        def overlapping_lookup(value):
+            result = original_lookup(value)
+            validated.wait(timeout=10)
+            return result
+
+        def reset(password):
+            try:
+                client = Client(enforce_csrf_checks=True)
+                csrf = client.get("/auth/session").json()["csrf_token"]
+                response = client.post(
+                    "/auth/reset-password",
+                    {"token": token, "password": password},
+                    content_type="application/json",
+                    headers={"X-CSRFToken": csrf},
+                )
+                return response.status_code, password
+            finally:
+                connections.close_all()
+
+        with mock.patch("users.recovery.user_for_token", side_effect=overlapping_lookup):
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                results = list(pool.map(reset, ["first-new-password", "second-new-password"]))
+
+        self.assertEqual(sorted(status for status, _ in results), [200, 400])
+        user.refresh_from_db()
+        winner = next(password for status, password in results if status == 200)
+        self.assertTrue(user.check_password(winner))
+        self.assertIsNone(original_lookup(token))
 
 
 @override_settings(PUBLIC_ORIGIN="http://okane.test")
