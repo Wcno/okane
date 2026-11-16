@@ -36,17 +36,26 @@ class User(AbstractBaseUser):
         ]
 
 
-class LoginFailure(models.Model):
-    """One failed login, counted per email and per origin (docs/contratos.md)."""
+class AccessAttempt(models.Model):
+    """One counted attempt at a limited action, per email and per origin (docs/contratos.md)."""
+
+    class Action(models.TextChoices):
+        LOGIN = "login"
+        PASSWORD_RECOVERY = "password_recovery"
 
     class Scope(models.TextChoices):
         EMAIL = "email"
         ORIGIN = "origin"
 
+    action = models.CharField(max_length=17, choices=Action)
     scope = models.CharField(max_length=6, choices=Scope)
     key = models.CharField(max_length=254)
-    failed_at = models.DateTimeField()
+    attempted_at = models.DateTimeField()
 
     class Meta:
-        db_table = "login_failures"
-        indexes = [models.Index(fields=["scope", "key", "failed_at"])]
+        db_table = "access_attempts"
+        indexes = [
+            models.Index(
+                fields=["action", "scope", "key", "attempted_at"], name="access_attempts_recent"
+            )
+        ]

@@ -1,6 +1,8 @@
-from django.test import Client, TestCase, override_settings, tag
+from django.core.exceptions import ImproperlyConfigured
+from django.test import Client, SimpleTestCase, TestCase, override_settings, tag
 
 from config.https import https_settings
+from config.mail import mail_settings, public_origin
 from users.models import User
 
 PASSWORD = "correct-horse-battery"
@@ -43,3 +45,33 @@ class HttpsBehindProxyTests(TestCase):
         # Django sees plain HTTP, so an https Origin is not its own.
         self.assertEqual(response.status_code, 403)
         self.assertFalse(plain.cookies["csrftoken"]["secure"])
+
+
+class MailSettingsTests(SimpleTestCase):
+    def settings_for(self, host):
+        return mail_settings(
+            host=host, port="2525", user="okane", password="secret", use_tls=True, sender="Okane <okane@example.com>"
+        )
+
+    def test_without_a_mail_server_messages_go_to_the_console(self):
+        settings = self.settings_for("")
+
+        self.assertEqual(settings["EMAIL_BACKEND"], "django.core.mail.backends.console.EmailBackend")
+        self.assertEqual(settings["DEFAULT_FROM_EMAIL"], "Okane <okane@example.com>")
+
+    def test_with_a_mail_server_messages_are_sent_through_it(self):
+        settings = self.settings_for("smtp.example.com")
+
+        self.assertEqual(settings["EMAIL_BACKEND"], "django.core.mail.backends.smtp.EmailBackend")
+        self.assertEqual((settings["EMAIL_HOST"], settings["EMAIL_PORT"]), ("smtp.example.com", 2525))
+
+
+class PublicOriginTests(SimpleTestCase):
+    def test_an_origin_is_kept_without_a_trailing_slash(self):
+        self.assertEqual(public_origin("https://okane.example/"), "https://okane.example")
+        self.assertEqual(public_origin("http://localhost:8000"), "http://localhost:8000")
+
+    def test_anything_that_is_not_an_origin_stops_the_start(self):
+        for value in ("okane.example", "ftp://okane.example", "https://okane.example/app", "https://", "https://a@okane.example", "https://okane.example?x=1"):
+            with self.subTest(value=value), self.assertRaises(ImproperlyConfigured):
+                public_origin(value)

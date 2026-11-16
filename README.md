@@ -68,6 +68,8 @@ system listens only on this computer; replace the secrets before setting
 | Address | Answer |
 |---|---|
 | `/register`, `/login`, `/logout` | Sign up, sign in and sign out; every other screen needs a session |
+| `/forgot-password`, `/reset-password/:token` | Ask for a password reset link by email and choose a new password with it |
+| `/profile/change-password` | Change the password with the current one; the other sessions end |
 | `/dashboard` and the other screens | The frontend, served by `webapp` |
 | `/api/health` | The readiness of `api-service` and `api-db`, forwarded by `webapp` |
 | `/health` | The readiness of `webapp` and `webapp-db` |
@@ -81,6 +83,13 @@ The flag assumes a reverse proxy that terminates TLS, forwards `Host` and sets
 only over HTTPS.
 After five failed sign-ins in a row for one email or from one address within
 15 minutes, `/auth/login` answers `429` with `Retry-After` until the window ends.
+`/auth/forgot-password` counts every request the same way, apart from sign-ins.
+
+A password reset link works once, for `PASSWORD_RESET_MINUTES` minutes, 60 by
+default. It is built on `WEBAPP_PUBLIC_ORIGIN`, which defaults to
+`http://localhost:WEBAPP_PORT`; set it when Okane is reached under another name.
+Until `EMAIL_HOST` names an SMTP server, messages are printed instead of sent:
+`docker compose logs webapp` shows each one with its link.
 
 Only `webapp` publishes a port. `docker compose ps` shows which container is
 not healthy, and `bash scripts/smoke-test.sh` checks the running system. Stop
