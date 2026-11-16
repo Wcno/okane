@@ -10,6 +10,8 @@ async function signOutFromTheMenu(page: Page) {
   await page.goto('/menu')
   // The sidebar link on desktop and the Menu entry on the phone; only one is visible.
   await page.getByRole('link', { name: 'Cerrar sesión' }).first().click()
+  await expect(page.getByRole('heading', { name: '¿Cerrar tu sesión?' })).toBeVisible()
+  await page.getByRole('button', { name: 'Cerrar sesión' }).click()
   await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
 }
 
@@ -95,6 +97,31 @@ test('signing out cuts access at once', async ({ page }) => {
   expect((await page.request.get('/api/accounts')).status()).toBe(401)
   await page.goto('/dashboard')
   await expect(page).toHaveURL(/\/login$/)
+})
+
+test('opening the logout screen only asks; the session stays open', async ({ page }) => {
+  const email = await signUp(page.request)
+
+  await page.goto('/logout')
+
+  await expect(page.getByRole('heading', { name: '¿Cerrar tu sesión?' })).toBeVisible()
+  await expect(page.getByText(email)).toBeVisible()
+  expect((await page.request.get('/api/accounts')).status()).not.toBe(401)
+  await page.getByRole('link', { name: 'Volver al Panel' }).click()
+  await expect(page).toHaveURL(/\/dashboard$/)
+})
+
+test('signing out works with the keyboard alone', async ({ page }) => {
+  await signUp(page.request)
+
+  await page.goto('/logout')
+  await page.getByRole('link', { name: 'Okane, ir al Panel' }).focus()
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toBeFocused()
+  await page.keyboard.press('Enter')
+
+  await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  expect((await page.request.get('/api/accounts')).status()).toBe(401)
 })
 
 test('a signed-in User who opens login goes to the Panel', async ({ page }) => {
