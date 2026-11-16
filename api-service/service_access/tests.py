@@ -19,11 +19,11 @@ class ServiceCredentialTests(SimpleTestCase):
 
     def test_lets_a_request_from_webapp_reach_the_router(self):
         response = self.client.get(
-            "/api/accounts",
+            "/api/no-such-endpoint",
             headers={"X-Okane-Service-Key": "expected-key", "X-Okane-User-Id": "7"},
         )
 
-        # No financial endpoint exists yet, so the router answers, not the guard.
+        # The router answers, not the guard.
         self.assertEqual(response.status_code, 404)
 
     def test_rejects_a_request_from_webapp_without_a_user_identity(self):

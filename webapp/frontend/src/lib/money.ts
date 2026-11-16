@@ -6,15 +6,20 @@ const formatter = new Intl.NumberFormat('en-US', {
 const MINUS = '−'
 
 /** Split an amount into sign, integer part and cents for large number layouts. */
-export const moneyParts = (amount: number) => {
+export const moneyParts = (amount: number | string) => {
+  if (typeof amount === 'string') {
+    const [whole, fraction = '00'] = amount.replace(/^-/, '').split('.')
+    const integer = new Intl.NumberFormat('en-US').format(BigInt(whole))
+    return { sign: amount.startsWith('-') ? MINUS : '', integer, cents: fraction.padEnd(2, '0') }
+  }
   const [integer, cents] = formatter.format(Math.abs(amount)).split('.')
   return { sign: amount < 0 ? MINUS : '', integer, cents }
 }
 
 /** Formats $1,284.60 or a negative amount; sign: true also prefixes positive amounts with +. */
-export const formatMoney = (amount: number, options: { sign?: boolean } = {}) => {
+export const formatMoney = (amount: number | string, options: { sign?: boolean } = {}) => {
   const { sign, integer, cents } = moneyParts(amount)
-  const prefix = sign || (options.sign && amount > 0 ? '+' : '')
+  const prefix = sign || (options.sign && Number(amount) > 0 ? '+' : '')
   return `${prefix}$${integer}.${cents}`
 }
 
