@@ -186,8 +186,7 @@ def forgot_password(request):
         return too_many_attempts(wait, TOO_MANY_REQUESTS)
     recovery_limit.record(email, origin)
     user = User.objects.filter(email=email).first()
-    if user is not None:
-        recovery.send_reset_link(user)
+    recovery.queue_reset_link(user)
     return HttpResponse(status=204)
 
 

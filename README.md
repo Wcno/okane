@@ -259,3 +259,5 @@ Merge a stack from the bottom with "Create a merge commit"; squashing rewrites
 the commits the PRs above it share. The agents live in
 [.claude/agents](.claude/agents) and the runbook in
 [.claude/skills/ticket-loop](.claude/skills/ticket-loop/SKILL.md).
+
+Password recovery delivery runs in a bounded background queue (two workers, up to 32 outstanding requests per web process), so SMTP latency does not reveal registered addresses. Delivery is best effort: process restarts or a full queue can discard pending messages; users can request another link. Unknown addresses follow the same enqueue path.

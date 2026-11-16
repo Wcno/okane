@@ -2,7 +2,7 @@ import contextlib
 import io
 import re
 from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier
+from threading import Barrier, Event
 from datetime import UTC, datetime, timedelta
 from unittest import mock
 
@@ -63,6 +63,11 @@ class PasswordTestCase(AuthTestCase):
     def setUp(self):
         super().setUp()
         self.register(client=Client(enforce_csrf_checks=True))
+        # Execute queued delivery deterministically in token/content tests.
+        delivery = mock.patch("users.recovery.queue_reset_link", side_effect=lambda user: recovery.send_reset_link(user) if user else None)
+        self.delivery_mock = delivery
+        delivery.start()
+        self.addCleanup(delivery.stop)
 
     def forgot_password(self, email="ana@example.com", client=None):
         return self.post("/auth/forgot-password", {"email": email}, client)
@@ -75,6 +80,29 @@ class PasswordTestCase(AuthTestCase):
 
 
 class ForgotPasswordTests(PasswordTestCase):
+    def test_slow_transport_does_not_delay_known_or_unknown_responses(self):
+        self.delivery_mock.stop()
+        started, release, finished = Event(), Event(), Event()
+
+        def delayed_transport(user):
+            started.set()
+            release.wait(timeout=5)
+            finished.set()
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            with mock.patch("users.recovery._delivery_pool", pool), mock.patch("users.recovery.send_reset_link", side_effect=delayed_transport):
+                try:
+                    known = self.forgot_password()
+                    self.assertTrue(started.wait(timeout=1))
+                    unknown = self.forgot_password("unknown@example.com")
+                    self.assertFalse(finished.is_set())
+                    self.assertEqual(known.status_code, 204)
+                    self.assertEqual(unknown.status_code, known.status_code)
+                    self.assertEqual(unknown.content, known.content)
+                finally:
+                    release.set()
+                    pool.shutdown(wait=True)
+
     def test_a_registered_email_receives_a_link_to_the_configured_origin(self):
         # A forged Host must not end up in the link.
         client = Client(enforce_csrf_checks=True, HTTP_HOST="localhost")
