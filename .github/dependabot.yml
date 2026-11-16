@@ -17,6 +17,45 @@ updates:
       minor-dependencies:
         update-types: [minor, patch]
 
+  - package-ecosystem: pip
+    directories:
+      - /api-service
+      - /webapp/backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    # Stay on the Django 5.2 LTS line until the team chooses to move.
+    ignore:
+      - dependency-name: Django
+        update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      minor-dependencies:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directories:
+      - /api-service
+      - /webapp
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: chore
+      include: scope
+
   - package-ecosystem: github-actions
     directory: /
     schedule:

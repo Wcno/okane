@@ -1,5 +1,6 @@
-# Validate the existing frontend on pull requests and main pushes.
-# Pages deployment remains opt-in through PAGES_ENABLED.
+# Validate the frontend, both Django services and the four-container stack on
+# pull requests and main pushes. Pages deployment remains opt-in through
+# PAGES_ENABLED.
 name: CI
 
 on:
@@ -60,6 +61,92 @@ jobs:
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: webapp/frontend/dist
+
+  backend:
+    name: ${{ matrix.service.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - { name: api-service, directory: api-service }
+          - { name: webapp, directory: webapp/backend }
+    defaults:
+      run:
+        working-directory: ${{ matrix.service.directory }}
+    # Tests use PostgreSQL, the same engine as the running system.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: okane
+          POSTGRES_USER: okane
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U okane -d okane"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    env:
+      DJANGO_SECRET_KEY: ci-only-secret-key
+      INTERNAL_SERVICE_KEY: ci-only-service-key
+      DATABASE_HOST: localhost
+      DATABASE_NAME: okane
+      DATABASE_USER: okane
+      DATABASE_PASSWORD: ci-only-password
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: ${{ matrix.service.directory }}/requirements.txt
+
+      - name: Install pinned dependencies
+        run: pip install -r requirements.txt
+
+      - name: Django system checks
+        run: python manage.py check
+
+      - name: Migrations match the models
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Tests
+        run: python manage.py test
+
+  compose:
+    name: compose
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure the stack from the documented example
+        run: cp .env.example .env
+
+      - name: Build and start the four containers
+        run: docker compose up --build --detach --wait --wait-timeout 240
+
+      - name: Check the running system
+        run: bash scripts/smoke-test.sh
+
+      - name: Show container state and logs
+        if: failure()
+        run: |
+          docker compose ps --all
+          docker compose logs --no-color --tail 200
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down --volumes
 
   deploy-demo:
     name: deploy demo

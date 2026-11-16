@@ -1,0 +1,122 @@
+# The four containers fixed by the course (docs/matrices.md).
+# Only webapp publishes a port; api-service and both databases stay on
+# internal networks (ADR 0001). Configure the values in .env from .env.example.
+name: okane
+
+services:
+  webapp:
+    build:
+      context: ./webapp
+    container_name: webapp
+    environment:
+      DJANGO_SECRET_KEY: ${WEBAPP_SECRET_KEY:?Set WEBAPP_SECRET_KEY in .env}
+      DJANGO_ALLOWED_HOSTS: ${WEBAPP_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:?Set INTERNAL_SERVICE_KEY in .env}
+      API_SERVICE_URL: http://api-service:8000
+      DATABASE_HOST: webapp-db
+      DATABASE_NAME: okane_webapp
+      DATABASE_USER: okane_webapp
+      DATABASE_PASSWORD: ${WEBAPP_DB_PASSWORD:?Set WEBAPP_DB_PASSWORD in .env}
+    ports:
+      - "${WEBAPP_BIND:-127.0.0.1}:${WEBAPP_PORT:-8000}:8000"
+    depends_on:
+      webapp-db:
+        condition: service_healthy
+      api-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks:
+      - public
+      - services
+      - webapp-data
+    restart: unless-stopped
+
+  webapp-db:
+    image: postgres:17-alpine
+    container_name: webapp-db
+    environment:
+      POSTGRES_DB: okane_webapp
+      POSTGRES_USER: okane_webapp
+      POSTGRES_PASSWORD: ${WEBAPP_DB_PASSWORD:?Set WEBAPP_DB_PASSWORD in .env}
+    volumes:
+      - webapp-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U okane_webapp -d okane_webapp"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks:
+      - webapp-data
+    restart: unless-stopped
+
+  api-service:
+    build:
+      context: ./api-service
+    container_name: api-service
+    environment:
+      DJANGO_SECRET_KEY: ${API_SERVICE_SECRET_KEY:?Set API_SERVICE_SECRET_KEY in .env}
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:?Set INTERNAL_SERVICE_KEY in .env}
+      DATABASE_HOST: api-db
+      DATABASE_NAME: okane_api
+      DATABASE_USER: okane_api
+      DATABASE_PASSWORD: ${API_DB_PASSWORD:?Set API_DB_PASSWORD in .env}
+    depends_on:
+      api-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks:
+      - services
+      - api-data
+    restart: unless-stopped
+
+  api-db:
+    image: postgres:17-alpine
+    container_name: api-db
+    environment:
+      POSTGRES_DB: okane_api
+      POSTGRES_USER: okane_api
+      POSTGRES_PASSWORD: ${API_DB_PASSWORD:?Set API_DB_PASSWORD in .env}
+    volumes:
+      - api-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U okane_api -d okane_api"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks:
+      - api-data
+    restart: unless-stopped
+
+networks:
+  # The only network with a route to the host; webapp alone joins it.
+  public:
+  # webapp to api-service.
+  services:
+    internal: true
+  # Each service reaches only its own database.
+  webapp-data:
+    internal: true
+  api-data:
+    internal: true
+
+volumes:
+  webapp-db-data:
+  api-db-data:
