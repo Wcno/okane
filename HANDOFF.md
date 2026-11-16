@@ -18,16 +18,18 @@ Stack, in merge order:
 
 - The worker finished; all its local gates passed (35 Vitest, 45 webapp, 11 api-service, 38 Playwright).
 - Worktree stack for browser QA: http://localhost:8001, Compose project `okane-agent-a81fa92779601b92c`, worktree `.claude/worktrees/agent-a81fa92779601b92c`.
-- Gate a (CI) is running; gates b, c and d have not started.
+- Gate a (CI) passed on the first head (`711ec85`); it runs again after the worker's follow-up push.
+- Gates b, c and d have not started.
 - Next ready set after #5: not evaluated; this run is limited to #5.
 
-### Blocker: questions from the #5 worker, waiting for the user
+### Decisions the user made on the #5 worker's questions (2026-11-16)
 
-1. The PR adds one sentence to `docs/contratos.md` naming `X-Okane-User-Id` (positive integer, `403` when missing or malformed).
-2. The PR adds `GET /auth/session`, which is not in `docs/matrices.md`.
-3. A successful login clears the failure counters for both the email and the address.
-4. Opening `/logout` signs out on arrival, so a cross-site link can sign a User out.
-5. The opt-in GitHub Pages demo would show a connection error, because the frontend now needs `webapp`.
+- The `X-Okane-User-Id` sentence stays in `docs/contratos.md` in PR #43; the worker also documents `GET /auth/session` in `docs/matrices.md` and `docs/spec.md`.
+- The login limit stays as built: a successful login clears the email and the address counters.
+- `/logout` shows a confirmation button and signs out only on click.
+- The GitHub Pages demo stays off and is not fixed in this PR.
+
+The worker is applying the `/logout` and docs changes on `feat/5-session-auth`.
 
 ## Groundwork delivered (#40, #41)
 
@@ -100,7 +102,7 @@ attribution; use the configured human Git identity.
 
 ## Next step
 
-1. The user answers the five questions above; send any change back to the worker and re-enter at gate a.
+1. When the worker reports its follow-up push, rerun gate a (`gh pr checks 43 --watch`).
 2. Run gates b (`ui-qa` on port 8001), c (code review against `main`) and d on PR #43.
 3. Clear the PR (comment, `gh pr ready`), then `docker compose down --volumes` in the worktree and remove it.
 4. The user merges PR #43 and the checkpoint PR #42.
