@@ -13,23 +13,27 @@ Tecnológica de Panamá, group 1M321.
 
 ## Current status
 
-**The team approved the plan on 2026-11-15. Implementation has not started.**
-What runs today is a frontend demonstration: `/dashboard`, navigation and quick
-expense entry, with in-memory sample data that resets on refresh.
+**The team approved the plan on 2026-11-15. The first ticket, the container
+skeleton ([#4](https://github.com/Wcno/okane/issues/4)), is implemented.**
+One command starts the four containers: `webapp` serves the frontend
+demonstration and forwards `/api/*` to `api-service`. The screens still use
+in-memory sample data that resets on refresh; there are no users or financial
+records yet.
 
 | Area | Status |
 |---|---|
 | Product, domain glossary, use-case matrices and design system | Documented |
 | Specification, contracts and ADRs 0001 to 0005 | Approved |
-| 25 implementation tickets (#4–#25, #30–#32) | Approved, labeled `ready-for-agent`; none started |
+| 25 implementation tickets (#4–#25, #30–#32) | Approved, labeled `ready-for-agent`; #4 implemented |
 | Frontend demonstration | Available with sample data |
-| Backend services, authentication and databases | Not implemented |
-| Docker Compose and full-system tests | Not implemented |
+| Four containers with Docker Compose | Available: health checks and `/api/*` forwarding |
+| Authentication, accounts and the other features | Not implemented |
+| Tests | Frontend units, HTTP tests of both services, smoke test of the stack |
 
-The first ticket is [#4](https://github.com/Wcno/okane/issues/4), the only one
-without blockers. Four decisions remain open in the
-[team review guide](docs/team-review.md): ticket owners, backend runtime
-versions, branch protection on `main`, and whether to publish the demo.
+The next ticket is [#5](https://github.com/Wcno/okane/issues/5), sign-up and
+sessions. Three decisions remain open in the
+[team review guide](docs/team-review.md): ticket owners, branch protection on
+`main`, and whether to publish the demo.
 
 ## Scope
 
@@ -47,7 +51,30 @@ cases, including the 28 original course cases. Beyond those, it plans:
 The 28 course cases need 13 of the 25 tickets; see the
 [minimum path](docs/plan-de-trabajo.md#ruta-mínima-para-los-28-casos-del-curso).
 
-## Run the demonstration
+## Run the full system
+
+Requirements: Git and Docker with Compose.
+
+```shell
+cp .env.example .env
+docker compose up --build --wait
+```
+
+Open <http://localhost:8000>. [.env.example](.env.example) documents every
+variable; its values are placeholders for local use, so replace the secrets
+before exposing the system to anyone else.
+
+| Address | Answer |
+|---|---|
+| `/dashboard` and the other screens | The frontend, served by `webapp` |
+| `/api/health` | The readiness of `api-service` and `api-db`, forwarded by `webapp` |
+| `/health` | The readiness of `webapp` and `webapp-db` |
+
+Only `webapp` publishes a port. `docker compose ps` shows which container is
+not healthy, and `bash scripts/smoke-test.sh` checks the running system. Stop
+it with `docker compose down`; add `--volumes` to delete the databases too.
+
+## Run only the frontend
 
 Requirements: Git, **Node.js 24** and **npm 11**. The frontend `.nvmrc` declares
 the Node major version. The demo needs no database or configuration.
@@ -75,8 +102,21 @@ Run these commands from `webapp/frontend`:
 | `npm run preview` | Serve the production build locally |
 | `npm run check` | Run types, lint, tests and build together |
 
-The existing tests cover the demonstration calculations and money formatting.
-Backend HTTP tests and browser tests arrive with their tickets.
+The frontend tests cover the demonstration calculations and money formatting.
+
+Each Django service has HTTP tests. They need **Python 3.14** and a reachable
+PostgreSQL; set `DATABASE_HOST`, `DATABASE_USER` and `DATABASE_PASSWORD` if it
+does not match the defaults in `config/settings.py`. Run them from `api-service`
+or from `webapp/backend`:
+
+```shell
+pip install -r requirements.txt
+export DJANGO_SECRET_KEY=local-only INTERNAL_SERVICE_KEY=local-only
+python manage.py test
+```
+
+Without PostgreSQL, `python manage.py test --exclude-tag database` runs the
+tests that do not touch the database. Browser tests arrive with their tickets.
 
 ## Documentation
 
@@ -103,19 +143,23 @@ GitHub dependencies.
 - Source code, identifiers, filenames, comments, test descriptions and commit
   messages: **English**.
 
-## Planned architecture
+## Architecture
 
-The course fixes four containers. None of the backend services exists yet.
+The course fixes four containers. All four run today; the responsibilities
+below arrive with their tickets.
 
 | Container | Technology | Responsibility |
 |---|---|---|
-| `webapp` | React + Django | Public interface, authentication and `/api/*` forwarding |
-| `webapp-db` | PostgreSQL | Users, credentials and sessions |
+| `webapp` | React + Django 5.2 | Public interface, authentication and `/api/*` forwarding |
+| `webapp-db` | PostgreSQL 17 | Users, credentials and sessions |
 | `api-service` | Django REST | Accounts, movements, budgets and investments |
-| `api-db` | PostgreSQL | Financial records |
+| `api-db` | PostgreSQL 17 | Financial records |
 
 The browser communicates only with `webapp`
-([ADR 0001](docs/adr/0001-webapp-como-unico-punto-de-entrada.md)).
+([ADR 0001](docs/adr/0001-webapp-como-unico-punto-de-entrada.md)). `webapp`
+rebuilds each `/api/*` request and adds a shared service credential;
+`api-service` rejects any financial request without it, and stays with both
+databases on internal networks.
 
 ## Contributing
 
@@ -134,11 +178,15 @@ The browser communicates only with `webapp`
 Every pull request and every commit on `main` runs:
 
 - **frontend:** exact install from the lockfile, types, lint, tests and build.
+- **api-service** and **webapp:** Django checks, migration check and HTTP tests
+  against PostgreSQL.
+- **compose:** builds and starts the four containers from `.env.example`, then
+  runs `scripts/smoke-test.sh` against the running system.
 - **conventions:** the pull request title and each commit message follow
   Conventional Commits.
 
 Actions are pinned by commit and the workflow has read-only permissions.
-Dependabot proposes dependency and action updates weekly.
+Dependabot proposes npm, pip, Docker image and action updates weekly.
 
 Commits on `main` also package the demo. Publishing it to GitHub Pages is off
 until the team enables it: set Pages to use GitHub Actions as its source and

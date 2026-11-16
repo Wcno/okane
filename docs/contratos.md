@@ -26,6 +26,15 @@ los Saldos iniciales y el Rendimiento mensual está en el
   Usuario ni configuración. La lectura de health no permite escrituras.
 - Una credencial de servicio falsa o ausente se rechaza incluso en la red
   interna. Las dos bases de datos y `api-service` no publican puertos externos.
+- La credencial interna es una clave compartida, configurada por entorno en
+  ambos servicios, que `webapp` envía en la cabecera `X-Okane-Service-Key`.
+  `api-service` la compara en tiempo constante y responde `403` si falta o no
+  coincide. `webapp` copia al reenvío solo `Accept` y `Content-Type`: ni
+  cookies, ni tokens, ni cabeceras internas del cliente llegan a `api-service`.
+- Si `api-service` no responde, `webapp` contesta `502` e indica qué servicio
+  falló. `/health` informa el estado de `webapp` y `webapp-db`; `/api/health`,
+  el de `api-service` y `api-db`. Ambos responden `503` si su base no está
+  disponible.
 
 ## Acceso, sesiones y límites de uso
 

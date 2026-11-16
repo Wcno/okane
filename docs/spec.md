@@ -1,6 +1,7 @@
 # Especificación de Okane
 
-Estado: **aprobada por el equipo el 2026-11-15; implementación sin iniciar**.
+Estado: **aprobada por el equipo el 2026-11-15; implementación en curso** (el
+avance por ticket está en [plan-de-trabajo.md](plan-de-trabajo.md)).
 Esta es la fuente versionada de la spec. El [issue #3](https://github.com/Wcno/okane/issues/3)
 coordina su revisión y los tickets derivados enumerados en [plan-de-trabajo.md](plan-de-trabajo.md).
 

@@ -2,7 +2,7 @@
 
 La [spec versionada](spec.md), revisada en el [issue #3](https://github.com/Wcno/okane/issues/3),
 agrupa **25 tickets, 76 historias y 58 casos de uso** (28 originales, 24 N2 y 6 N3).
-**Estado: aprobado por el equipo el 2026-11-15. La implementación no ha comenzado.**
+**Estado: aprobado por el equipo el 2026-11-15. Implementado: #4. Siguiente: #5.**
 
 La revisión de feedback reemplaza los Gastos recurrentes automáticos por reservas
 con confirmación manual, unifica Movimientos, amplía Proyección y añade
@@ -88,9 +88,10 @@ decisión en #3.
 
 Hay **46 dependencias técnicas nativas sin ciclos**, reflejadas en la tabla y en
 GitHub. Los 25 tickets (#4–#25 y #30–#32) están abiertos con
-`ready-for-agent`: el equipo los aprobó y ninguno se ha empezado.
+`ready-for-agent`; el equipo los aprobó. El **#4** está implementado y se cierra
+al integrar su pull request.
 
 La aprobación está registrada en #3. Quedan por definir los responsables de cada
-ticket y las decisiones abiertas de [team-review.md](team-review.md). El primer
-ticket técnico es **#4**, el único sin bloqueos.
+ticket y las decisiones abiertas de [team-review.md](team-review.md). El
+siguiente ticket es **#5**, que solo dependía de #4.
 El estado operativo y las verificaciones se registran en [HANDOFF.md](../HANDOFF.md).
