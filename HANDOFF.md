@@ -4,32 +4,30 @@ Updated: 2026-11-16, America/Panama. Assistant: Claude Code.
 
 ## Current scope
 
-Updated 2026-11-16 by Claude Code (Opus 5.5). Objective: groundwork for
-autonomous ticket runs. Branch `chore/autonomous-groundwork`, delivered as one
-PR. #4 is closed; no implementation ticket is started. Start a ticket only when
-the user asks for it and its blockers are closed.
+Updated 2026-11-16 by Claude Code (Fable 5.2, orchestrator).
+Objective: first supervised `/ticket-loop` run, limited to #5.
+Checkpoint branch: `docs/handoff-2026-11-16`, with its own PR.
+PR #40 (groundwork) and PR #41 (ticket skills) are merged; `main` is at `ed97fc7`.
 
-## Completed in this revision
+## Ticket loop state
 
-- `scripts/worktree-stack.sh` lets a git worktree run its own Compose stack
-  beside the main checkout through ignored `.env` and `compose.override.yaml`.
-  `compose.yaml` keeps the container names the course requires.
-- `scripts/smoke-test.sh` works under any project name and checks the
-  container names in `compose.yaml` itself.
-- `e2e/` holds Playwright tests on desktop and mobile widths. The first spec
-  checks the Spanish shell, console errors, failed requests and horizontal
-  overflow. CI runs it in the `compose` job; Dependabot watches `/e2e`.
-- `.claude/agents/ticket-worker.md` (Opus) and `.claude/agents/ui-qa.md`
-  (Sonnet), plus the user-invoked `/ticket-loop` runbook in
-  `.claude/skills/ticket-loop/`. The orchestrator session runs on Fable 5.2.
-  The loop opens PRs as a tree stacked on their blockers' branches (tree mode,
-  confirmed by the user over a linear stack); the user merges them, bottom
-  first, with merge commits. Workers follow the `implement` workflow with the
-  `tdd`, `code-review` and `pr` skills; the orchestrator reviews again.
-- Verified locally: main and worktree stacks ran side by side, both passed the
-  smoke test, and 12 browser checks passed against the main stack. Claude in
-  Chrome opened the Panel from the stack with no console errors.
-- PR #40 CI passed on every job, including the new browser tests.
+Stack, in merge order:
+
+- `main`
+  - #5 "Registro, inicio y cierre de sesión": in flight, base `main`, no PR yet.
+
+- In flight: one `ticket-worker` on #5 in its own worktree.
+- Gates passed for #5: none yet (a CI, b browser QA, c review, d orchestrator read).
+- Next ready set after #5: not evaluated; this run is limited to #5.
+- Uncommitted files in the main checkout: none.
+
+## Groundwork delivered (#40, #41)
+
+- `scripts/worktree-stack.sh` lets a git worktree run its own Compose stack beside the main checkout.
+- `scripts/smoke-test.sh` works under any project name.
+- `e2e/` holds Playwright tests on desktop and mobile widths; CI runs them in the `compose` job.
+- `.claude/agents/ticket-worker.md` (Opus), `.claude/agents/ui-qa.md` (Sonnet) and the `/ticket-loop` runbook.
+- PRs stack as a tree on their blockers' branches; the user merges them, bottom first, with merge commits.
 
 ## Previous revision: container skeleton (#4)
 
@@ -94,7 +92,8 @@ attribution; use the configured human Git identity.
 
 ## Next step
 
-1. The user reviews and merges PR #40. Tickets may already stack on it.
-2. Confirm or correct the two decisions above before #5.
-3. Switch the session to Fable 5.2 and run `/ticket-loop 5` as the first
-   supervised run.
+1. Wait for the #5 worker's report, then run gates a to d on its PR.
+2. Clear the PR (comment, `gh pr ready`) and tear down its worktree stack.
+3. The user merges the #5 PR and this checkpoint PR.
+4. The two team decisions above (runtime versions, shared service key) are still unconfirmed by the team; #5 builds on them as recorded in `docs/team-review.md`.
+5. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.
