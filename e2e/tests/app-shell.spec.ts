@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
+import { signUp } from './support/session.js'
 
 const routes = ['/dashboard', '/menu', '/expenses']
+
+test.beforeEach(async ({ page }) => {
+  await signUp(page.request)
+})
 
 function collectProblems(page: Page): string[] {
   const problems: string[] = []

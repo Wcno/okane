@@ -67,9 +67,16 @@ system listens only on this computer; replace the secrets before setting
 
 | Address | Answer |
 |---|---|
+| `/register`, `/login`, `/logout` | Sign up, sign in and sign out; every other screen needs a session |
 | `/dashboard` and the other screens | The frontend, served by `webapp` |
 | `/api/health` | The readiness of `api-service` and `api-db`, forwarded by `webapp` |
 | `/health` | The readiness of `webapp` and `webapp-db` |
+
+A session ends after `SESSION_IDLE_DAYS` days without use, 14 by default.
+Set `WEBAPP_HTTPS=true` when `webapp` is served over HTTPS, so its cookies
+travel only over HTTPS.
+After five failed sign-ins in a row for one email or from one address within
+15 minutes, `/auth/login` answers `429` with `Retry-After` until the window ends.
 
 Only `webapp` publishes a port. `docker compose ps` shows which container is
 not healthy, and `bash scripts/smoke-test.sh` checks the running system. Stop
@@ -78,7 +85,8 @@ it with `docker compose down`; add `--volumes` to delete the databases too.
 ## Run only the frontend
 
 Requirements: Git, **Node.js 26** and **npm 11**. The frontend `.nvmrc` declares
-the Node major version. The demo needs no database or configuration.
+the Node major version. Sign-in needs `webapp`, so start the full system first;
+the dev server forwards `/auth`, `/api` and `/health` to it.
 
 ```shell
 cd webapp/frontend
@@ -86,7 +94,8 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. Routes other than `/dashboard` show a
+Open the local URL printed by Vite. Set `OKANE_BACKEND_URL` when the stack is
+not on <http://localhost:8000>. Routes other than `/dashboard` show a
 placeholder until their tickets are implemented.
 
 ## Development checks
@@ -184,8 +193,9 @@ below arrive with their tickets.
 
 The browser communicates only with `webapp`
 ([ADR 0001](docs/adr/0001-webapp-como-unico-punto-de-entrada.md)). `webapp`
-rebuilds each `/api/*` request and adds a shared service credential;
-`api-service` rejects any financial request without it, and stays with both
+rebuilds each `/api/*` request and adds a shared service credential and the
+signed-in User in `X-Okane-User-Id`; a call without a session gets `401`.
+`api-service` rejects any financial request without both, and stays with both
 databases on internal networks.
 
 ## Contributing

@@ -1,9 +1,11 @@
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, LogOut } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useSignedInUser } from '../auth/context'
 import { navigationGroups } from '../navigation'
 
-/** Mobile More screen for destinations outside the bottom bar. */
+/** Mobile More screen for destinations outside the bottom bar, and the session. */
 export function Menu() {
+  const { user } = useSignedInUser()
   return (
     <>
       <header className="mb-5">
@@ -35,6 +37,23 @@ export function Menu() {
             </ul>
           </section>
         ))}
+
+        <section aria-label="Tu usuario">
+          <h2 className="mb-2 px-1 text-[0.9rem] font-medium text-ink-3">Tu usuario</h2>
+          <div className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
+            <p className="truncate border-b border-line px-4 py-3 text-[0.95rem] text-ink-2">
+              <span className="sr-only">Sesión iniciada como </span>
+              {user.email}
+            </p>
+            <Link
+              to="/logout"
+              className="flex h-14 items-center gap-3.5 px-4 text-[1rem] font-medium transition-colors duration-150 hover:bg-surface-2"
+            >
+              <LogOut size={20} className="text-ink-2" aria-hidden="true" />
+              <span className="flex-1">Cerrar sesión</span>
+            </Link>
+          </div>
+        </section>
       </div>
     </>
   )

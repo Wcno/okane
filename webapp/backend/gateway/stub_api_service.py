@@ -39,7 +39,7 @@ class StubApiService:
                 self.end_headers()
                 self.wfile.write(stub.body)
 
-            do_GET = do_POST = answer
+            do_GET = do_POST = do_PUT = do_DELETE = answer
 
             def log_message(self, *args):
                 pass

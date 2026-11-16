@@ -36,7 +36,7 @@ class SinglePageRouteTests(FrontendTestCase):
         self.assertEqual(response.content.decode(), INDEX_HTML)
 
     def test_backend_routes_are_never_answered_with_the_entry_page(self):
-        for path in ("/auth/login", "/auth/unknown", "/users/me", "/health/unknown"):
+        for path in ("/auth/unknown", "/auth/password", "/users/me", "/health/unknown"):
             with self.subTest(path=path):
                 response = self.client.get(path)
 
