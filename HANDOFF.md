@@ -14,12 +14,20 @@ PR #40 (groundwork) and PR #41 (ticket skills) are merged; `main` is at `ed97fc7
 Stack, in merge order:
 
 - `main`
-  - #5 "Registro, inicio y cierre de sesión": in flight, base `main`, no PR yet.
+  - PR #43 `feat/5-session-auth` (#5 "Registro, inicio y cierre de sesión"): draft, base `main`.
 
-- In flight: one `ticket-worker` on #5 in its own worktree.
-- Gates passed for #5: none yet (a CI, b browser QA, c review, d orchestrator read).
+- The worker finished; all its local gates passed (35 Vitest, 45 webapp, 11 api-service, 38 Playwright).
+- Worktree stack for browser QA: http://localhost:8001, Compose project `okane-agent-a81fa92779601b92c`, worktree `.claude/worktrees/agent-a81fa92779601b92c`.
+- Gate a (CI) is running; gates b, c and d have not started.
 - Next ready set after #5: not evaluated; this run is limited to #5.
-- Uncommitted files in the main checkout: none.
+
+### Blocker: questions from the #5 worker, waiting for the user
+
+1. The PR adds one sentence to `docs/contratos.md` naming `X-Okane-User-Id` (positive integer, `403` when missing or malformed).
+2. The PR adds `GET /auth/session`, which is not in `docs/matrices.md`.
+3. A successful login clears the failure counters for both the email and the address.
+4. Opening `/logout` signs out on arrival, so a cross-site link can sign a User out.
+5. The opt-in GitHub Pages demo would show a connection error, because the frontend now needs `webapp`.
 
 ## Groundwork delivered (#40, #41)
 
@@ -92,7 +100,8 @@ attribution; use the configured human Git identity.
 
 ## Next step
 
-1. Wait for the #5 worker's report, then run gates a to d on its PR.
-2. Clear the PR (comment, `gh pr ready`) and tear down its worktree stack.
-3. The user merges the #5 PR and this checkpoint PR.
-4. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.
+1. The user answers the five questions above; send any change back to the worker and re-enter at gate a.
+2. Run gates b (`ui-qa` on port 8001), c (code review against `main`) and d on PR #43.
+3. Clear the PR (comment, `gh pr ready`), then `docker compose down --volumes` in the worktree and remove it.
+4. The user merges PR #43 and the checkpoint PR #42.
+5. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.
