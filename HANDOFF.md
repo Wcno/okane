@@ -5,7 +5,7 @@ Updated: 2026-11-16, America/Panama. Assistant: Claude Code.
 ## Current scope
 
 Updated 2026-11-16 by Claude Code (Fable 5.2, orchestrator).
-The first supervised `/ticket-loop` run, limited to #5, reopened PR #43 for one change the user asked for after trying it.
+The first supervised `/ticket-loop` run, limited to #5, is finished.
 Checkpoint branch: `docs/handoff-2026-11-16`, PR #42.
 PR #40 (groundwork) and PR #41 (ticket skills) are merged; `main` is at `ed97fc7`.
 
@@ -14,13 +14,14 @@ PR #40 (groundwork) and PR #41 (ticket skills) are merged; `main` is at `ed97fc7
 Stack, in merge order:
 
 - `main`
-  - PR #43 `feat/5-session-auth` (#5 "Registro, inicio y cierre de sesión"): draft again, base `main`, head `49b5535`.
+  - PR #43 `feat/5-session-auth` (#5 "Registro, inicio y cierre de sesión"): cleared and ready for review, base `main`, head `3946761`.
 
-- PR #43 passed gates a to d on `49b5535` and was marked ready, then returned to draft.
-- The user tried it and found every sign-out took two steps, which is not what the orchestrator had described.
-- Decision (user, 2026-11-16): "Cerrar sesión" in the sidebar and Menú signs out in one click; opening `/logout` by URL still asks first.
-- The worker is making that change in the recreated worktree `.claude/worktrees/agent-a81fa92779601b92c`.
-- The main Compose stack on port 8000 was rebuilt from `feat/5-session-auth` at `49b5535` for the user's manual check; the main checkout is on `docs/handoff-2026-11-16`.
+- Gates a (CI), b (`ui-qa` PASS), c and d passed on `3946761`.
+  The full two-axis review ran on `60afc8a`; later commits were read by the orchestrator.
+- Decision (user, 2026-11-16), after trying the PR: "Cerrar sesión" in the sidebar and Menú signs out in one click; opening `/logout` by URL still asks first.
+- The worktree stack is down with its volumes and the worktree is removed. Nothing is in flight.
+- The main checkout is on `feat/5-session-auth` and the Compose stack on port 8000 is built from `3946761`, for the user's manual check.
+- Tickets blocked by #5 can stack on `feat/5-session-auth` before it merges.
 
 ### Decisions the user made on the #5 worker's questions (2026-11-16)
 
@@ -102,11 +103,13 @@ attribution; use the configured human Git identity.
 
 ## Next step
 
-1. When the worker reports, rerun gates a to d on PR #43, including `ui-qa`, since the frontend changes.
-2. Clear the PR again, tear down the worktree stack (`git worktree unlock` before removing), and rebuild the port 8000 stack from the new head so the user can check it.
+1. The user checks the app on port 8000, then merges PR #43 with a merge commit, and the checkpoint PR #42.
+2. Run `/ticket-loop` again for the next tickets; evaluate the ready set from `docs/plan-de-trabajo.md` and the issues' native blockers.
 3. Friction seen in this run, to fix in the runbook or agents in a small PR:
    the harness locks a worker's worktree, so removal needs `git worktree unlock` first;
    the worker should stop and report a contract edit before opening the PR instead of after;
    `ui-qa` cannot set exact viewport widths or the colour scheme in Chrome.
 4. `docs/team-review.md` still says the team should confirm the runtime and service-key decisions before #5.
-5. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.
+5. Follow-ups seen in QA, outside #5: the Menú focus ring has square corners inside the rounded card;
+   a gunicorn sync worker in `webapp` timed out on an idle connection (`WORKER TIMEOUT`, no URI read), from the #4 container setup.
+6. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.
