@@ -18,8 +18,13 @@ Stack, in merge order:
 
 - The worker finished; all its local gates passed (35 Vitest, 45 webapp, 11 api-service, 38 Playwright).
 - Worktree stack for browser QA: http://localhost:8001, Compose project `okane-agent-a81fa92779601b92c`, worktree `.claude/worktrees/agent-a81fa92779601b92c`.
-- Gate a (CI) passed on the first head (`711ec85`); it runs again after the worker's follow-up push.
-- Gates b, c and d have not started.
+- On head `60afc8a`: gate a (CI) passed and gate b (`ui-qa`) returned PASS.
+  `ui-qa` could not set exact 390 and 1440 px widths or see the light theme; the Playwright suite covers both.
+- Gate c (review) went red once, with three findings sent back to the worker:
+  the reset of the login counters on success has no test inside the window;
+  `WEBAPP_HTTPS=true` does not trust `X-Forwarded-Proto`, so CSRF would reject POSTs behind a TLS proxy, and the Secure cookies are untested;
+  the focus check covers only the first Tab stop.
+- The worker is fixing them; PR #43 then re-enters at gate a.
 - Next ready set after #5: not evaluated; this run is limited to #5.
 
 ### Decisions the user made on the #5 worker's questions (2026-11-16)
@@ -29,7 +34,7 @@ Stack, in merge order:
 - `/logout` shows a confirmation button and signs out only on click.
 - The GitHub Pages demo stays off and is not fixed in this PR.
 
-The worker is applying the `/logout` and docs changes on `feat/5-session-auth`.
+The worker applied the `/logout` and docs changes in `60afc8a`.
 
 ## Groundwork delivered (#40, #41)
 
@@ -102,8 +107,7 @@ attribution; use the configured human Git identity.
 
 ## Next step
 
-1. When the worker reports its follow-up push, rerun gate a (`gh pr checks 43 --watch`).
-2. Run gates b (`ui-qa` on port 8001), c (code review against `main`) and d on PR #43.
-3. Clear the PR (comment, `gh pr ready`), then `docker compose down --volumes` in the worktree and remove it.
-4. The user merges PR #43 and the checkpoint PR #42.
-5. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.
+1. When the worker reports its push, rerun gates a to d on PR #43 (gate c red count: 1 of 3).
+2. Clear the PR (comment, `gh pr ready`), then `docker compose down --volumes` in the worktree and remove it.
+3. The user merges PR #43 and the checkpoint PR #42.
+4. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.
