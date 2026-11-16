@@ -1,5 +1,4 @@
 import { formatMoney } from '../lib/money'
-import { toDisplayNumber } from '../lib/decimal'
 import type { Account, AccountType } from './api'
 import { ratioToPercent } from './form'
 
@@ -19,7 +18,7 @@ export const accountTypeDescriptions: Record<AccountType, string> = {
 }
 
 /** A decimal string from the API as $1,284.60. */
-export const formatAmount = (amount: string) => formatMoney(toDisplayNumber(amount))
+export const formatAmount = (amount: string) => formatMoney(amount)
 
 export const formatRate = (ratio: string) => `${ratioToPercent(ratio)}%`
 
