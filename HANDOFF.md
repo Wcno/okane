@@ -1,115 +1,28 @@
 # Okane handoff
 
-Updated: 2026-11-16, America/Panama. Assistant: Claude Code.
+Updated: 2026-11-16, America/Panama. Assistant: Codex.
+Objective: finish issue #7 only; publish for independent review, never merge.
+Branch: feat/7-accounts-derived-balance. Backend checkpoint: 9fde044.
 
-## Current scope
+Confirmed GitHub #5 closed/completed and merged via #43. Read #7, spec,
+contracts and code-language. Preserved the existing frontend and Logout/button
+refactor. No changes to #6 or other branches. No observed file changes by another
+process during this session.
 
-Updated 2026-11-16 by Claude Code (Fable 5.2, orchestrator).
-The first supervised `/ticket-loop` run, limited to #5, is finished.
-Checkpoint branch: `docs/handoff-2026-11-16`, PR #42.
-PR #40 (groundwork) and PR #41 (ticket skills) are merged; `main` is at `ed97fc7`.
+Personally verified: frontend check (68 tests, types, lint, production build);
+api-service PostgreSQL tests (43); webapp PostgreSQL tests (49); API migration
+check (no changes); isolated Compose build and smoke test (all pass).
+Windows Node is 24; container build uses required Node 26.
 
-## Ticket loop state
+Verified browser coverage: 44 existing E2E tests passed; 8 new account lifecycle tests passed at 390/1440 in light/dark after fixing test setup and navigation synchronization. E2E TypeScript check passed. In progress: PR publication.
+Files included in the completion commit: inherited frontend accounts files, App/buttons/Logout, new
+accounts E2E test, this handoff.
+Local isolated stack: WSL LabDocker, project okane-7-codex, port 8077.
+Ignored .env and compose.override.yaml contain local setup; no secrets committed.
 
-Stack, in merge order:
+Scope boundary: ledger source tests simulate future entries. Real movements,
+positions, recurring-rule blockers and historical valuation belong to subsequent
+tickets, which must register sources and preserve archived references. Current
+archive tests retain balances and their sum; no claim of a complete wealth module.
+Next: independent PR review and CI assessment. Do not merge.
 
-- `main`
-  - PR #43 `feat/5-session-auth` (#5 "Registro, inicio y cierre de sesión"): cleared and ready for review, base `main`, head `3946761`.
-
-- Gates a (CI), b (`ui-qa` PASS), c and d passed on `3946761`.
-  The full two-axis review ran on `60afc8a`; later commits were read by the orchestrator.
-- Decision (user, 2026-11-16), after trying the PR: "Cerrar sesión" in the sidebar and Menú signs out in one click; opening `/logout` by URL still asks first.
-- The worktree stack is down with its volumes and the worktree is removed. Nothing is in flight.
-- The main checkout is on `feat/5-session-auth` and the Compose stack on port 8000 is built from `3946761`, for the user's manual check.
-- Tickets blocked by #5 can stack on `feat/5-session-auth` before it merges.
-
-### Decisions the user made on the #5 worker's questions (2026-11-16)
-
-- The `X-Okane-User-Id` sentence stays in `docs/contratos.md` in PR #43; the worker also documents `GET /auth/session` in `docs/matrices.md` and `docs/spec.md`.
-- The login limit stays as built: a successful login clears the email and the address counters.
-- `/logout` shows a confirmation button and signs out only on click.
-- The GitHub Pages demo stays off and is not fixed in this PR.
-
-The worker applied the `/logout` and docs changes in `60afc8a`.
-
-## Groundwork delivered (#40, #41)
-
-- `scripts/worktree-stack.sh` lets a git worktree run its own Compose stack beside the main checkout.
-- `scripts/smoke-test.sh` works under any project name.
-- `e2e/` holds Playwright tests on desktop and mobile widths; CI runs them in the `compose` job.
-- `.claude/agents/ticket-worker.md` (Opus), `.claude/agents/ui-qa.md` (Sonnet) and the `/ticket-loop` runbook.
-- PRs stack as a tree on their blockers' branches; the user merges them, bottom first, with merge commits.
-
-## Previous revision: container skeleton (#4)
-
-- `api-service/`: Django REST project. `/api/health` is public, read-only and
-  reports the database state; every other path requires the service
-  credential in `X-Okane-Service-Key` and answers `403` without it.
-- `webapp/backend/`: Django project that serves the built frontend with
-  WhiteNoise, answers client-side routes with the entry page, forwards
-  `/api/*` to `api-service` and exposes `/health`. Backend prefixes (`api`,
-  `auth`, `users`, `health`) and missing static files never get the frontend.
-- `compose.yaml`, both Dockerfiles, `.env.example` and the smoke test. Only
-  `webapp` publishes a port, on `127.0.0.1` unless `WEBAPP_BIND` says
-  otherwise; the other three containers sit on internal networks.
-
-## Decisions taken for the team
-
-Taken while building #4 and confirmed by the user on 2026-11-16; #5 builds on them.
-They are recorded in `docs/team-review.md`.
-
-- Runtime versions: Python 3.14, Django 5.2 LTS, Django REST framework 3.18,
-  PostgreSQL 17, Node 24 for the frontend build.
-- Internal authentication: a shared key in `X-Okane-Service-Key`.
-- `webapp` has no Django contrib apps yet, so #5 can still choose its user
-  model before the first migration.
-
-## Notes for #5
-
-- `webapp` keeps Django's CSRF middleware, as the contract requires for
-  session writes. Nothing issues the CSRF cookie yet, so a `POST` to `/api/*`
-  in the running stack answers `403` until #5 delivers the token to the
-  frontend. The forwarding tests use Django's test client, which skips CSRF.
-- The gateway returns only the status, body and `Content-Type` of
-  `api-service`. Add other response headers when an endpoint needs them.
-- Health and settings code is duplicated between the two services because
-  they are separate build contexts. Extract it if a third copy appears.
-
-## Still open
-
-- Ticket owners are not assigned or recorded in #3.
-- Branch protection on `main` is not enabled and needs a repository admin.
-  The checks to require: `frontend`, `api-service`, `webapp`, `compose`,
-  `conventions`.
-- The demo deployment is opt-in and off: `PAGES_ENABLED` is not set.
-- This machine has Docker, Node 26 and Python 3.14. Its origin uses HTTPS
-  through the `gh` credential helper, because the SSH agent is not reachable
-  from assistant shells.
-
-## Development setup
-
-Full system: copy `.env.example` to `.env`, then
-`docker compose up --build --wait` and open port 8000. Frontend only: Node 26
-/ npm 11, in `webapp/frontend` run `npm ci`, `npm run dev` or `npm run check`.
-Service tests: see "Development checks" in the README.
-
-## Attribution and existing clones
-
-Main history was rewritten earlier on 2026-11-15 to remove AI co-author
-trailers from 13 commits while preserving file trees and human authorship.
-Older clones must resynchronize with the current history; do not merge the
-pre-cleanup history back. `.claude/settings.json` disables automatic AI
-attribution; use the configured human Git identity.
-
-## Next step
-
-1. The user checks the app on port 8000, then merges PR #43 with a merge commit, and the checkpoint PR #42.
-2. Run `/ticket-loop` again for the next tickets; evaluate the ready set from `docs/plan-de-trabajo.md` and the issues' native blockers.
-3. Friction seen in this run, to fix in the runbook or agents in a small PR:
-   the harness locks a worker's worktree, so removal needs `git worktree unlock` first;
-   the worker should stop and report a contract edit before opening the PR instead of after;
-   `ui-qa` cannot set exact viewport widths or the colour scheme in Chrome.
-4. `docs/team-review.md` still says the team should confirm the runtime and service-key decisions before #5.
-5. Follow-ups seen in QA, outside #5: the Menú focus ring has square corners inside the rounded card;
-   a gunicorn sync worker in `webapp` timed out on an idle connection (`WORKER TIMEOUT`, no URI read), from the #4 container setup.
-6. The stray remote branch `chore/autonomous-groundwork` can be deleted by the user.

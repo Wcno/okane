@@ -1,6 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { GuestOnly, RequireSession, SessionGate } from './auth/routes'
 import { AppShell } from './components/AppShell'
+import { AccountCreate } from './pages/AccountCreate'
+import { AccountDelete } from './pages/AccountDelete'
+import { AccountEdit } from './pages/AccountEdit'
+import { Accounts } from './pages/Accounts'
 import { Dashboard } from './pages/Dashboard'
 import { Login } from './pages/Login'
 import { Logout } from './pages/Logout'
@@ -22,6 +26,10 @@ export default function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/menu" element={<Menu />} />
+            <Route path="/accounts" element={<Accounts />} />
+            <Route path="/accounts/create" element={<AccountCreate />} />
+            <Route path="/accounts/:id/edit" element={<AccountEdit />} />
+            <Route path="/accounts/:id/delete" element={<AccountDelete />} />
             <Route path="*" element={<UnderConstruction />} />
           </Route>
         </Route>
