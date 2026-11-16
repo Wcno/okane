@@ -2,11 +2,8 @@ import { Link, useLocation } from 'react-router-dom'
 import { useSession } from '../auth/context'
 import { isSignedOutState, useSignOut } from '../auth/useSignOut'
 import { AuthLayout } from '../components/AuthLayout'
-import { primaryButtonClassName } from '../components/buttons'
+import { primaryButtonClassName, secondaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
-
-const secondaryButtonClassName =
-  'inline-flex h-12 w-full items-center justify-center rounded-full border border-line-strong text-[1rem] font-semibold text-ink transition-colors duration-150 hover:bg-surface-2'
 
 /**
  * Opened by URL, it asks before closing the session, so a link from another

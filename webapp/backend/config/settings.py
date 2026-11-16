@@ -10,6 +10,7 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 
 from config.https import https_settings
+from config.mail import mail_settings, public_origin
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -89,6 +90,22 @@ CSRF_FAILURE_VIEW = "users.views.csrf_failure"
 CSRF_COOKIE_SAMESITE = "Lax"
 # HTTPS through a TLS-terminating proxy: see config/https.py.
 globals().update(https_settings(env("DJANGO_HTTPS", "false").lower() == "true"))
+
+# Password reset links are built on PUBLIC_ORIGIN and stop working
+# PASSWORD_RESET_MINUTES after they are issued (docs/contratos.md).
+PUBLIC_ORIGIN = public_origin(env("PUBLIC_ORIGIN", "http://localhost:8000"))
+PASSWORD_RESET_TIMEOUT = int(env("PASSWORD_RESET_MINUTES", "60")) * 60
+# Mail is printed to the console unless EMAIL_HOST names an SMTP server.
+globals().update(
+    mail_settings(
+        host=env("EMAIL_HOST", ""),
+        port=env("EMAIL_PORT", "587"),
+        user=env("EMAIL_HOST_USER", ""),
+        password=env("EMAIL_HOST_PASSWORD", ""),
+        use_tls=env("EMAIL_USE_TLS", "true").lower() == "true",
+        sender=env("EMAIL_FROM", "Okane <no-reply@localhost>"),
+    )
+)
 
 LANGUAGE_CODE = "es"
 TIME_ZONE = "America/Panama"

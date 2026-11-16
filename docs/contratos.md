@@ -54,6 +54,15 @@ los Saldos iniciales y el Rendimiento mensual está en el
   de forma permanente ni revela si el correo existe.
 - La sesión caduca tras catorce días sin uso. El enlace de restablecimiento
   caduca a la hora de emitirse. Ambos plazos se configuran y documentan.
+- En `/auth/forgot-password` cuenta cada solicitud, porque ninguna puede
+  distinguirse como fallida sin revelar si el correo existe; su cuenta es
+  independiente de la de inicios de sesión, y restablecer la contraseña con un
+  enlace reinicia ambas para ese correo y origen. El enlace sirve una sola vez, deja
+  de servir al cambiar la contraseña o iniciar sesión, y se construye sobre el
+  origen configurado de `webapp`, nunca sobre una cabecera de la petición.
+- Restablecer la contraseña cierra todas las sesiones del Usuario. Cambiarla
+  exige la contraseña actual, conserva la sesión que hace el cambio y cierra
+  las demás.
 - `/api/v1` admite hasta 120 peticiones por minuto por token; el exceso recibe
   `429` con `Retry-After` y no consume claves de idempotencia. Los tokens
   inválidos repetidos desde un mismo origen se limitan como los inicios de sesión.

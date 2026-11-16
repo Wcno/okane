@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { submitCredentials } from '../auth/api'
 import { useAuth, useSession } from '../auth/context'
-import { MIN_PASSWORD_LENGTH, validateCredentials, type CredentialErrors, type CredentialsMode } from '../auth/validation'
+import { NEW_PASSWORD_HINT, validateCredentials, type CredentialErrors, type CredentialsMode } from '../auth/validation'
 import { primaryButtonClassName } from './buttons'
 import { FormAlert } from './FormAlert'
 import { TextField } from './TextField'
@@ -71,11 +71,7 @@ export function CredentialsForm({ mode }: { mode: CredentialsMode }) {
         autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
         value={password}
         onChange={(event) => setPassword(event.target.value)}
-        hint={
-          mode === 'register'
-            ? `Al menos ${MIN_PASSWORD_LENGTH} caracteres. Evita contraseñas comunes o hechas solo de números.`
-            : undefined
-        }
+        hint={mode === 'register' ? NEW_PASSWORD_HINT : undefined}
         errors={errors.password}
       />
 

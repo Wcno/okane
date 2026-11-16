@@ -1,5 +1,10 @@
 export const authRoutes = ['/login', '/register', '/logout']
 
+/** Router state that tells /login a new password was just saved from a reset link. */
+export const PASSWORD_RESET = { passwordReset: true }
+
+export const isPasswordResetState = (state: unknown) => (state as typeof PASSWORD_RESET | null)?.passwordReset === true
+
 const HOME = '/dashboard'
 
 /**
