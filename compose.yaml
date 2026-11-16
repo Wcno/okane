@@ -18,7 +18,7 @@ services:
       DATABASE_USER: okane_webapp
       DATABASE_PASSWORD: ${WEBAPP_DB_PASSWORD:?Set WEBAPP_DB_PASSWORD in .env}
     ports:
-      - "${WEBAPP_PORT:-8000}:8000"
+      - "${WEBAPP_BIND:-127.0.0.1}:${WEBAPP_PORT:-8000}:8000"
     depends_on:
       webapp-db:
         condition: service_healthy
