@@ -11,7 +11,12 @@ from accounts import clock, ledger
 from accounts.models import Account
 from config.rest import paginate
 from investments import quotes
-from investments.chronology import DELETE_LEAVES_SALE_SHORT, first_shortfall, history
+from investments.chronology import (
+    DELETE_LEAVES_SALE_SHORT,
+    DELETE_ORPHANS_DIVIDEND,
+    first_problem,
+    history,
+)
 from investments.models import Asset, InvestmentTransaction, ReferencePrice
 from investments.performance import dashboard_of, performance_of
 from investments.positions import (
@@ -102,6 +107,11 @@ def sell(request):
     return record(request, InvestmentTransaction.Type.SELL)
 
 
+@api_view(["POST"])
+def dividend(request):
+    return record(request, InvestmentTransaction.Type.DIVIDEND)
+
+
 def represented(recorded):
     """An operation as the list and the read-one screens show it: with the Asset it refers to."""
     return {**InvestmentTransactionSerializer(recorded).data, "asset": represent_asset(recorded.asset)}
@@ -158,11 +168,13 @@ def transaction_detail(request, transaction_id):
         serializer.is_valid(raise_exception=True)
         return with_balance(serializer.save())
 
-    shortfall = first_shortfall(
-        history(user_id, recorded.account_id, recorded.asset_id, except_id=recorded.pk)
+    problem = first_problem(
+        history(user_id, recorded.account_id, recorded.asset_id, except_id=recorded.pk),
+        sale_message=DELETE_LEAVES_SALE_SHORT,
+        dividend_message=DELETE_ORPHANS_DIVIDEND,
     )
-    if shortfall is not None:
-        raise exceptions.ValidationError(shortfall.explain(DELETE_LEAVES_SALE_SHORT))
+    if problem is not None:
+        raise exceptions.ValidationError(problem)
     recorded.delete()
     return Response(status=204)
 
@@ -207,7 +219,12 @@ def current_price(user_id, asset):
         .first()
     )
     last = (
-        InvestmentTransaction.objects.filter(user_id=user_id, asset=asset, date__lte=clock.today())
+        InvestmentTransaction.objects.filter(
+            user_id=user_id,
+            asset=asset,
+            date__lte=clock.today(),
+            type__in=[InvestmentTransaction.Type.BUY, InvestmentTransaction.Type.SELL],
+        )
         .order_by("-date", "-id")
         .first()
     )

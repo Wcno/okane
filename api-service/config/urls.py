@@ -18,6 +18,7 @@ urlpatterns = [
     path("api/investments/transactions", investments.transaction_collection),
     path("api/investments/transactions/buy", investments.buy),
     path("api/investments/transactions/sell", investments.sell),
+    path("api/investments/transactions/dividend", investments.dividend),
     path("api/investments/transactions/<int:transaction_id>", investments.transaction_detail),
     path("api/investments/positions", investments.positions),
     path("api/investments/dashboard", investments.dashboard),

@@ -72,7 +72,11 @@ def held(user_id, as_of):
     prices up to `as_of` count, so a past closing never sees a later one.
     """
     transactions = list(
-        InvestmentTransaction.objects.filter(user_id=user_id, date__lte=as_of)
+        InvestmentTransaction.objects.filter(
+            user_id=user_id,
+            date__lte=as_of,
+            type__in=[InvestmentTransaction.Type.BUY, InvestmentTransaction.Type.SELL],
+        )
         .select_related("asset", "account")
         .order_by("date", "id")
     )
