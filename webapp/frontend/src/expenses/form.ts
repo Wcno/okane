@@ -1,5 +1,4 @@
 import type { Account } from '../accounts/api'
-import { parsePositiveAmount } from '../lib/amount'
 import { checkRecord, type RecordDraft, type RecordWording } from '../lib/recordForm'
 import type { ExpenseErrors, ExpenseInput } from './api'
 
@@ -12,12 +11,6 @@ const CATEGORY_REQUIRED = 'Elige la Categoría del gasto.'
 const wording: RecordWording = {
   accountRequired: 'Elige la Cuenta de la que salió el dinero.',
   dateInvalid: 'Elige la fecha del gasto.',
-}
-
-/** The amount to show a consequence for, or null while what is typed is not one. */
-export function typedAmount(text: string): string | null {
-  const parsed = parsePositiveAmount(text)
-  return 'amount' in parsed ? parsed.amount : null
 }
 
 export type ExpenseOutcome = { ok: true; expense: ExpenseInput } | { ok: false; errors: ExpenseErrors }

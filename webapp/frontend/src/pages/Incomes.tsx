@@ -9,7 +9,6 @@ import { EmptyState, NoticeBanner, Pending, ScreenHeader } from '../components/s
 import type { Income } from '../incomes/api'
 import { NEEDS_AN_ACCOUNT_FOR_INCOME, describeIncome } from '../incomes/presentation'
 import { useIncomeFeed } from '../incomes/useIncomeFeed'
-import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
 
 const rowId = (income: Income) => `income-${income.id}`
@@ -21,7 +20,7 @@ function Row({ income, accountName }: { income: Income; accountName: string }) {
     <RecordRow
       id={rowId(income)}
       to={`/incomes/${income.id}/edit`}
-      label={`Editar ingreso ${title}, ${formatMoney(income.amount)}${accountName && `, ${accountName}`}`}
+      action="Editar ingreso"
       icon={<IncomeChip />}
       title={title}
       details={details}
@@ -42,7 +41,11 @@ export function Incomes() {
 
   return (
     <>
-      <ScreenHeader title="Ingresos" intro="El dinero que ha entrado a tus Cuentas, del más reciente al más antiguo." />
+      <ScreenHeader
+        title="Ingresos"
+        intro="El dinero que ha entrado a tus Cuentas, del más reciente al más antiguo."
+        action={canRegister ? { to: '/incomes/create', label: 'Registrar ingreso', shortLabel: 'Ingreso' } : undefined}
+      />
 
       <NoticeBanner notice={notice} className="max-w-[44rem]" />
 

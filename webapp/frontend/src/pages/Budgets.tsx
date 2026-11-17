@@ -19,6 +19,7 @@ function BudgetRow({ budget }: { budget: Budget }) {
   return (
     <RecordRow
       to={`/budgets/${budget.id}/edit`}
+      action="Editar Presupuesto"
       icon={<CategoryChip categoryId={budget.categoryId} />}
       title={title}
       details={details}
@@ -32,6 +33,7 @@ function UnbudgetedRow({ line }: { line: BudgetLine }) {
   return (
     <RecordRow
       to={`/budgets/create?month=${line.month}&category=${line.categoryId}`}
+      action="Crear Presupuesto"
       icon={<CategoryChip categoryId={line.categoryId} />}
       title={name}
       details="Sin Presupuesto · solo lo gastado"

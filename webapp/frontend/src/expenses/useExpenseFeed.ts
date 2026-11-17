@@ -1,4 +1,5 @@
-import { useRecordFeed, type RecordPage } from '../lib/useRecordFeed'
+import type { RecordPage } from '../lib/recordPage'
+import { useRecordFeed } from '../lib/useRecordFeed'
 import { listExpenses, type Expense } from './api'
 import { useExpenseRevision } from './revision'
 

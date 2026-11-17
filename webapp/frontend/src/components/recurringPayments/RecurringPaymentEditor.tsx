@@ -4,15 +4,10 @@ import type { Outcome } from '../../lib/http'
 import { useRecordForm } from '../../lib/useRecordForm'
 import type { RecurringPayment, RecurringPaymentField, RecurringPaymentInput } from '../../recurringPayments/api'
 import { validateRecurringPayment, type RecurringPaymentDraft } from '../../recurringPayments/form'
-import { CategoryField } from '../expenses/CategoryField'
+import { CategoryField } from '../record/CategoryField'
+import { borderClassName, fieldClassName } from '../record/fieldStyles'
 import { AmountField, DescriptionField, FieldError } from '../record/RecordFields'
 import { RecordEditor } from '../record/RecordEditor'
-
-const fieldClassName =
-  'h-[44px] w-full rounded-xl border bg-surface px-3.5 text-[1rem] text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/15'
-
-const borderClassName = (invalid: boolean) =>
-  invalid ? 'border-critical' : 'border-line-strong hover:border-ink-3 focus-visible:border-ink'
 
 /** The form that creates or corrects one rule; Create and Edit differ in what they pass. */
 export function RecurringPaymentEditor({

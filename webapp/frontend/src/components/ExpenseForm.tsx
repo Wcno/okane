@@ -7,9 +7,10 @@ import { confirmationText, previewText, remainingAfter, remainingNow } from '../
 import { useBudgetMonth } from '../budgets/useBudgetMonth'
 import { categoryById } from '../data/categories'
 import { createExpense, type Expense } from '../expenses/api'
-import { chooseDefaultAccount, typedAmount } from '../expenses/form'
+import { chooseDefaultAccount } from '../expenses/form'
+import { typedAmount } from '../lib/amount'
 import { balanceSentence } from '../accounts/presentation'
-import { NEEDS_AN_ACCOUNT } from '../expenses/presentation'
+import { NEEDS_AN_ACCOUNT_FOR_EXPENSE } from '../expenses/presentation'
 import { announceExpenseRevision } from '../expenses/revision'
 import { useExpenseAccounts } from '../expenses/useExpenseAccounts'
 import { useExpenseForm } from '../expenses/useExpenseForm'
@@ -158,7 +159,7 @@ function QuickSheetContent() {
           </button>
         </>
       )}
-      {state.status === 'ready' && <NeedsAnAccount text={NEEDS_AN_ACCOUNT} onLeave={closeForm} />}
+      {state.status === 'ready' && <NeedsAnAccount text={NEEDS_AN_ACCOUNT_FOR_EXPENSE} onLeave={closeForm} />}
     </div>
   )
 }

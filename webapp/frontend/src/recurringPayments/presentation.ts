@@ -1,5 +1,5 @@
 import { categoryById } from '../data/categories'
-import { formatDay } from '../lib/dates'
+import { formatDay, todayInPanama } from '../lib/dates'
 import type { RecurringPayment, RecurringPaymentOccurrence } from './api'
 
 export const recurringPaymentsBack = { to: '/recurring-payments', label: 'Pagos recurrentes' }
@@ -40,10 +40,10 @@ export function allOccurrences(rules: RecurringPayment[]): RecurringPaymentOccur
   return [...seen.values()]
 }
 
-/** "Vence 5 nov 2026", or "Venció 5 nov 2026" once past. */
-export function dueText(occurrence: Pick<RecurringPaymentOccurrence, 'dueDate' | 'status'>): string {
+/** "Vence 5 nov 2026", or "Venció 5 nov 2026" once the day is past, whatever became of the reservation. */
+export function dueText(occurrence: Pick<RecurringPaymentOccurrence, 'dueDate'>, today = todayInPanama()): string {
   const day = formatDay(occurrence.dueDate)
-  return occurrence.status === 'overdue' ? `Venció ${day}` : `Vence ${day}`
+  return occurrence.dueDate < today ? `Venció ${day}` : `Vence ${day}`
 }
 
 export const STATUS_LABELS: Record<RecurringPaymentOccurrence['status'], string> = {

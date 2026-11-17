@@ -38,6 +38,9 @@ class ExpenseSerializer(serializers.Serializer):
     """
 
     id = serializers.IntegerField(read_only=True)
+    # Read-only: the confirmed occurrence this Expense was born from, if any.
+    # `context["occurrence_ids"]` maps Expense ids to it; an absent id is null.
+    recurring_payment_occurrence_id = serializers.SerializerMethodField()
     amount = DecimalStringField(
         max_digits=14,
         decimal_places=2,
@@ -63,6 +66,9 @@ class ExpenseSerializer(serializers.Serializer):
             "max_length": DESCRIPTION_TOO_LONG,
         },
     )
+
+    def get_recurring_payment_occurrence_id(self, expense):
+        return self.context.get("occurrence_ids", {}).get(expense.id)
 
     def validate_category_id(self, value):
         if value not in CATEGORY_IDS:

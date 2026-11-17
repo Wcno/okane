@@ -1,5 +1,4 @@
-import type { Account } from '../accounts/api'
-import { MAX_AMOUNT_TEXT, parsePositiveAmount } from './amount'
+import { MAX_AMOUNT_TEXT, parsePositiveAmount, typedAmount } from './amount'
 import { formatDay, isCalendarDay, todayInPanama } from './dates'
 import type { FieldErrors } from './http'
 
@@ -12,6 +11,12 @@ export interface RecordDraft {
 }
 
 export type RecordField = 'amount' | 'accountId' | 'date' | 'description'
+
+/** What the checks read of an Account: which one it is and the first day it can hold a record. */
+export interface RecordAccount {
+  id: number
+  openingDate: string
+}
 
 export const DESCRIPTION_MAX_LENGTH = 140
 
@@ -30,7 +35,7 @@ export interface CheckedRecord {
   errors: FieldErrors<RecordField>
   /** The amount as the API takes it, or null while it is not a valid one. */
   amount: string | null
-  account: Account | undefined
+  account: RecordAccount | undefined
   description: string
 }
 
@@ -39,7 +44,7 @@ export interface CheckedRecord {
  * before sending; api-service has the last word. "Today" is the Panama day at
  * the moment of the check, so a form left open past midnight follows the new day.
  */
-export function checkRecord(draft: RecordDraft, accounts: Account[], wording: RecordWording): CheckedRecord {
+export function checkRecord(draft: RecordDraft, accounts: RecordAccount[], wording: RecordWording): CheckedRecord {
   const today = todayInPanama()
   const errors: FieldErrors<RecordField> = {}
   const parsed = parsePositiveAmount(draft.amount)
@@ -55,5 +60,5 @@ export function checkRecord(draft: RecordDraft, accounts: Account[], wording: Re
   }
   if (description.length > DESCRIPTION_MAX_LENGTH) errors.description = [DESCRIPTION_TOO_LONG]
 
-  return { errors, amount: 'amount' in parsed ? parsed.amount : null, account, description }
+  return { errors, amount: typedAmount(draft.amount), account, description }
 }

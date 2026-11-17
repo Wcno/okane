@@ -1,3 +1,11 @@
+import json
+import threading
+from unittest import mock
+
+from django.db import connection
+from django.test import Client, TransactionTestCase, override_settings, tag
+
+from expenses.tests import TODAY
 from recurring_payments import tests as recurring_tests
 from recurring_payments.tests import FOOD, RULES, UTILITIES
 
@@ -282,3 +290,40 @@ class RemainingTests(BudgetApiTestCase):
 
         self.assertEqual(edited.status_code, 200, edited.content)
         self.assertEqual(self.row(FOOD, month="2026-09")["amount"], "500.00")
+
+
+@tag("database")
+@override_settings(INTERNAL_SERVICE_KEY="expected-key")
+class ConcurrentBudgetTests(TransactionTestCase):
+    """Simultaneous requests hit the database, so each one commits for real."""
+
+    def setUp(self):
+        clock = mock.patch("accounts.clock.today", return_value=TODAY)
+        clock.start()
+        self.addCleanup(clock.stop)
+
+    def test_two_simultaneous_creates_for_one_category_and_month_leave_a_single_budget(self):
+        start = threading.Barrier(2)
+        statuses = []
+
+        def create():
+            try:
+                start.wait()
+                response = Client().generic(
+                    "POST",
+                    BUDGETS,
+                    data=json.dumps({"amount": "300.00", "category_id": FOOD, "month": "2026-11"}),
+                    content_type="application/json",
+                    headers={"X-Okane-Service-Key": "expected-key", "X-Okane-User-Id": "1"},
+                )
+                statuses.append(response.status_code)
+            finally:
+                connection.close()
+
+        threads = [threading.Thread(target=create) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        self.assertEqual(sorted(statuses), [201, 409])

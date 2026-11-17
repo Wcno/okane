@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { expect, expectScreenQuality, knownAxeRules, test } from './support/qa.js'
+import { expect, expectScreenQuality, test } from './support/qa.js'
 import { archiveAccount, createAccount, createExpense } from './support/ledger.js'
 import { signUp } from './support/session.js'
 
@@ -20,7 +20,7 @@ const submitButton = (page: Page) => page.getByRole('main').getByRole('button', 
 const accountRow = (page: Page, name: string) => page.getByRole('listitem').filter({ hasText: name })
 
 /** The row of an Expense in the list: one link to its edit screen. */
-const expenseRow = (page: Page, title: string) => page.getByRole('link', { name: new RegExp(`^Editar gasto ${title},`) })
+const expenseRow = (page: Page, title: string) => page.getByRole('link', { name: new RegExp(`^${title}.*Editar gasto$`) })
 
 const panamaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Panama' }).format(new Date())
 
@@ -51,7 +51,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     )
     await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
     await expect(expenseRow(page, 'Supermercado')).toBeVisible()
-    await expectScreenQuality(page, `expenses-list-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
+    await expectScreenQuality(page, `expenses-list-${colorScheme}`)
 
     // Correcting the amount and moving the Expense to another Account updates both Balances.
     await expenseRow(page, 'Supermercado').click()
@@ -391,12 +391,12 @@ test.describe('on a phone', () => {
     const row = expenseRow(page, 'Supermercado de la esquina grande')
     await expect(row).toContainText('Supermercado de la esquina grande')
     await expect(row).toContainText('Alimentación · Cuenta corriente del hogar')
-    await expect(row).toHaveAttribute('aria-label', /^Editar gasto .*\$1,234\.50, Cuenta corriente del hogar$/)
+    await expect(row).toHaveAccessibleName(/^Supermercado de la esquina grande .*Cuenta corriente del hogar .*\$1,234\.50 \. Editar gasto$/)
     await expect(page.getByRole('main').getByRole('button')).toHaveCount(0)
     expect((await row.boundingBox())?.height).toBeGreaterThanOrEqual(44)
     // The details wrap instead of being cut: every line of text fits its box.
     const clipped = await row.evaluate((link) =>
-      [...link.querySelectorAll('span')].some((span) => span.scrollWidth > span.clientWidth + 1),
+      [...link.querySelectorAll('span:not(.sr-only)')].some((span) => span.scrollWidth > span.clientWidth + 1),
     )
     expect(clipped).toBe(false)
     expect(await noOverflow(page)).toBe(true)
@@ -428,7 +428,7 @@ test.describe('on a phone', () => {
       const second = await options.nth(1).boundingBox()
       expect(second?.y, `first row at ${width}px`).toBe(first?.y)
       expect(second?.x, `second column at ${width}px`).toBeGreaterThan(first?.x ?? 0)
-      // Long names wrap onto a second line; none is cut off or shown with an ellipsis.
+      // Every name is one word: none is cut off, shown with an ellipsis, or broken inside the word.
       const names = page.locator('fieldset label span.min-w-0')
       const truncated = await names.evaluateAll((spans) =>
         spans.filter(
@@ -437,6 +437,14 @@ test.describe('on a phone', () => {
         ).length,
       )
       expect(truncated, `names truncated at ${width}px`).toBe(0)
+      const linesPerName = await names.evaluateAll((spans) =>
+        spans.map((span) => {
+          const range = document.createRange()
+          range.selectNodeContents(span)
+          return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size
+        }),
+      )
+      expect(linesPerName, `names split across lines at ${width}px`).toEqual(linesPerName.map(() => 1))
       for (const option of await options.all()) {
         expect((await option.boundingBox())?.height).toBeGreaterThanOrEqual(44)
       }

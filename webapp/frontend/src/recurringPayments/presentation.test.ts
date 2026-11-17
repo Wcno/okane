@@ -68,8 +68,9 @@ describe('splitting occurrences', () => {
   })
 
   it('says when a reservation is due or was due', () => {
-    expect(dueText({ dueDate: '2026-12-05', status: 'pending' })).toBe('Vence 5 dic 2026')
-    expect(dueText({ dueDate: '2026-11-05', status: 'overdue' })).toBe('Venció 5 nov 2026')
+    expect(dueText({ dueDate: '2026-12-05' }, '2026-11-16')).toBe('Vence 5 dic 2026')
+    expect(dueText({ dueDate: '2026-11-16' }, '2026-11-16')).toBe('Vence 16 nov 2026')
+    expect(dueText({ dueDate: '2026-11-05' }, '2026-11-16')).toBe('Venció 5 nov 2026')
   })
 })
 

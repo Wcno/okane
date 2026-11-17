@@ -28,3 +28,9 @@ export function parsePositiveAmount(text: string): ParsedAmount {
   if ('error' in parsed) return parsed
   return parsed.amount.startsWith('-') || parsed.amount === '0.00' ? { error: 'invalid' } : parsed
 }
+
+/** The positive amount a typed text stands for, or null while it is not one. */
+export function typedAmount(text: string): string | null {
+  const parsed = parsePositiveAmount(text)
+  return 'amount' in parsed ? parsed.amount : null
+}

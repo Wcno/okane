@@ -137,11 +137,11 @@ los Saldos iniciales y el Rendimiento mensual está en el
   admite hasta 140 caracteres. `PUT /api/expenses/{id}` reemplaza el Gasto
   completo y exige la fecha: no asume hoy como `POST`. Un monto de más de 12
   dígitos enteros se rechaza con un mensaje propio.
-- Corregir o eliminar un Gasto de una Cuenta archivada se permite mientras el
-  Gasto siga en esa Cuenta. Mover un Gasto a una Cuenta archivada o de inversión
-  se rechaza, igual que registrar uno nuevo en ella.
-- Un identificador de Gasto o de Cuenta que no es del Usuario responde `404`, y
-  ese `404` prevalece sobre la validación del resto de los campos.
+- Corregir o eliminar un Gasto o un Ingreso de una Cuenta archivada se permite
+  mientras el registro siga en esa Cuenta. Mover un Gasto a una Cuenta archivada o
+  de inversión se rechaza, igual que registrar uno nuevo en ella.
+- Un identificador de Gasto, de Ingreso o de Cuenta que no es del Usuario responde
+  `404`, y ese `404` prevalece sobre la validación del resto de los campos.
 - `GET /api/incomes/{id}` devuelve un Ingreso del Usuario, para abrir sus
   pantallas de edición y eliminación desde un enlace; el identificador de otro
   Usuario responde `404`.
@@ -186,6 +186,12 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Editar o borrar el Gasto confirmado aplica las reglas de Gastos sin reabrir la
   reserva ni borrar su resolución original. La interfaz advierte este efecto y
   conserva el vínculo de auditoría incluso tras el borrado del Gasto.
+- Cada Gasto del API de Gastos (lista, lectura y respuestas de escritura) lleva
+  `recurring_payment_occurrence_id`: la ocurrencia confirmada de la que nació,
+  o `null` si se registró a mano. Es de solo lectura y se ignora al enviarlo.
+  Las pantallas de editar y eliminar ese Gasto muestran el aviso: "Este gasto
+  viene de un pago recurrente confirmado. Cambiarlo (o Eliminarlo) no reabre la
+  reserva ni cambia su resolución."
 - `GET /api/recurring-payments` pagina las reglas y las devuelve con
   `id`, `description`, `amount`, `account_id`, `category_id`, `day_of_month`,
   `start_date`, `status` (`active`, o `deleted` si una regla eliminada aún tiene
@@ -218,7 +224,8 @@ los Saldos iniciales y el Rendimiento mensual está en el
   reciben `amount` (mayor que cero), `category_id` y `month`; `PUT` reemplaza
   el Presupuesto completo. Un segundo Presupuesto para la misma Categoría y mes
   devuelve `409`. El registro rápido de Gastos lee el Restante de la Categoría
-  en la fila del mes actual y calcula la consecuencia (`remaining` menos el monto).
+  en la fila del mes de la fecha del Gasto y calcula la consecuencia
+  (`remaining` menos el monto); sin Presupuesto en esa fila, no hay Restante.
 - La copia mensual se ejecuta una vez por Usuario y mes actual, en una
   transacción, y solo copia desde el mes calendario inmediatamente anterior
   si el mes actual aún no tiene Presupuestos. Un mes ya personalizado se marca

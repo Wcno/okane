@@ -1,4 +1,4 @@
-﻿import { expect, expectScreenQuality, knownAxeRules, test } from './support/qa.js'
+﻿import { expect, expectScreenQuality, test } from './support/qa.js'
 import { signUp } from './support/session.js'
 
 for (const colorScheme of ['light', 'dark'] as const) {
@@ -21,12 +21,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await page.getByLabel('Fecha de inicio del registro').fill('2026-01-01')
     await expectScreenQuality(page, `accounts-create-filled-${colorScheme}`)
     await page.getByRole('button', { name: 'Crear cuenta', exact: true }).click()
-    await expect(page.getByRole('link', { name: 'Editar cuenta Tarjeta prueba' })).toBeVisible()
-    await expectScreenQuality(page, `accounts-list-${colorScheme}`, {
-      skipAxeRules: [...knownAxeRules.balanceFigureLabel, ...knownAxeRules.recordRowLabel],
-    })
+    await expect(page.getByRole('link', { name: /^Tarjeta prueba .*Editar cuenta$/ })).toBeVisible()
+    await expectScreenQuality(page, `accounts-list-${colorScheme}`)
 
-    await page.getByRole('link', { name: 'Editar cuenta Tarjeta prueba' }).click()
+    await page.getByRole('link', { name: /^Tarjeta prueba .*Editar cuenta$/ }).click()
     await expect(page.getByLabel('Saldo inicial', { exact: true })).toHaveCount(0)
     await expectScreenQuality(page, `accounts-edit-${colorScheme}`)
     await page.getByLabel('Nombre', { exact: true }).fill('Tarjeta corregida')
@@ -34,7 +32,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page).toHaveURL(/\/accounts$/)
     await page.reload()
 
-    await page.getByRole('link', { name: 'Editar cuenta Tarjeta corregida' }).click()
+    await page.getByRole('link', { name: /^Tarjeta corregida .*Editar cuenta$/ }).click()
     await page.getByRole('link', { name: 'Eliminar esta cuenta' }).click()
     await expect(page.getByRole('button', { name: 'Eliminar cuenta', exact: true })).toBeVisible()
     await expectScreenQuality(page, `accounts-delete-${colorScheme}`)
