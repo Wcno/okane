@@ -11,6 +11,20 @@ export const cardClassName = 'rounded-card border border-line bg-surface p-5 sha
 const primaryActionClassName =
   'inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-primary pl-4 pr-5 text-[1rem] font-semibold text-on-primary transition-transform duration-150 hover:-translate-y-px active:scale-[0.98]'
 
+/**
+ * The words of a header action. On a phone only `shortLabel` shows; the rest of `label`
+ * stays in the accessible name, so the name always starts with what is visible and reads in full.
+ */
+function ActionLabel({ label, shortLabel }: { label: string; shortLabel?: string }) {
+  if (!shortLabel || !label.startsWith(shortLabel) || label === shortLabel) return <>{label}</>
+  return (
+    <>
+      {shortLabel}
+      <span className="sr-only sm:not-sr-only">{label.slice(shortLabel.length)}</span>
+    </>
+  )
+}
+
 export function ScreenHeader({
   title,
   intro,
@@ -20,6 +34,7 @@ export function ScreenHeader({
   title: string
   intro?: ReactNode
   back?: { to: string; label: string }
+  /** `label` starts with `shortLabel`, the part a phone shows. */
   action?: { to: string; label: string; shortLabel?: string }
 }) {
   return (
@@ -41,8 +56,7 @@ export function ScreenHeader({
         {action && (
           <Link to={action.to} className={primaryActionClassName}>
             <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
-            <span className="sm:hidden">{action.shortLabel ?? action.label}</span>
-            <span className="hidden sm:inline">{action.label}</span>
+            <ActionLabel label={action.label} shortLabel={action.shortLabel} />
           </Link>
         )}
       </div>

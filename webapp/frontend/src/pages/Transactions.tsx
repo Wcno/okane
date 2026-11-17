@@ -45,7 +45,7 @@ export function Transactions() {
         title="Transacciones de inversión"
         intro="Tus compras, ventas y dividendos, de la más reciente a la más antigua."
         // With nothing registered, the empty state already asks for the first purchase.
-        action={hasRecords ? { to: '/investments/transactions/buy', label: 'Registrar compra', shortLabel: 'Comprar' } : undefined}
+        action={hasRecords ? { to: '/investments/transactions/buy', label: 'Comprar activo', shortLabel: 'Comprar' } : undefined}
       />
 
       {hasRecords && (

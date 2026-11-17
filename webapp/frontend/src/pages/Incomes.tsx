@@ -44,7 +44,7 @@ export function Incomes() {
       <ScreenHeader
         title="Ingresos"
         intro="El dinero que ha entrado a tus Cuentas, del más reciente al más antiguo."
-        action={canRegister ? { to: '/incomes/create', label: 'Registrar ingreso', shortLabel: 'Ingreso' } : undefined}
+        action={canRegister ? { to: '/incomes/create', label: 'Registrar ingreso', shortLabel: 'Registrar' } : undefined}
       />
 
       <NoticeBanner notice={notice} className="max-w-[44rem]" />

@@ -38,7 +38,7 @@ export function Transfers() {
   const known = accounts.state.status === 'ready' ? accounts.state.value : []
   const byId = new Map(known.map((account) => [account.id, account]))
   const canRegister = accounts.state.status !== 'ready' || transferAccounts(known).length >= 2
-  const create = { to: '/transfers/create', label: 'Registrar transferencia', shortLabel: 'Nueva' }
+  const create = { to: '/transfers/create', label: 'Nueva transferencia', shortLabel: 'Nueva' }
 
   return (
     <>
