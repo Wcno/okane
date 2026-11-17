@@ -12,7 +12,12 @@ from accounts.serializers import (
     amount_messages,
     messages,
 )
-from investments.holdings import exact, sellable_units
+from investments.chronology import (
+    CHANGE_LEAVES_SALE_SHORT,
+    first_shortfall,
+    history,
+)
+from investments.holdings import exact, sellable_units, trimmed
 from investments.models import Asset, InvestmentTransaction
 
 SMALLEST_QUANTITY = Decimal("0.00000001")
@@ -45,12 +50,6 @@ SALE_EXCEEDS_UNITS_LATER = (
 )
 
 
-def trimmed(units):
-    """Units as a User reads them: no trailing zeros, at least one digit."""
-    text = f"{units:f}"
-    return text.rstrip("0").rstrip(".") if "." in text else text
-
-
 def quantity_field(invalid, too_large):
     return DecimalStringField(
         max_digits=20,
@@ -70,7 +69,9 @@ class InvestmentTransactionSerializer(serializers.Serializer):
     """Validates a purchase or a sale; the context holds `user_id` and `type`.
 
     The Account is locked, so two sales of the same Account queue up and the
-    second one is checked against the units the first left. `validated_data`
+    second one is checked against the units the first left. Given an instance,
+    it validates a change of that record, which keeps its type, and checks the
+    whole history of every Position the change touches. `validated_data`
     carries the Account and the Asset objects.
     """
 
@@ -120,10 +121,16 @@ class InvestmentTransactionSerializer(serializers.Serializer):
         asset = data.pop("asset_id")
         if account.type != Account.Type.INVESTMENT:
             raise serializers.ValidationError({"account_id": [ACCOUNT_NOT_INVESTMENT]})
-        if account.archived_at is not None:
+        # Correcting a record of an Account archived since is a correction of history;
+        # only moving one into such an Account is a new operation.
+        stays = self.instance is not None and self.instance.account_id == account.id
+        if account.archived_at is not None and not stays:
             raise serializers.ValidationError({"account_id": [ACCOUNT_IS_ARCHIVED]})
 
-        data.setdefault("date", clock.today())
+        if "date" not in data:
+            if self.instance is not None:
+                raise serializers.ValidationError({"date": [DATE_INVALID]})
+            data["date"] = clock.today()
         if data["date"] > clock.today():
             raise serializers.ValidationError({"date": [DATE_IN_FUTURE]})
         if data["date"] < account.opening_date:
@@ -136,10 +143,37 @@ class InvestmentTransactionSerializer(serializers.Serializer):
         if cash <= 0:
             raise serializers.ValidationError({"units": [CASH_ROUNDS_TO_ZERO]})
 
-        if self.context["type"] == InvestmentTransaction.Type.SELL:
-            self.check_units_to_sell(account, asset, data)
         data.update(account=account, asset=asset, cash_amount=cash)
+        if self.instance is not None:
+            self.check_history_after_change(data)
+        elif self.context["type"] == InvestmentTransaction.Type.SELL:
+            self.check_units_to_sell(account, asset, data)
         return data
+
+    def check_history_after_change(self, data):
+        """Every Position the change touches must still cover its sales, from its first day to its last."""
+        record = self.instance
+        candidate = InvestmentTransaction(
+            pk=record.pk,
+            user_id=record.user_id,
+            type=record.type,
+            account=data["account"],
+            asset=data["asset"],
+            units=data["units"],
+            unit_price=data["unit_price"],
+            cash_amount=data["cash_amount"],
+            date=data["date"],
+        )
+        touched = {(record.account_id, record.asset_id), (candidate.account_id, candidate.asset_id)}
+        for account_id, asset_id in touched:
+            transactions = history(record.user_id, account_id, asset_id, except_id=record.pk)
+            if (account_id, asset_id) == (candidate.account_id, candidate.asset_id):
+                transactions.append(candidate)
+            shortfall = first_shortfall(transactions)
+            if shortfall is not None:
+                raise serializers.ValidationError(
+                    {"units": [shortfall.explain(CHANGE_LEAVES_SALE_SHORT)]}
+                )
 
     def check_units_to_sell(self, account, asset, data):
         history = list(
@@ -163,3 +197,9 @@ class InvestmentTransactionSerializer(serializers.Serializer):
         return InvestmentTransaction.objects.create(
             user_id=self.context["user_id"], type=self.context["type"], **validated_data
         )
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        instance.save()
+        return instance

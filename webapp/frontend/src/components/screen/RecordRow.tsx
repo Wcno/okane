@@ -18,6 +18,8 @@ export function RecordRow({
   title,
   details,
   amount,
+  trailing,
+  signed = false,
 }: {
   to?: string
   /** The DOM id of the link, so a screen can move the keyboard to a row. */
@@ -28,6 +30,10 @@ export function RecordRow({
   title: string
   details?: string
   amount?: string
+  /** A secondary figure under the amount, right-aligned, e.g. the Balance after a line. */
+  trailing?: ReactNode
+  /** Also prefix a positive amount with "+", for a list that mixes what came in and what went out. */
+  signed?: boolean
 }) {
   const content = (
     <>
@@ -39,7 +45,10 @@ export function RecordRow({
         )}
       </span>
       {amount !== undefined && (
-        <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatMoney(amount)}</span>
+        <span className="shrink-0 text-right">
+          <span className="block text-[1rem] font-semibold tabular-nums">{formatMoney(amount, { sign: signed })}</span>
+          {trailing}
+        </span>
       )}
       {to && action && <span className="sr-only">. {action}</span>}
     </>

@@ -284,7 +284,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 | Registrar venta de activos | Sí | `POST /api/investments/transactions/sell` | `investment_transactions` | api-service, api-db | A5 |
 | Registrar dividendo | Sí | `POST /api/investments/transactions/dividend` | `investment_transactions` | api-service, api-db | N3 |
 | Consultar posiciones de inversión | Sí | `GET /api/investments/positions` | `investment_transactions` | api-service, api-db | A5 |
-| Consultar transacciones de inversión | Sí | `GET /api/investments/transactions` | `investment_transactions` | api-service, api-db | A5 |
+| Consultar transacciones de inversión | Sí | `GET /api/investments/transactions`, `GET /api/investments/transactions/{id}` | `investment_transactions` | api-service, api-db | A5 |
 | Editar transacción de inversión | Sí | `PUT /api/investments/transactions/{id}` | `investment_transactions` | api-service, api-db | A5 |
 | Eliminar transacción de inversión | Sí | `DELETE /api/investments/transactions/{id}` | `investment_transactions` | api-service, api-db | A5 |
 | Consultar rendimiento del portafolio | Sí | `GET /api/investments/performance` | `investment_transactions` | api-service, api-db | A5 |

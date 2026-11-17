@@ -1,4 +1,5 @@
 import { TriangleAlert } from 'lucide-react'
+import type { ReactNode } from 'react'
 import type { Account } from '../../accounts/api'
 import type { Asset, Trade, TradeField, TradeInput, TradeKind } from '../../investments/api'
 import { cashAmount, exceedsCash, type TradeDraft } from '../../investments/form'
@@ -18,25 +19,39 @@ const copy: Record<TradeKind, { submit: string; submitting: string; cash: string
   sell: { submit: 'Registrar venta', submitting: 'Registrando…', cash: 'Volverá a la Cuenta' },
 }
 
-/** The form that records one purchase or sale; Buy and Sell differ in what they pass. */
+/**
+ * The form that records or corrects one purchase or sale. Buy and Sell differ
+ * in the words they use; a correction passes its own labels, its Account note
+ * and the content below the buttons.
+ */
 export function TradeEditor({
   kind,
   initial,
   accounts,
   save,
   onSaved,
+  labels,
+  cancelTo = positionsBack.to,
+  accountNote,
+  children,
 }: {
   kind: TradeKind
   initial: TradeDraft
   accounts: Account[]
   save: (trade: TradeInput) => Promise<Outcome<Trade, TradeField>>
   onSaved: (trade: Trade, asset: Asset) => void | Promise<void>
+  labels?: { submit: string; submitting: string }
+  cancelTo?: string
+  accountNote?: string
+  /** Content below the buttons, such as the way to the delete screen. */
+  children?: ReactNode
 }) {
   const { form, draft, change, errors, isSubmitting, submit } = useTradeForm({ initial, accounts, save, onSaved })
   const id = (name: string) => `${kind}-${name}`
   const account = accounts.find((candidate) => candidate.id === draft.accountId)
   const cash = cashAmount(draft.units, draft.unitPrice)
   const warnAboutCash = exceedsCash(kind, cash, account)
+  const buttons = labels ?? copy[kind]
 
   return (
     <RecordEditor
@@ -44,9 +59,9 @@ export function TradeEditor({
       onSubmit={submit}
       isSubmitting={isSubmitting}
       formError={errors.form}
-      submitLabel={copy[kind].submit}
-      submittingLabel={copy[kind].submitting}
-      cancelTo={positionsBack.to}
+      submitLabel={buttons.submit}
+      submittingLabel={buttons.submitting}
+      cancelTo={cancelTo}
       stickyActions
       fields={
         <>
@@ -68,6 +83,7 @@ export function TradeEditor({
                 </option>
               ))}
             </select>
+            {accountNote && <p className="mt-1.5 text-[0.9rem] text-ink-3">{accountNote}</p>}
             <FieldError id={id('account-error')} errors={errors.accountId} />
           </div>
 
@@ -124,6 +140,8 @@ export function TradeEditor({
           />
         </>
       }
-    />
+    >
+      {children}
+    </RecordEditor>
   )
 }
