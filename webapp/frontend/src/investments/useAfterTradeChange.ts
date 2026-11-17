@@ -4,6 +4,7 @@ import { currentAccount } from '../accounts/api'
 import type { ScreenNotice } from '../lib/notice'
 import type { Asset, Trade } from './api'
 import { transactionsBack, tradeNotice, type TradeChange } from './presentation'
+import { announceTransactionRevision } from './transactionRevision'
 
 /**
  * What a correction or a deletion of a Transacción de inversión ends with: go
@@ -15,6 +16,7 @@ export function useAfterTradeChange() {
     async (change: TradeChange, trade: Pick<Trade, 'type' | 'units' | 'cashAmount' | 'accountId'>, asset: Pick<Asset, 'symbol'>) => {
       const account = await currentAccount(trade.accountId)
       const state: ScreenNotice = { notice: tradeNotice(change, trade, asset, account) }
+      announceTransactionRevision()
       navigate(transactionsBack.to, { state })
     },
     [navigate],

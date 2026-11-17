@@ -1,27 +1,27 @@
-import { Fragment, useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { dayHeading, groupByDay } from '../../lib/dayGroups'
+import { todayInPanama } from '../../lib/dates'
+import type { RecordFeed } from '../../lib/useRecordFeed'
 import { smallSecondaryButtonClassName } from '../buttons'
 import { FormAlert } from '../FormAlert'
-import { todayInPanama } from '../../lib/dates'
-import { dayHeading, groupByDay } from '../../lib/days'
-import type { PagedFeed } from '../../lib/usePagedFeed'
-import { cardClassName } from './Screen'
+import { cardClassName } from '../screen/Screen'
 
 /**
  * After "Mostrar más" the keyboard stays where it was: on the button while
  * there are more pages, else on the first row that arrived, so it does not
  * fall back to the top of the page.
  */
-function useKeepFocusAfterMore<Item extends { id: number }>(feed: PagedFeed<Item>, rowId: (item: Item) => string) {
+function useKeepFocusAfterMore<Record>(feed: RecordFeed<Record>, rowId: (record: Record) => string) {
   const asked = useRef(false)
-  const shown = useRef(feed.items.length)
+  const shown = useRef(feed.records.length)
 
   useEffect(() => {
     const previous = shown.current
-    shown.current = feed.items.length
-    if (!asked.current || feed.items.length <= previous) return
+    shown.current = feed.records.length
+    if (!asked.current || feed.records.length <= previous) return
     asked.current = false
-    if (feed.nextPage === null) document.getElementById(rowId(feed.items[previous]))?.focus()
-  }, [feed.items, feed.nextPage, rowId])
+    if (feed.nextPage === null) document.getElementById(rowId(feed.records[previous]))?.focus()
+  }, [feed.records, feed.nextPage, rowId])
 
   return () => {
     asked.current = true
@@ -29,21 +29,22 @@ function useKeepFocusAfterMore<Item extends { id: number }>(feed: PagedFeed<Item
 }
 
 /**
- * A list of records grouped under a heading for each day, with the "Mostrar más"
- * control for the next page. `noun` is the plural the count sentence uses.
+ * The records of a feed under a heading for each day, then the count and
+ * "Mostrar más". `row` renders one record as a RecordRow whose link has `rowId`.
  */
-export function DayFeed<Item extends { id: number; date: string }>({
+export function DayFeed<Record extends { id: number; date: string }>({
   feed,
-  noun,
-  rowId,
-  renderRow,
   showMore,
+  row,
+  rowId,
+  countText,
 }: {
-  feed: PagedFeed<Item>
-  noun: string
-  rowId: (item: Item) => string
-  renderRow: (item: Item) => ReactNode
+  feed: RecordFeed<Record>
   showMore: () => void
+  row: (record: Record) => ReactNode
+  rowId: (record: Record) => string
+  /** "Mostrando 50 de 51 gastos." */
+  countText: (shown: number, total: number) => string
 }) {
   const today = todayInPanama()
   const rememberAsked = useKeepFocusAfterMore(feed, rowId)
@@ -51,22 +52,18 @@ export function DayFeed<Item extends { id: number; date: string }>({
 
   return (
     <div className="max-w-[44rem] space-y-4 lg:space-y-5">
-      {groupByDay(feed.items).map((group) => (
+      {groupByDay(feed.records).map((group) => (
         <section key={group.date} aria-labelledby={`day-${group.date}`} className={cardClassName}>
           <h2 id={`day-${group.date}`} className="text-[1rem] font-medium text-ink-2">
             {dayHeading(group.date, today)}
           </h2>
-          <ul className="mt-3 divide-y divide-line">
-            {group.items.map((item) => (
-              <Fragment key={item.id}>{renderRow(item)}</Fragment>
-            ))}
-          </ul>
+          <ul className="mt-3 divide-y divide-line">{group.records.map(row)}</ul>
         </section>
       ))}
 
       <div className="flex flex-col items-center gap-3 px-1 pt-1">
         <p className="text-[0.87rem] text-ink-3" role="status">
-          Mostrando {feed.items.length} de {feed.total} {noun}.
+          {countText(feed.records.length, feed.total)}
         </p>
         {feed.more.status === 'failed' && <FormAlert>{feed.more.message}</FormAlert>}
         {feed.nextPage !== null && (

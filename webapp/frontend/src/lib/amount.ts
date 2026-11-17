@@ -43,3 +43,10 @@ export function parseQuantity(text: string): ParsedQuantity {
   if (whole === '0' && fraction === '') return { error: 'invalid' }
   return { quantity: fraction ? `${whole}.${fraction}` : whole }
 }
+
+/** A record of money (Expense, Income) takes a positive amount: zero and a negative one are as invalid as text. */
+export function parsePositiveAmount(text: string): ParsedAmount {
+  const parsed = parseAmount(text)
+  if ('error' in parsed) return parsed
+  return parsed.amount.startsWith('-') || parsed.amount === '0.00' ? { error: 'invalid' } : parsed
+}

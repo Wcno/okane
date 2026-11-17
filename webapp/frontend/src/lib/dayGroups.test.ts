@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { dayHeading, groupByDay } from './days'
+import { dayHeading, groupByDay } from './dayGroups'
 
-const item = (id: number, date: string) => ({ id, date })
+const record = (id: number, date: string) => ({ id, date })
 
 describe('dayHeading', () => {
   it('names today and yesterday and writes any other day out', () => {
@@ -21,9 +21,9 @@ describe('dayHeading', () => {
 
 describe('groupByDay', () => {
   it('keeps the order and starts a group whenever the day changes', () => {
-    const groups = groupByDay([item(4, '2026-11-16'), item(3, '2026-11-16'), item(2, '2026-11-10')])
+    const groups = groupByDay([record(4, '2026-11-16'), record(3, '2026-11-16'), record(2, '2026-11-10')])
 
-    expect(groups.map((group) => [group.date, group.items.map((entry) => entry.id)])).toEqual([
+    expect(groups.map((group) => [group.date, group.records.map((item) => item.id)])).toEqual([
       ['2026-11-16', [4, 3]],
       ['2026-11-10', [2]],
     ])

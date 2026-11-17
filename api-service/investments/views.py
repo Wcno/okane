@@ -17,6 +17,7 @@ from investments.positions import positions_of, represent_asset
 from investments.serializers import InvestmentTransactionSerializer
 
 SEARCH_RESULT_LIMIT = 20
+# Keep equal to ASSET_QUERY_MAX_LENGTH in webapp/frontend/src/investments/api.ts.
 QUERY_MAX_LENGTH = 60
 QUERY_REQUIRED = "Escribe el símbolo o el nombre del Activo, por ejemplo AAPL."
 QUERY_TOO_LONG = f"La búsqueda admite hasta {QUERY_MAX_LENGTH} caracteres."
@@ -166,7 +167,7 @@ def positions(request):
         try:
             as_of = datetime.date.fromisoformat(request.query_params["as_of"])
         except ValueError:
-            raise exceptions.ValidationError({"as_of": [AS_OF_INVALID]})
+            raise exceptions.ValidationError({"as_of": [AS_OF_INVALID]}) from None
         if as_of > clock.today():
             raise exceptions.ValidationError({"as_of": [AS_OF_IN_FUTURE]})
     items, page = paginate(request, positions_of(request.okane_user_id, as_of))

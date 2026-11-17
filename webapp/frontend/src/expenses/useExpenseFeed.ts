@@ -1,13 +1,11 @@
-import { usePagedFeed, type Page } from '../lib/usePagedFeed'
+import { useRecordFeed, type RecordPage } from '../lib/useRecordFeed'
 import { listExpenses, type Expense } from './api'
 import { useExpenseRevision } from './revision'
 
-const loadExpensePage = async (page: number): Promise<Page<Expense>> => {
+async function loadExpenses(page: number): Promise<RecordPage<Expense>> {
   const { expenses, total, nextPage } = await listExpenses(page)
-  return { items: expenses, total, nextPage }
+  return { records: expenses, total, nextPage }
 }
 
-/** The User's Expenses, newest first; reloads when an Expense changes elsewhere. */
-export function useExpenseFeed() {
-  return usePagedFeed(loadExpensePage, useExpenseRevision())
-}
+/** The User's Expenses, newest first; they load again when one changes elsewhere. */
+export const useExpenseFeed = () => useRecordFeed(loadExpenses, useExpenseRevision())

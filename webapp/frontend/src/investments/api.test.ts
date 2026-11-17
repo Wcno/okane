@@ -45,7 +45,7 @@ describe('listTransactions', () => {
     )
     vi.stubGlobal('fetch', fetch)
 
-    await expect(listTransactions(1)).resolves.toEqual({ items: [transaction], total: 51, nextPage: 2 })
+    await expect(listTransactions(1)).resolves.toEqual({ records: [transaction], total: 51, nextPage: 2 })
     expect(fetch.mock.calls[0][0]).toBe('/api/investments/transactions?page_size=50&page=1')
   })
 

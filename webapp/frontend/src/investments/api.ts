@@ -1,5 +1,5 @@
 import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
-import type { Page } from '../lib/usePagedFeed'
+import type { RecordPage } from '../lib/useRecordFeed'
 
 /** An Asset of the catalog: identified by provider, market and symbol, never by symbol alone. */
 export interface Asset {
@@ -67,6 +67,9 @@ export interface Position {
   portfolioPercent: string | null
   accounts: PositionAccount[]
 }
+
+/** Keep equal to QUERY_MAX_LENGTH in api-service/investments/views.py. */
+export const ASSET_QUERY_MAX_LENGTH = 60
 
 const SEARCH_FAILED = 'Okane no pudo buscar Activos. Espera un momento e inténtalo de nuevo.'
 const POSITIONS_FAILED = 'Okane no pudo consultar tus Posiciones. Espera un momento e inténtalo de nuevo.'
@@ -202,12 +205,12 @@ const toTransaction = (body: TransactionBody): Transaction => ({
 const TRANSACTIONS_PAGE_SIZE = 50
 
 /** One page of the User's Transactions, newest first. */
-export async function listTransactions(page: number): Promise<Page<Transaction>> {
+export async function listTransactions(page: number): Promise<RecordPage<Transaction>> {
   const body = await readJson<{ results: TransactionBody[]; total: number; next_page: number | null }>(
     `/api/investments/transactions?page_size=${TRANSACTIONS_PAGE_SIZE}&page=${page}`,
     { failed: TRANSACTIONS_FAILED },
   )
-  return { items: body.results.map(toTransaction), total: body.total, nextPage: body.next_page }
+  return { records: body.results.map(toTransaction), total: body.total, nextPage: body.next_page }
 }
 
 /** One Transaction; throws NotFoundError when it is not the User's or no longer exists. */

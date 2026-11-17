@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { createAccount, findAsset, recordTrade } from './support/ledger.js'
-import { expect, expectScreenQuality, knownAxeRules, test } from './support/qa.js'
+import { expect, expectScreenQuality, test } from './support/qa.js'
 import { signUp } from './support/session.js'
 
 const noOverflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
@@ -15,8 +15,8 @@ function forbidBrowserDialogs(page: Page) {
 const accountRow = (page: Page, name: string) => page.getByRole('listitem').filter({ hasText: name })
 
 /** The rows of the list: each one is a link to the screen that corrects that purchase or sale. */
-const purchaseRow = (page: Page) => page.getByRole('link', { name: /^Editar compra AAPL/ })
-const saleRow = (page: Page) => page.getByRole('link', { name: /^Editar venta AAPL/ })
+const purchaseRow = (page: Page) => page.getByRole('link', { name: /^AAPL .*Compra · / })
+const saleRow = (page: Page) => page.getByRole('link', { name: /^AAPL .*Venta · / })
 
 for (const colorScheme of ['light', 'dark'] as const) {
   test(`investment transactions lifecycle in ${colorScheme}`, async ({ page, expectedProblems }) => {
@@ -51,9 +51,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page.getByText('Mostrando 2 de 2 transacciones de inversión.')).toBeVisible()
     await expect(saleRow(page)).toContainText('Venta · 1 unidad a $150.00 · Bróker')
     await expect(purchaseRow(page)).toContainText('Compra · 2 unidades a $100.00 · Bróker')
-    await expectScreenQuality(page, `investment-transactions-list-${colorScheme}`, {
-      skipAxeRules: knownAxeRules.recordRowLabel,
-    })
+    await expectScreenQuality(page, `investment-transactions-list-${colorScheme}`)
 
     // Correcting the purchase to 0.5 units would leave the June sale without units: refused, and the typed value stays.
     await purchaseRow(page).click()
@@ -155,6 +153,6 @@ test('the list shows the next page on request and keeps the day headings', async
   await expect(page.locator('a[id^=transaction-]').nth(50)).toBeFocused()
   await expect(page.getByRole('button', { name: 'Mostrar más' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'mar 10 nov' })).toBeVisible()
-  await expectScreenQuality(page, 'investment-transactions-all-pages', { skipAxeRules: knownAxeRules.recordRowLabel })
+  await expectScreenQuality(page, 'investment-transactions-all-pages')
   expect(await noOverflow(page)).toBe(true)
 })

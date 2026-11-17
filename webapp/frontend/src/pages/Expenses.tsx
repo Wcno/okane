@@ -1,13 +1,13 @@
 import { ReceiptText } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
-import type { Account } from '../accounts/api'
+import { offeredAccounts } from '../accounts/presentation'
 import { useAccounts } from '../accounts/useAccounts'
 import { CategoryChip } from '../components/expenses/CategoryChip'
-import { DayFeed } from '../components/screen/DayFeed'
+import { DayFeed } from '../components/record/DayFeed'
 import { RecordRow } from '../components/screen/RecordRow'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader } from '../components/screen/Screen'
 import type { Expense } from '../expenses/api'
-import { NEEDS_AN_ACCOUNT, describeExpense, offeredAccounts } from '../expenses/presentation'
+import { NEEDS_AN_ACCOUNT, describeExpense } from '../expenses/presentation'
 import { useExpenseFeed } from '../expenses/useExpenseFeed'
 import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
@@ -37,7 +37,7 @@ export function Expenses() {
   const location = useLocation()
   const notice = noticeFrom(location.state)
   const known = accounts.state.status === 'ready' ? accounts.state.value : []
-  const names = new Map(known.map((account: Account) => [account.id, account.name]))
+  const names = new Map(known.map((account) => [account.id, account.name]))
   const canRegister = accounts.state.status !== 'ready' || offeredAccounts(known).length > 0
 
   return (
@@ -48,7 +48,7 @@ export function Expenses() {
 
       {state.status !== 'ready' ? (
         <Pending state={state} retry={retry} loading="Cargando tus gastos…" />
-      ) : state.value.items.length === 0 ? (
+      ) : state.value.records.length === 0 ? (
         <EmptyState
           icon={ReceiptText}
           title="Aún no registras gastos"
@@ -66,10 +66,10 @@ export function Expenses() {
       ) : (
         <DayFeed
           feed={state.value}
-          noun="gastos"
-          rowId={rowId}
           showMore={showMore}
-          renderRow={(expense) => <Row expense={expense} accountName={names.get(expense.accountId) ?? ''} />}
+          rowId={rowId}
+          row={(expense) => <Row key={expense.id} expense={expense} accountName={names.get(expense.accountId) ?? ''} />}
+          countText={(shown, total) => `Mostrando ${shown} de ${total} gastos.`}
         />
       )}
     </>

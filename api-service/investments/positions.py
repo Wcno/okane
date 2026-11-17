@@ -27,6 +27,7 @@ def represent_asset(asset):
 
 
 def fixed(value, step):
+    """Round half away from zero to `step`: cents for money, eight places for units and prices."""
     return f"{value.quantize(step, rounding=ROUND_HALF_UP):f}"
 
 

@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { createAccount, findAsset, recordTrade } from './support/ledger.js'
 import { expect, expectScreenQuality, test } from './support/qa.js'
 import { signUp } from './support/session.js'
@@ -25,6 +25,17 @@ async function fillTrade(page: Page, units: string, price: string) {
   await page.getByLabel('Unidades').fill(units)
   await page.getByLabel('Precio por unidad').fill(price)
 }
+
+/** The element ends above the sticky action row, so the keyboard or a scroll never leaves it hidden behind it. */
+async function expectClearOfActionRow(page: Page, locator: Locator) {
+  await locator.evaluate((element) => element.scrollIntoView({ block: 'nearest' }))
+  const box = await locator.boundingBox()
+  const actions = await submit(page, 'Registrar compra').boundingBox()
+  expect(box!.y + box!.height).toBeLessThanOrEqual(actions!.y)
+}
+
+const lineCount = (locator: Locator) =>
+  locator.evaluate((element) => Math.round(element.getBoundingClientRect().height / parseFloat(getComputedStyle(element).lineHeight)))
 
 const panamaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Panama' }).format(new Date())
 
@@ -61,6 +72,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(row).toContainText('costo promedio $100.00')
     await expect(row).toContainText('$200.00')
     await expect(row).toContainText('100.00 %')
+    // The two lines under the name each fit in two lines of a phone.
+    for (const line of await row.locator('p').all()) expect(await lineCount(line)).toBeLessThanOrEqual(2)
     await expectScreenQuality(page, `investments-positions-${colorScheme}`)
 
     await page.getByRole('link', { name: 'Registrar venta' }).click()
@@ -90,7 +103,11 @@ test('a purchase without enough cash warns first and is accepted anyway', async 
   await page.goto('/investments/transactions/buy')
   await pickAsset(page, 'msft', /^MSFT/)
   await fillTrade(page, '1', '80')
-  await expect(page.getByText(/Esta compra supera el efectivo de Bróker \(\$50\.00\)/)).toBeVisible()
+  const warning = page.getByText(/Esta compra supera el efectivo de Bróker \(\$50\.00\)/)
+  await expect(warning).toBeVisible()
+  await expectClearOfActionRow(page, warning)
+  await page.getByLabel('Fecha').focus()
+  await expectClearOfActionRow(page, page.getByLabel('Fecha'))
   await expectScreenQuality(page, 'investments-buy-cash-warning')
   await submit(page, 'Registrar compra').click()
 
@@ -135,6 +152,9 @@ test('selling more units than the Position holds is refused and keeps what was t
   const units = page.getByLabel('Unidades')
   await expect(page.getByText('No puedes vender 3 unidades: la Posición tiene 2.')).toBeVisible()
   await expect(units).toHaveAttribute('aria-invalid', 'true')
+  // The message belongs to Unidades, not to the price beside it.
+  await expect(page.locator('#sell-units-error')).toContainText('No puedes vender 3 unidades')
+  await expect(page.locator('#sell-price-error')).toHaveCount(0)
   await expect(units).toBeFocused()
   await expect(units).toHaveValue('3')
   await expectScreenQuality(page, 'investments-sell-refused')
@@ -223,7 +243,7 @@ test('the same Asset in two Accounts is one Position with a weighted average', a
   await expect(rows).toContainText('4 unidades')
   await expect(rows).toContainText('costo promedio $175.00')
   await expect(rows).toContainText('En 2 Cuentas: Bróker uno 1 · Bróker dos 3')
-  await expect(rows).toContainText('precio $200.00 de tu última operación')
+  await expect(rows).toContainText('Precio $200.00 de tu última operación')
   await expectScreenQuality(page, 'investments-positions-grouped')
 })
 
@@ -240,6 +260,9 @@ test('each share is a portion of the portfolio value', async ({ page }) => {
   await expect(page.getByRole('listitem').filter({ hasText: 'AAPL' })).toContainText('75.00 %')
   await expect(page.getByRole('listitem').filter({ hasText: 'MSFT' })).toContainText('25.00 %')
   await expectScreenQuality(page, 'investments-positions-two-assets')
+  // A populated screen keeps the way to register another purchase.
+  await page.getByRole('link', { name: 'Registrar compra' }).click()
+  await expect(page).toHaveURL(/\/investments\/transactions\/buy$/)
 })
 
 test('without an investment Account a purchase asks for one first', async ({ page }) => {

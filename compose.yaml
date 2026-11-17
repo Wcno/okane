@@ -119,9 +119,9 @@ services:
     restart: unless-stopped
 
 networks:
-  # The only network with a route to the host; webapp alone joins it.
+  # The only network that publishes a port to the host; webapp alone joins it.
   public:
-  # Outbound only, for api-service to reach the quotes service; nothing is published.
+  # Outbound only: api-service reaches the quotes service through it. It publishes nothing.
   egress:
   # webapp to api-service.
   services:

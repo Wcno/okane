@@ -1,14 +1,6 @@
-import type { Account } from '../accounts/api'
 import { categoryById } from '../data/categories'
 import { formatDay } from '../lib/dates'
 import type { Expense } from './api'
-
-/** Accounts that can take an Expense: spending or savings, not archived. `keep` stays even if archived. */
-export function offeredAccounts(accounts: Account[], keep?: number): Account[] {
-  return accounts.filter(
-    (account) => account.id === keep || (account.type !== 'investment' && account.archivedAt === null),
-  )
-}
 
 export const expensesBack = { to: '/expenses', label: 'Gastos' }
 
