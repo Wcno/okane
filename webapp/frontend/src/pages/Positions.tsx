@@ -1,4 +1,4 @@
-import { ChartLine, Plus, TrendingDown } from 'lucide-react'
+import { ChartLine, TrendingDown } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { smallSecondaryButtonClassName } from '../components/buttons'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
@@ -28,6 +28,14 @@ function Row({ position }: { position: Position }) {
               {accounts.map((item) => `${item.accountName} ${formatUnits(item.units)}`).join(' · ')}
             </p>
           )}
+          <Link
+            to="/investments/transactions/sell"
+            aria-label={`Vender ${asset.symbol}`}
+            className={`${smallSecondaryButtonClassName} mt-2`}
+          >
+            <TrendingDown size={17} aria-hidden="true" />
+            Vender
+          </Link>
         </div>
         <div className="shrink-0 text-right">
           <p className="text-[1rem] font-semibold tabular-nums">{formatMoney(position.value)}</p>
@@ -45,24 +53,16 @@ function Row({ position }: { position: Position }) {
 export function Positions() {
   const { state, retry } = useLoaded(listPositions)
   const notice = noticeFrom(useLocation().state)
+  const hasPositions = state.status === 'ready' && state.value.length > 0
 
   return (
     <>
       <ScreenHeader
         title="Posiciones"
         intro="Lo que tienes de cada Activo, con su costo promedio y su valor según la última operación que registraste."
+        // With nothing held, the empty state already asks for the first purchase.
+        action={hasPositions ? { to: '/investments/transactions/buy', label: 'Registrar compra' } : undefined}
       />
-
-      <div className="mb-5 flex flex-wrap gap-3 lg:mb-6">
-        <Link to="/investments/transactions/buy" className={smallSecondaryButtonClassName}>
-          <Plus size={17} aria-hidden="true" />
-          Registrar compra
-        </Link>
-        <Link to="/investments/transactions/sell" className={smallSecondaryButtonClassName}>
-          <TrendingDown size={17} aria-hidden="true" />
-          Registrar venta
-        </Link>
-      </div>
 
       <NoticeBanner notice={notice} className="max-w-[44rem]" />
 
