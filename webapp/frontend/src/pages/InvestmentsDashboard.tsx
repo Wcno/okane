@@ -1,12 +1,14 @@
 import { ChartLine } from 'lucide-react'
 import { Card } from '../components/dashboard/Card'
 import { DistributionCard } from '../components/investments/DistributionCard'
-import { Figure, HeroMoney, InvestmentHeader, ReturnLine } from '../components/investments/Figures'
-import { EmptyState, Pending } from '../components/screen/Screen'
+import { Figure, HeroMoney, ReturnLine } from '../components/investments/Figures'
+import { EmptyState, Pending, ScreenHeader } from '../components/screen/Screen'
 import { getDashboard, type InvestmentsDashboard as Dashboard } from '../investments/portfolio'
 import { performancePath } from '../investments/presentation'
 import { formatMoney } from '../lib/money'
 import { useLoaded } from '../lib/useLoaded'
+
+const intro = 'El valor de tu portafolio, lo que has aportado y lo que ha rendido.'
 
 function AccountRows({ dashboard }: { dashboard: Dashboard }) {
   return (
@@ -39,7 +41,7 @@ export function InvestmentsDashboard() {
   if (state.status !== 'ready') {
     return (
       <>
-        <InvestmentHeader title="Inversiones" intro="El valor de tu portafolio, lo que has aportado y lo que ha rendido." />
+        <ScreenHeader title="Inversiones" intro={intro} />
         <Pending state={state} retry={retry} loading="Cargando tus inversiones…" />
       </>
     )
@@ -49,7 +51,7 @@ export function InvestmentsDashboard() {
   if (dashboard.accounts.length === 0) {
     return (
       <>
-        <InvestmentHeader title="Inversiones" intro="El valor de tu portafolio, lo que has aportado y lo que ha rendido." />
+        <ScreenHeader title="Inversiones" intro={intro} />
         <EmptyState
           icon={ChartLine}
           title="Aún no tienes una Cuenta de inversión"
@@ -62,9 +64,9 @@ export function InvestmentsDashboard() {
 
   return (
     <>
-      <InvestmentHeader
+      <ScreenHeader
         title="Inversiones"
-        intro="El valor de tu portafolio, lo que has aportado y lo que ha rendido."
+        intro={intro}
         action={{ to: '/investments/transactions/buy', label: 'Registrar compra' }}
       />
 
@@ -80,12 +82,9 @@ export function InvestmentsDashboard() {
                 Algunos precios son estimados: vienen de tu última operación. Corrígelos en la distribución para valorar con tu precio.
               </p>
             )}
-            <dl className="mt-5 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
+            <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
               <Figure label="Aporte neto" hint="Lo que has puesto, menos lo que has retirado">
                 {formatMoney(dashboard.netContribution)}
-              </Figure>
-              <Figure label="Rendimiento" hint="Valor actual menos Aporte neto">
-                {formatMoney(dashboard.return.amount, { sign: true })}
               </Figure>
               <Figure label="Efectivo" hint="Sin invertir en las Cuentas">
                 {formatMoney(dashboard.cash)}

@@ -20,6 +20,8 @@ def register(source):
     have at least one record. Ids without records may be left out of both.
     A source whose records move money into or out of an investment Account also
     has `net_contribution_changes(account_ids)`, shaped like `balance_changes`.
+    Both change methods also take `as_of`, a day: only records dated up to and
+    including it count. It is passed only when a past closing is asked for.
     """
     _sources.append(source)
 
@@ -28,23 +30,33 @@ def unregister(source):
     _sources.remove(source)
 
 
-def balances(accounts):
-    """Return the Balance of each Account, keyed by Account id."""
-    totals = {account.id: account.opening_balance for account in accounts}
+def _options(as_of):
+    return {} if as_of is None else {"as_of": as_of}
+
+
+def _opening(account, as_of):
+    """The opening balance counts from the day the Account starts."""
+    started = as_of is None or account.opening_date <= as_of
+    return account.opening_balance if started else Decimal(0)
+
+
+def balances(accounts, as_of=None):
+    """Return the Balance of each Account, keyed by Account id; with `as_of`, at the end of that day."""
+    totals = {account.id: _opening(account, as_of) for account in accounts}
     for source in _sources:
-        for account_id, change in source.balance_changes(totals.keys()).items():
+        for account_id, change in source.balance_changes(totals.keys(), **_options(as_of)).items():
             totals[account_id] += Decimal(change)
     return totals
 
 
-def net_contributions(accounts):
-    """Return the Net Contribution of each investment Account, keyed by Account id.
+def net_contributions(accounts, as_of=None):
+    """Return the Net Contribution of each investment Account, keyed by Account id; with `as_of`, at the end of that day.
 
     It starts from the opening balance, the first Contribution, and adds what
     entered minus what left by Transfer.
     """
     totals = {
-        account.id: account.opening_balance
+        account.id: _opening(account, as_of)
         for account in accounts
         if account.type == Account.Type.INVESTMENT
     }
@@ -52,7 +64,7 @@ def net_contributions(accounts):
         changes = getattr(source, "net_contribution_changes", None)
         if changes is None:
             continue
-        for account_id, change in changes(totals.keys()).items():
+        for account_id, change in changes(totals.keys(), **_options(as_of)).items():
             totals[account_id] += Decimal(change)
     return totals
 
