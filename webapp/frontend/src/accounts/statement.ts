@@ -60,10 +60,10 @@ const toLine = (body: StatementLineBody): StatementLine => ({
   commission: body.commission ?? null,
 })
 
-/** One page of the Statement of an Account, newest line first; throws NotFoundError for an Account that is not the User's. */
+/** One page of the Statement of an Account, oldest line first; throws NotFoundError for an Account that is not the User's. */
 export async function listStatement(accountId: number, page: number): Promise<RecordPage<StatementLine>> {
   const body = await readJson<{ results: StatementLineBody[]; total: number; next_page: number | null }>(
-    `/api/accounts/${accountId}/statement?order=desc&page_size=${STATEMENT_PAGE_SIZE}&page=${page}`,
+    `/api/accounts/${accountId}/statement?order=asc&page_size=${STATEMENT_PAGE_SIZE}&page=${page}`,
     { failed: STATEMENT_FAILED, gone: ACCOUNT_GONE },
   )
   return { records: body.results.map(toLine), total: body.total, nextPage: body.next_page }

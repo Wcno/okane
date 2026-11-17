@@ -13,7 +13,7 @@ afterEach(() => {
 })
 
 describe('listStatement', () => {
-  it('reads a page newest first with signed amounts and balances kept as decimal strings', async () => {
+  it('reads a page oldest first with signed amounts and balances kept as decimal strings', async () => {
     const fetch = vi.fn().mockResolvedValue(
       json(200, {
         results: [
@@ -49,7 +49,7 @@ describe('listStatement', () => {
 
     const page = await listStatement(8, 1)
 
-    expect(fetch.mock.calls[0][0]).toBe('/api/accounts/8/statement?order=desc&page_size=50&page=1')
+    expect(fetch.mock.calls[0][0]).toBe('/api/accounts/8/statement?order=asc&page_size=50&page=1')
     expect(page.total).toBe(4)
     expect(page.nextPage).toBe(2)
     expect(page.records[0]).toMatchObject({

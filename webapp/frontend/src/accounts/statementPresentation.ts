@@ -29,17 +29,17 @@ export function lineLink(line: MovementLine): { to: string; action: string } {
 /** "Saldo $1,379.90": the Balance right after the line, the figure to compare with the bank. */
 export const balanceAfter = (line: StatementLine) => `Saldo ${formatMoney(line.balance)}`
 
-/** The line that starts the Statement: its date and the Balance it opens with. */
+/** The line that starts the Statement: its date; its Balance is shown after it, like on every line. */
 export const describeOpening = (line: StatementLine) => ({
   title: 'Saldo inicial',
-  details: `${formatDay(line.date)} · ${balanceAfter(line)}`,
+  details: formatDay(line.date),
 })
 
 /** "Comisión $1.50": what the broker took, already counted in the line's amount. */
 const commissionText = (line: StatementLine) =>
   line.commission && Number(line.commission) > 0 ? `Comisión ${formatMoney(line.commission)}` : ''
 
-/** What a movement is called and what is known about it; the Balance after it closes the details. */
+/** What a movement is called and what is known about it. */
 export function describeMovement(
   line: MovementLine,
   accounts: Map<number, Account>,
@@ -78,5 +78,5 @@ export function describeMovement(
       detail = line.asset?.name ?? ''
       break
   }
-  return { title, details: [detail, balanceAfter(line)].filter(Boolean).join(' · ') }
+  return { title, details: detail }
 }

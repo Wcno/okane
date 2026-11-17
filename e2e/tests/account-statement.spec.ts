@@ -97,6 +97,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(statementRow(page, /Quincena/)).toContainText('+$500.00')
     await expect(statementRow(page, /Quincena/)).toContainText('Saldo $1,500.00')
     await expect(page.getByRole('status').filter({ hasText: 'Mostrando' })).toHaveText('Mostrando 4 de 4 líneas.')
+    // Oldest first: the opening Balance tops the Statement and the latest movement ends it.
+    await expect(page.getByRole('main').getByRole('listitem').first()).toContainText('Saldo inicial')
+    await expect(page.getByRole('main').getByRole('listitem').last()).toContainText('Transferencia a Ahorro')
     await expectScreenQuality(page, `account-statement-spending-${colorScheme}`)
 
     await page.getByRole('link', { name: /^Supermercado.*Editar gasto$/ }).click()

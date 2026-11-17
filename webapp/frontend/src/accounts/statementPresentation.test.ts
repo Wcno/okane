@@ -23,17 +23,18 @@ const line = (fields: Partial<StatementLine>): StatementLine & { kind: Exclude<S
 const accounts = new Map([[5, { id: 5, name: 'Ahorro' } as Account]])
 
 describe('describeMovement', () => {
-  it('closes every line with the Balance after it', () => {
+  it('names an income by its description and says it is an Ingreso', () => {
     expect(describeMovement(line({ description: 'Quincena' }), accounts)).toEqual({
       title: 'Quincena',
-      details: 'Ingreso · Saldo $1,500.00',
+      details: 'Ingreso',
     })
   })
 
   it('names an Expense by its Category when it has no description', () => {
-    expect(describeMovement(line({ kind: 'expense', categoryId: 1, balance: '-12.50' }), accounts).details).toBe(
-      'Saldo −$12.50',
-    )
+    expect(describeMovement(line({ kind: 'expense', categoryId: 1 }), accounts)).toEqual({
+      title: expect.any(String),
+      details: '',
+    })
   })
 
   it('says where a Transfer went or came from', () => {
@@ -51,7 +52,7 @@ describe('describeMovement', () => {
         line({ kind: 'buy', asset: { symbol: 'AAPL', name: 'Apple Inc' }, units: '2.50000000', amount: '-31.00' }),
         accounts,
       ),
-    ).toEqual({ title: 'Compra de AAPL', details: 'Apple Inc · 2.5 unidades · Saldo $1,500.00' })
+    ).toEqual({ title: 'Compra de AAPL', details: 'Apple Inc · 2.5 unidades' })
   })
 })
 
@@ -59,7 +60,7 @@ describe('dividends and commissions', () => {
   it('names a Dividend by its Asset, with no units', () => {
     expect(
       describeMovement(line({ kind: 'dividend', asset: { symbol: 'AAPL', name: 'Apple Inc' }, amount: '4.20' }), accounts),
-    ).toEqual({ title: 'Dividendo de AAPL', details: 'Apple Inc · Saldo $1,500.00' })
+    ).toEqual({ title: 'Dividendo de AAPL', details: 'Apple Inc' })
   })
 
   it('shows the commission a trade paid, inside its amount', () => {
@@ -67,15 +68,15 @@ describe('dividends and commissions', () => {
       line({ kind: 'buy', asset: { symbol: 'AAPL', name: 'Apple Inc' }, units: '2.00000000', commission: '1.50' }),
       accounts,
     ).details
-    expect(details).toBe('Apple Inc · 2 unidades · Comisión $1.50 · Saldo $1,500.00')
+    expect(details).toBe('Apple Inc · 2 unidades · Comisión $1.50')
   })
 })
 
 describe('describeOpening', () => {
-  it('shows the opening date and the opening Balance', () => {
-    expect(describeOpening(line({ kind: 'income', date: '2026-11-01', balance: '1000.00' }))).toEqual({
+  it('shows the opening date', () => {
+    expect(describeOpening(line({ kind: 'income', date: '2026-11-01' }))).toEqual({
       title: 'Saldo inicial',
-      details: expect.stringMatching(/ · Saldo \$1,000\.00$/),
+      details: '1 nov 2026',
     })
   })
 })

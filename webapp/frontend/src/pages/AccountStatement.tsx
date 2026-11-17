@@ -3,6 +3,7 @@ import { useCallback } from 'react'
 import type { Account } from '../accounts/api'
 import { listStatement, type StatementLine } from '../accounts/statement'
 import {
+  balanceAfter,
   describeMovement,
   describeOpening,
   isMovement,
@@ -45,6 +46,11 @@ function Chip({ line }: { line: StatementLine }) {
   }
 }
 
+/** The Balance after a line, as a secondary figure under the amount. */
+function BalanceFigure({ line }: { line: StatementLine }) {
+  return <span className="block text-[0.82rem] tabular-nums text-ink-3">{balanceAfter(line)}</span>
+}
+
 /** The line that starts the Statement: nothing to edit, because the opening Balance never changes. */
 function OpeningRow({ line }: { line: StatementLine }) {
   const { title, details } = describeOpening(line)
@@ -56,7 +62,10 @@ function OpeningRow({ line }: { line: StatementLine }) {
         <span className="line-clamp-2 break-words text-[1rem] font-medium">{title}</span>
         <span className="mt-0.5 block break-words text-[0.87rem] leading-snug text-ink-3">{details}</span>
       </span>
-      <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatMoney(line.amount)}</span>
+      <span className="shrink-0 text-right">
+        <span className="block text-[1rem] font-semibold tabular-nums">{formatMoney(line.amount)}</span>
+        <BalanceFigure line={line} />
+      </span>
     </li>
   )
 }
@@ -76,6 +85,7 @@ function Row({ line, accounts }: { line: StatementLine; accounts: Map<number, Ac
       title={title}
       details={details}
       amount={line.amount}
+      trailing={<BalanceFigure line={line} />}
       signed
     />
   )
@@ -96,7 +106,7 @@ function Statement({ account }: { account: Account }) {
         intro={
           <>
             {account.name} · Saldo <span className="font-medium tabular-nums">{formatMoney(account.balance)}</span>. Cada
-            línea muestra el Saldo después de ella, del movimiento más reciente al más antiguo.
+            línea muestra el Saldo después de ella, del movimiento más antiguo al más reciente.
           </>
         }
       />
