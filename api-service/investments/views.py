@@ -28,6 +28,8 @@ QUERY_MAX_LENGTH = 60
 QUERY_REQUIRED = "Escribe el símbolo o el nombre del Activo, por ejemplo AAPL."
 QUERY_TOO_LONG = f"La búsqueda admite hasta {QUERY_MAX_LENGTH} caracteres."
 AS_OF_INVALID = "Escribe la fecha del cierre, por ejemplo 2026-11-16."
+FROM_INVALID = "Escribe el primer día del período, por ejemplo 2026-11-01."
+FROM_AFTER_CLOSING = "El período no puede empezar después de su cierre."
 AS_OF_IN_FUTURE = "El cierre no puede ser una fecha futura."
 
 
@@ -132,7 +134,16 @@ def projection(request):
 
 @api_view(["GET"])
 def performance(request):
-    return Response(performance_of(request.okane_user_id, requested_day(request)))
+    as_of = requested_day(request)
+    first_day = None
+    if "from" in request.query_params:
+        try:
+            first_day = datetime.date.fromisoformat(request.query_params["from"])
+        except ValueError:
+            raise exceptions.ValidationError({"from": [FROM_INVALID]}) from None
+        if first_day > as_of:
+            raise exceptions.ValidationError({"from": [FROM_AFTER_CLOSING]})
+    return Response(performance_of(request.okane_user_id, as_of, first_day))
 
 
 def current_price(user_id, asset):

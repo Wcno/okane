@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { createAccount, createTransfer, findAsset, recordTrade } from './support/ledger.js'
+import { createAccount, createTransfer, findAsset, recordTrade, setReferencePrice } from './support/ledger.js'
 import { expect, expectScreenQuality, test } from './support/qa.js'
 import { signUp } from './support/session.js'
 
@@ -108,6 +108,26 @@ test('a transfer in and a withdrawal change the Net Contribution, not the Return
   await expect(value.getByText('Aporte neto', { exact: true })).toBeVisible()
   await expect(value.locator('dd', { hasText: '$1,200.00' }).first()).toBeVisible()
   await expect(value).toContainText('(0.00 %)')
+})
+
+test('the Return of a period is the difference between two cumulative Returns', async ({ page }) => {
+  await signUp(page.request)
+  const broker = await createAccount(page.request, { name: 'Bróker', type: 'investment', opening_balance: '100.00' })
+  const asset = await findAsset(page.request, 'aapl')
+  await recordTrade(page.request, 'buy', { account_id: broker.id, asset_id: asset.id, units: '1', unit_price: '100', date: '2026-01-02' })
+  await setReferencePrice(page.request, asset.id, '110', '2026-02-05')
+  await setReferencePrice(page.request, asset.id, '115', '2026-02-10')
+
+  await page.goto('/investments/performance')
+
+  const period = page.getByRole('region', { name: 'Rendimiento del período' })
+  await period.getByLabel('Desde').fill('2026-02-06')
+  await expect(period).toContainText('+$5.00')
+  await expect(period).toContainText('Acumulado al inicio')
+  await expect(period.locator('dd', { hasText: '$10.00' })).toBeVisible()
+  await expect(period.locator('dd', { hasText: '$15.00' })).toBeVisible()
+  await expectScreenQuality(page, 'investments-performance-period')
+  await expect(main(page).getByRole('link', { name: 'Registrar compra' })).toHaveCount(0)
 })
 
 test('the percent does not apply without a positive Net Contribution', async ({ page }) => {

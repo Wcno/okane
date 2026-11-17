@@ -56,8 +56,19 @@ export interface PositionReturn {
   price: ReferencePrice
 }
 
+/** Return of a period: the cumulative Return at its close minus the one at its start. */
+export interface PeriodReturn {
+  from: string
+  to: string
+  openingReturn: string
+  closingReturn: string
+  return: string
+}
+
 export interface InvestmentsPerformance extends Portfolio {
   positions: PositionReturn[]
+  /** Present only when a first day was asked for. */
+  period: PeriodReturn | null
 }
 
 interface PortfolioBody {
@@ -126,7 +137,8 @@ export async function getDashboard(): Promise<InvestmentsDashboard> {
   }
 }
 
-export async function getPerformance(): Promise<InvestmentsPerformance> {
+/** The performance of the portfolio; with `from`, also the Return of the period that starts that day. */
+export async function getPerformance(from?: string): Promise<InvestmentsPerformance> {
   const body = await readJson<
     PortfolioBody & {
       positions: {
@@ -138,8 +150,11 @@ export async function getPerformance(): Promise<InvestmentsPerformance> {
         gain_percent: string | null
         price: ReferencePrice
       }[]
+      period: { from: string; to: string; opening_return: string; closing_return: string; return: string } | null
     }
-  >('/api/investments/performance', { failed: PERFORMANCE_FAILED })
+  >(`/api/investments/performance${from === undefined ? '' : `?from=${encodeURIComponent(from)}`}`, {
+    failed: PERFORMANCE_FAILED,
+  })
   return {
     ...toPortfolio(body),
     positions: body.positions.map((item) => ({
@@ -151,5 +166,12 @@ export async function getPerformance(): Promise<InvestmentsPerformance> {
       gainPercent: item.gain_percent,
       price: item.price,
     })),
+    period: body.period && {
+      from: body.period.from,
+      to: body.period.to,
+      openingReturn: body.period.opening_return,
+      closingReturn: body.period.closing_return,
+      return: body.period.return,
+    },
   }
 }

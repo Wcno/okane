@@ -56,11 +56,25 @@ describe('the investments readers', () => {
     answer({
       ...portfolio,
       positions: [{ asset: assetBody, units: '4.00000000', cost: '400.00', value: '360.00', gain: '-40.00', gain_percent: '-10.00', price }],
+      period: null,
     })
 
     const performance = await getPerformance()
 
     expect(performance.positions[0]).toMatchObject({ gain: '-40.00', gainPercent: '-10.00' })
+  })
+
+  it('reads the Return of a period when a first day is asked for', async () => {
+    const fetch = answer({
+      ...portfolio,
+      positions: [],
+      period: { from: '2026-11-06', to: '2026-11-16', opening_return: '10.00', closing_return: '15.00', return: '5.00' },
+    })
+
+    const performance = await getPerformance('2026-11-06')
+
+    expect(fetch.mock.calls[0][0]).toBe('/api/investments/performance?from=2026-11-06')
+    expect(performance.period).toEqual({ from: '2026-11-06', to: '2026-11-16', openingReturn: '10.00', closingReturn: '15.00', return: '5.00' })
   })
 
   it('reads an Asset without a price as null, never zero', async () => {

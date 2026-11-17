@@ -1,8 +1,8 @@
-import { ArrowLeft, ChartLine } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ChartLine } from 'lucide-react'
 import { Card } from '../components/dashboard/Card'
-import { Figure, HeroMoney, InvestmentHeader, ReturnLine } from '../components/investments/Figures'
-import { EmptyState, Pending } from '../components/screen/Screen'
+import { Figure, HeroMoney, ReturnLine } from '../components/investments/Figures'
+import { PeriodCard } from '../components/investments/PeriodCard'
+import { EmptyState, Pending, ScreenHeader } from '../components/screen/Screen'
 import { getPerformance } from '../investments/portfolio'
 import { dashboardBack, describeAsset, formatPercent, priceOrigin } from '../investments/presentation'
 import { formatMoney } from '../lib/money'
@@ -10,15 +10,7 @@ import { useLoaded } from '../lib/useLoaded'
 
 const intro = 'Lo que tu portafolio ha ganado o perdido desde que empezaste, sobre lo que has puesto en él.'
 
-const back = (
-  <Link
-    to={dashboardBack.to}
-    className="-mt-2 mb-0.5 inline-flex min-h-[44px] items-center gap-1.5 rounded-md text-[0.9rem] font-medium text-ink-2 transition-colors duration-150 hover:text-ink"
-  >
-    <ArrowLeft size={16} aria-hidden="true" />
-    {dashboardBack.label}
-  </Link>
-)
+const back = { to: dashboardBack.to, label: dashboardBack.label }
 
 /** The cumulative Return of the portfolio, of each investment Account and of each Position. */
 export function InvestmentsPerformance() {
@@ -27,7 +19,7 @@ export function InvestmentsPerformance() {
   if (state.status !== 'ready') {
     return (
       <>
-        <InvestmentHeader title="Rendimiento" intro={intro} back={back} />
+        <ScreenHeader title="Rendimiento" intro={intro} back={back} />
         <Pending state={state} retry={retry} loading="Cargando tu Rendimiento…" />
       </>
     )
@@ -37,7 +29,7 @@ export function InvestmentsPerformance() {
   if (performance.accounts.length === 0) {
     return (
       <>
-        <InvestmentHeader title="Rendimiento" intro={intro} back={back} />
+        <ScreenHeader title="Rendimiento" intro={intro} back={back} />
         <EmptyState
           icon={ChartLine}
           title="Aún no hay Rendimiento que mostrar"
@@ -50,12 +42,7 @@ export function InvestmentsPerformance() {
 
   return (
     <>
-      <InvestmentHeader
-        title="Rendimiento"
-        intro={intro}
-        back={back}
-        action={{ to: '/investments/transactions/buy', label: 'Registrar compra' }}
-      />
+      <ScreenHeader title="Rendimiento" intro={intro} back={back} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start lg:gap-5">
         <div className="min-w-0 space-y-4 lg:col-span-7 lg:space-y-5">
@@ -83,6 +70,8 @@ export function InvestmentsPerformance() {
               </p>
             )}
           </Card>
+
+          <PeriodCard />
 
           <Card id="return-by-account" title="Por Cuenta">
             <ul className="mt-2 divide-y divide-line">
