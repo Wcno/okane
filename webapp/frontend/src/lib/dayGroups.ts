@@ -9,14 +9,14 @@ export function dayHeading(day: string, today: string): string {
   return day.slice(0, 4) === today.slice(0, 4) ? text : `${text} ${field('year')}`
 }
 
-export interface DayGroup<Record extends { date: string }> {
+export interface DayGroup<Entry extends { date: string }> {
   date: string
-  records: Record[]
+  records: Entry[]
 }
 
 /** Splits a list that is already sorted by date into one group per day. */
-export function groupByDay<Record extends { date: string }>(records: Record[]): DayGroup<Record>[] {
-  const groups: DayGroup<Record>[] = []
+export function groupByDay<Entry extends { date: string }>(records: Entry[]): DayGroup<Entry>[] {
+  const groups: DayGroup<Entry>[] = []
   for (const record of records) {
     const last = groups[groups.length - 1]
     if (last?.date === record.date) last.records.push(record)

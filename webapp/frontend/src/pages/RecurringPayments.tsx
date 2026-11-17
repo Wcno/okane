@@ -95,27 +95,27 @@ function Rules({ rules, accounts }: { rules: RecurringPayment[]; accounts: Accou
       )}
 
       {active.length > 0 && (
-      <section aria-labelledby="rules" className={cardClassName}>
-        <h2 id="rules" className="text-[1rem] font-medium text-ink-2">
-          Tus pagos recurrentes
-        </h2>
-        <ul className="mt-3 divide-y divide-line">
-          {active.map((rule) => {
-            const { title, details } = describeRule(rule, names.get(rule.accountId))
-            return (
-              <RecordRow
-                key={rule.id}
-                to={`/recurring-payments/${rule.id}/edit`}
-                label={`Editar pago recurrente ${title}, ${formatMoney(rule.amount)}`}
-                icon={<CategoryChip categoryId={rule.categoryId} />}
-                title={title}
-                details={details}
-                amount={rule.amount}
-              />
-            )
-          })}
-        </ul>
-      </section>
+        <section aria-labelledby="rules" className={cardClassName}>
+          <h2 id="rules" className="text-[1rem] font-medium text-ink-2">
+            Tus pagos recurrentes
+          </h2>
+          <ul className="mt-3 divide-y divide-line">
+            {active.map((rule) => {
+              const { title, details } = describeRule(rule, names.get(rule.accountId))
+              return (
+                <RecordRow
+                  key={rule.id}
+                  to={`/recurring-payments/${rule.id}/edit`}
+                  label={`Editar pago recurrente ${title}, ${formatMoney(rule.amount)}`}
+                  icon={<CategoryChip categoryId={rule.categoryId} />}
+                  title={title}
+                  details={details}
+                  amount={rule.amount}
+                />
+              )
+            })}
+          </ul>
+        </section>
       )}
 
       {answered.length > 0 && (
@@ -151,7 +151,7 @@ export function RecurringPayments() {
         intro="Reserva cada mes el dinero de tus pagos fijos. El gasto se registra cuando confirmas que lo pagaste."
         action={
           state.status === 'ready' && state.value.length > 0 && canCreate
-            ? { to: '/recurring-payments/create', label: 'Nuevo pago recurrente', shortLabel: 'Nuevo' }
+            ? { to: '/recurring-payments/create', label: 'Nuevo pago' }
             : undefined
         }
       />

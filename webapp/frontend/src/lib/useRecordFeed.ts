@@ -1,28 +1,22 @@
 import { useCallback, useState } from 'react'
+import type { RecordPage } from './recordPage'
 import { useSessionEnd } from './useSessionEnd'
 import { useLoaded, type Loaded } from './useLoaded'
 
-/** One page of a list of records, newest first. */
-export interface RecordPage<Record> {
-  records: Record[]
-  total: number
-  nextPage: number | null
-}
-
 /** The pages after the first one, which belong to one load of the first page. */
-interface LaterPages<Record> {
-  firstPage: RecordPage<Record>
-  records: Record[]
+interface LaterPages<Entry> {
+  firstPage: RecordPage<Entry>
+  records: Entry[]
   nextPage: number | null
   total: number
   more: { status: 'idle' } | { status: 'loading' } | { status: 'failed'; message: string }
 }
 
-export interface RecordFeed<Record> {
-  records: Record[]
+export interface RecordFeed<Entry> {
+  records: Entry[]
   total: number
   nextPage: number | null
-  more: LaterPages<Record>['more']
+  more: LaterPages<Entry>['more']
 }
 
 /**
@@ -30,13 +24,13 @@ export interface RecordFeed<Record> {
  * screen's data (and again when `revision` changes, because one changed
  * elsewhere); "more" appends the next.
  */
-export function useRecordFeed<Record extends { id: number }>(
-  load: (page: number) => Promise<RecordPage<Record>>,
+export function useRecordFeed<Entry extends { id: number }>(
+  load: (page: number) => Promise<RecordPage<Entry>>,
   revision: number,
 ) {
   const endSession = useSessionEnd()
   const { state, retry } = useLoaded(() => load(1), revision)
-  const [later, setLater] = useState<LaterPages<Record> | null>(null)
+  const [later, setLater] = useState<LaterPages<Entry> | null>(null)
 
   const firstPage = state.status === 'ready' ? state.value : null
   // Pages kept from before a reload of the first page no longer line up with it.
@@ -44,7 +38,7 @@ export function useRecordFeed<Record extends { id: number }>(
 
   const showMore = useCallback(async () => {
     if (firstPage === null) return
-    const base: LaterPages<Record> = current ?? {
+    const base: LaterPages<Entry> = current ?? {
       firstPage,
       records: [],
       nextPage: firstPage.nextPage,
@@ -72,7 +66,7 @@ export function useRecordFeed<Record extends { id: number }>(
     }
   }, [firstPage, current, load, endSession])
 
-  const feed: Loaded<RecordFeed<Record>> =
+  const feed: Loaded<RecordFeed<Entry>> =
     state.status !== 'ready'
       ? state
       : {

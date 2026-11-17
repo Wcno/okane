@@ -3,8 +3,8 @@ from django.urls import path
 from accounts import views as accounts
 from expenses import views as expenses
 from health.views import health
-from recurring_payments import views as recurring_payments
 from incomes import views as incomes
+from recurring_payments import views as recurring_payments
 
 # Paths match the ones webapp exposes, so forwarding never rewrites them.
 urlpatterns = [

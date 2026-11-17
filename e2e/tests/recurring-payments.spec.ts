@@ -51,7 +51,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expectScreenQuality(page, `recurring-list-rules-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
 
     // A populated list keeps its create action at the top right.
-    await page.getByRole('link', { name: 'Nuevo pago recurrente' }).click()
+    await page.getByRole('link', { name: 'Nuevo pago', exact: true }).click()
     await expect(page).toHaveURL(/\/recurring-payments\/create$/)
     await page.goBack()
 
@@ -155,7 +155,17 @@ test('reservations from earlier months stay pending, oldest first', async ({ pag
   await page.goto('/recurring-payments')
   await expect(page.getByRole('heading', { name: 'Por confirmar' })).toBeVisible()
   const rows = page.getByRole('link', { name: /^Revisar pago Alquiler,/ })
-  await expect(rows.first()).toContainText('Venció')
+  // Day 1 of each month since the start: the first row is the oldest, each next one is a month later.
+  const first = new Date(Date.parse(`${panamaDay(70)}T00:00:00Z`))
+  const oldest = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + (first.getUTCDate() > 1 ? 1 : 0), 1))
+  const monthLabel = (offset: number) => {
+    const day = new Date(Date.UTC(oldest.getUTCFullYear(), oldest.getUTCMonth() + offset, 1))
+    const parts = new Intl.DateTimeFormat('es', { timeZone: 'UTC', month: 'short', year: 'numeric' }).formatToParts(day)
+    const part = (type: string) => (parts.find((item) => item.type === type)?.value ?? '').replace('.', '')
+    return `${part('month')} ${part('year')}`
+  }
+  await expect(rows.first()).toContainText(`Venció 1 ${monthLabel(0)}`)
+  await expect(rows.nth(1)).toContainText(`1 ${monthLabel(1)}`)
   expect(await rows.count()).toBeGreaterThanOrEqual(2)
   await expectScreenQuality(page, 'recurring-list-carried-over', { skipAxeRules: knownAxeRules.recordRowLabel })
 })
@@ -184,7 +194,7 @@ test('confirming rejects a bad date and keeps what was typed; a resolved reserva
 
   await page.getByLabel('Fecha').fill(new Date(Date.parse(`${firstOfThisMonth()}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10))
   await page.getByRole('button', { name: 'Confirmar pago' }).click()
-  await expect(page.getByText('La fecha no puede ser anterior a la reserva')).toBeVisible()
+  await expect(page.getByText('La fecha no puede ser anterior a la entrada de la reserva')).toBeVisible()
 
   // Another tab cancels the reservation: the stale form is refused and says why.
   await page.getByLabel('Fecha').fill(panamaDay())

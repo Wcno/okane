@@ -290,6 +290,30 @@ class IncomeIsolationTests(IncomeApiTestCase):
 
         self.assertEqual(self.register(account, account_id=999999).status_code, 404)
 
+    def test_not_found_wins_over_the_validation_of_the_other_fields(self):
+        theirs = self.account(user=2)
+        mine = self.account(user=1)
+        income = self.registered(mine)
+
+        registering = self.register(theirs, user=1, amount="0", date="2999-01-01")
+        correcting = self.call(
+            "PUT",
+            f"/api/incomes/{income['id']}",
+            {"amount": "0", "account_id": theirs["id"], "date": "2999-01-01"},
+        )
+        unknown_income = self.call(
+            "PUT",
+            "/api/incomes/999999",
+            {"amount": "0", "account_id": mine["id"], "date": "2999-01-01"},
+        )
+
+        self.assertEqual(
+            [registering.status_code, correcting.status_code, unknown_income.status_code],
+            [404, 404, 404],
+        )
+        self.assertEqual(self.balance(mine), "1012.50")
+        self.assertEqual(self.call("GET", "/api/incomes").json()["total"], 1)
+
     def test_the_owner_comes_from_webapp_and_never_from_the_body(self):
         account = self.account(user=1)
 

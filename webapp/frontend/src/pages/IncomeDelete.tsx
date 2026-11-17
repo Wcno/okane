@@ -26,7 +26,7 @@ function Confirmation({ income, accounts }: { income: Income; accounts: Account[
             {account && ` El Saldo de ${account.name} bajará ${formatMoney(income.amount)}.`}
           </>
         }
-        cancel={{ to: '/incomes', label: 'Cancelar' }}
+        cancel={{ to: incomesBack.to, label: 'Cancelar' }}
         confirm={{
           label: 'Eliminar ingreso',
           busyLabel: 'Eliminando…',

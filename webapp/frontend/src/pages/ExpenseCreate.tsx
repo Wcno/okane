@@ -4,7 +4,7 @@ import { NeedsAnAccountCard } from '../components/record/NeedsAnAccount'
 import { Pending, ScreenHeader } from '../components/screen/Screen'
 import { createExpense } from '../expenses/api'
 import { chooseDefaultAccount } from '../expenses/form'
-import { NEEDS_AN_ACCOUNT, expensesBack } from '../expenses/presentation'
+import { NEEDS_AN_ACCOUNT_FOR_EXPENSE, expensesBack } from '../expenses/presentation'
 import { useAfterExpenseChange } from '../expenses/useAfterExpenseChange'
 import { useExpenseAccounts } from '../expenses/useExpenseAccounts'
 import { todayInPanama } from '../lib/dates'
@@ -25,7 +25,7 @@ export function ExpenseCreate() {
       {state.status !== 'ready' ? (
         <Pending state={state} retry={retry} loading="Cargando tus Cuentas…" />
       ) : state.value.accounts.length === 0 ? (
-        <NeedsAnAccountCard text={NEEDS_AN_ACCOUNT} />
+        <NeedsAnAccountCard text={NEEDS_AN_ACCOUNT_FOR_EXPENSE} />
       ) : (
         <ExpenseEditor
           idPrefix="expense"

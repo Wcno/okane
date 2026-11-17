@@ -95,7 +95,7 @@ export function validateConfirmation(
 ): Validated<Confirmation, ConfirmationField> {
   const { errors, amount, account } = checkRecord({ ...draft, description: '' }, context.accounts, confirmationWording)
   if (errors.date === undefined && draft.date < context.reservedFrom) {
-    errors.date = [`La fecha no puede ser anterior a la reserva (${formatDay(context.reservedFrom)}).`]
+    errors.date = [`La fecha no puede ser anterior a la entrada de la reserva (${formatDay(context.reservedFrom)}).`]
   }
   if (Object.keys(errors).length > 0 || amount === null || account === undefined) return { ok: false, errors }
   return { ok: true, value: { amount, accountId: account.id, date: draft.date } }

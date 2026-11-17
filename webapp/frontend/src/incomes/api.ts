@@ -1,5 +1,6 @@
 import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
-import type { RecordPage } from '../lib/useRecordFeed'
+import type { RecordField } from '../lib/recordForm'
+import type { RecordPage } from '../lib/recordPage'
 
 /** An Income as api-service describes it. The amount stays a decimal string. */
 export interface Income {
@@ -13,8 +14,7 @@ export interface Income {
 /** What registering or correcting an Income sends: every field, the date included. */
 export type IncomeInput = Omit<Income, 'id'>
 
-export type IncomeField = 'amount' | 'accountId' | 'date' | 'description'
-export type IncomeErrors = FieldErrors<IncomeField>
+export type IncomeErrors = FieldErrors<RecordField>
 
 const LIST_FAILED = 'Okane no pudo consultar tus ingresos. Espera un momento e inténtalo de nuevo.'
 const INCOME_GONE = 'Este ingreso ya no existe. Vuelve a tus ingresos para ver la lista al día.'
@@ -46,7 +46,7 @@ const toBody = (income: IncomeInput) => ({
   description: income.description,
 })
 
-const FORM_FIELDS: Record<string, IncomeField> = {
+const FORM_FIELDS: Record<string, RecordField> = {
   amount: 'amount',
   account_id: 'accountId',
   date: 'date',
@@ -68,7 +68,7 @@ export async function getIncome(id: number): Promise<Income> {
 
 const readIncome = async (response: Response) => toIncome(await response.json())
 
-export function createIncome(income: IncomeInput, csrfToken: string): Promise<Outcome<Income, IncomeField>> {
+export function createIncome(income: IncomeInput, csrfToken: string): Promise<Outcome<Income, RecordField>> {
   return write({
     method: 'POST',
     path: '/api/incomes',
@@ -80,7 +80,7 @@ export function createIncome(income: IncomeInput, csrfToken: string): Promise<Ou
   })
 }
 
-export function updateIncome(id: number, income: IncomeInput, csrfToken: string): Promise<Outcome<Income, IncomeField>> {
+export function updateIncome(id: number, income: IncomeInput, csrfToken: string): Promise<Outcome<Income, RecordField>> {
   return write({
     method: 'PUT',
     path: `/api/incomes/${id}`,
@@ -92,7 +92,7 @@ export function updateIncome(id: number, income: IncomeInput, csrfToken: string)
   })
 }
 
-export function deleteIncome(id: number, csrfToken: string): Promise<Outcome<void, IncomeField>> {
+export function deleteIncome(id: number, csrfToken: string): Promise<Outcome<void, RecordField>> {
   return write({
     method: 'DELETE',
     path: `/api/incomes/${id}`,
