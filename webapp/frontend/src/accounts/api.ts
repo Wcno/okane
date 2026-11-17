@@ -98,6 +98,16 @@ export async function currentAccount(accountId: number): Promise<Account | undef
   }
 }
 
+/** The Accounts as they are now, in the order asked; undefined where one cannot be read. */
+export async function currentAccounts(accountIds: number[]): Promise<Array<Account | undefined>> {
+  try {
+    const accounts = await listAccounts()
+    return accountIds.map((id) => accounts.find((account) => account.id === id))
+  } catch {
+    return accountIds.map(() => undefined)
+  }
+}
+
 const readAccount = async (response: Response) => toAccount(await response.json())
 
 export function createAccount(account: NewAccount, csrfToken: string): Promise<Outcome<Account, AccountField>> {
