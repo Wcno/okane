@@ -57,6 +57,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     await ruleLink(page, 'Internet').click()
     await expect(page.getByLabel('Monto')).toHaveValue('45.00')
+    await expect(page.getByRole('button', { name: 'Guardar cambios' })).toBeVisible()
     await page.getByLabel('Monto').fill('50')
     await expectScreenQuality(page, `recurring-edit-${colorScheme}`)
     await page.getByRole('button', { name: 'Guardar cambios' }).click()
@@ -67,6 +68,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await ruleLink(page, 'Internet').click()
     await page.getByRole('link', { name: 'Eliminar este pago recurrente' }).click()
     await expect(page).toHaveURL(/\/recurring-payments\/\d+\/delete$/)
+    await expect(page.getByRole('button', { name: 'Eliminar pago recurrente' })).toBeVisible()
     await expectScreenQuality(page, `recurring-delete-${colorScheme}`)
     await page.getByRole('button', { name: 'Eliminar pago recurrente' }).click()
 
@@ -129,6 +131,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await reviewLink(page, 'Streaming').click()
     await page.getByRole('link', { name: /cancelar esta reserva/ }).click()
     await expect(page).toHaveURL(/\/occurrences\/\d+\/cancel$/)
+    await expect(page.getByRole('button', { name: 'Cancelar reserva' })).toBeVisible()
     await expectScreenQuality(page, `recurring-cancel-${colorScheme}`)
     await page.getByRole('button', { name: 'Cancelar reserva' }).click()
 
@@ -190,6 +193,9 @@ test('confirming rejects a bad date and keeps what was typed; a resolved reserva
   await page.getByRole('button', { name: 'Confirmar pago' }).click()
   await expect(page.getByRole('alert')).toContainText('ya se canceló')
   await expect(page.getByLabel('Monto')).toHaveValue('90')
+  // The reservation was answered elsewhere, so confirming is no longer offered.
+  await expect(page.getByRole('button', { name: 'Confirmar pago' })).toBeHidden()
+  await expect(page.getByRole('link', { name: 'Volver a pagos recurrentes' })).toBeVisible()
   await expectScreenQuality(page, 'recurring-confirm-conflict')
 
   await page.goto(`/recurring-payments/occurrences/${occurrenceId}/confirm`)

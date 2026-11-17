@@ -54,7 +54,7 @@ function ResolvedRow({ occurrence, names }: { occurrence: RecurringPaymentOccurr
       <span className="min-w-0 flex-1">
         <span className="line-clamp-2 break-words text-[1rem] font-medium">{names.rule(occurrence)}</span>
         <span className="mt-0.5 block break-words text-[0.87rem] leading-snug text-ink-3">
-          {[STATUS_LABELS[occurrence.status], dueText({ dueDate: occurrence.dueDate, status: 'pending' }), account]
+          {[STATUS_LABELS[occurrence.status], dueText(occurrence), account]
             .filter(Boolean)
             .join(' · ')}
         </span>
