@@ -64,3 +64,41 @@ export async function archiveAccount(request: APIRequestContext, accountId: numb
   const response = await send(request, 'DELETE', `/api/accounts/${accountId}`)
   expect(response.status()).toBe(200)
 }
+
+interface RecurringPaymentFields {
+  account_id: number
+  start_date: string
+  amount?: string
+  category_id?: number
+  day_of_month?: number
+  description?: string
+}
+
+/** Creates a rule; api-service materializes its occurrences the next time the User reads financial data. */
+export async function createRecurringPayment(request: APIRequestContext, fields: RecurringPaymentFields) {
+  const response = await send(request, 'POST', '/api/recurring-payments', {
+    amount: '500.00',
+    category_id: 1,
+    day_of_month: 1,
+    ...fields,
+  })
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number }
+}
+
+/** The ids of the occurrences the list shows for a rule, oldest due first. */
+export async function listOccurrenceIds(request: APIRequestContext, ruleId: number) {
+  const response = await request.get('/api/recurring-payments?page_size=50')
+  expect(response.status()).toBe(200)
+  const { results } = (await response.json()) as {
+    results: { id: number; occurrences: { id: number; due_date: string }[] }[]
+  }
+  const rule = results.find((candidate) => candidate.id === ruleId)
+  return [...(rule?.occurrences ?? [])].sort((a, b) => a.due_date.localeCompare(b.due_date)).map(({ id }) => id)
+}
+
+/** Cancels an occurrence behind the screen's back, as another tab would. */
+export async function cancelOccurrence(request: APIRequestContext, occurrenceId: number) {
+  const response = await send(request, 'POST', `/api/recurring-payments/occurrences/${occurrenceId}/cancel`)
+  expect(response.status()).toBe(200)
+}
