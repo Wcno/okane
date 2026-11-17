@@ -8,7 +8,7 @@ from django.test import Client, TransactionTestCase, override_settings, tag
 
 from expenses.tests import FOOD, TODAY, ExpenseApiTestCase
 from investments import quotes
-from investments.models import Asset
+from investments.models import Asset, InvestmentTransaction
 from investments.serializers import InvestmentTransactionSerializer
 
 
@@ -960,14 +960,12 @@ class TransactionDeleteTests(TransactionsApiTestCase):
         self.assertEqual(self.read(recorded).status_code, 200)
 
 
+@tag("database")
+@override_settings(INTERNAL_SERVICE_KEY="expected-key")
 class ConcurrentChangeTests(TransactionTestCase):
     """Real commits on separate connections: a deletion and a sale of the same units must queue up."""
 
     def test_a_deletion_and_a_sale_cannot_both_succeed(self):
-        import json
-
-        from django.test import Client
-
         headers = {"X-Okane-Service-Key": "expected-key", "X-Okane-User-Id": "1"}
         patcher = mock.patch("accounts.clock.today", return_value=TODAY)
         patcher.start()
@@ -976,7 +974,7 @@ class ConcurrentChangeTests(TransactionTestCase):
         def post(path, body):
             return Client().post(path, json.dumps(body), content_type="application/json", headers=headers)
 
-        account = post(
+        account_response = post(
             "/api/accounts",
             {
                 "name": "Bróker",
@@ -984,18 +982,22 @@ class ConcurrentChangeTests(TransactionTestCase):
                 "opening_balance": "1000.00",
                 "opening_date": "2026-11-01",
             },
-        ).json()
+        )
+        self.assertEqual(account_response.status_code, 201, account_response.content)
+        account = account_response.json()
         asset = Asset.objects.create(provider="fake", market="XNAS", symbol="AAPL", name="Apple")
         trade = {"account_id": account["id"], "asset_id": asset.id, "units": "10", "unit_price": "10"}
-        purchase = post("/api/investments/transactions/buy", trade).json()
+        purchase_response = post("/api/investments/transactions/buy", trade)
+        self.assertEqual(purchase_response.status_code, 201, purchase_response.content)
+        purchase = purchase_response.json()
 
-        statuses = []
+        outcomes = {}
         barrier = threading.Barrier(2)
 
         def delete():
             try:
                 barrier.wait()
-                statuses.append(
+                outcomes["deletion"] = (
                     Client()
                     .delete(f"/api/investments/transactions/{purchase['id']}", headers=headers)
                     .status_code
@@ -1006,7 +1008,7 @@ class ConcurrentChangeTests(TransactionTestCase):
         def sell():
             try:
                 barrier.wait()
-                statuses.append(post("/api/investments/transactions/sell", trade).status_code)
+                outcomes["sale"] = post("/api/investments/transactions/sell", trade).status_code
             finally:
                 connection.close()
 
@@ -1016,8 +1018,13 @@ class ConcurrentChangeTests(TransactionTestCase):
         for thread in threads:
             thread.join()
 
-        self.assertEqual(sorted(statuses)[1], 400)
-        self.assertEqual(len([status for status in statuses if status < 300]), 1)
+        succeeded = [name for name, status in outcomes.items() if status < 300]
+        refused = [name for name, status in outcomes.items() if status == 400]
+        self.assertEqual(len(succeeded), 1, outcomes)
+        self.assertEqual(len(refused), 1, outcomes)
+
+        remaining = InvestmentTransaction.objects.filter(account_id=account["id"]).count()
+        self.assertEqual(remaining, 0 if succeeded == ["deletion"] else 2)
 
 
 class SampleProviderTests(InvestmentApiTestCase):
