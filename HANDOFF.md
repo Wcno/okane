@@ -52,8 +52,8 @@ No other PR is open.
 
 ## Next step
 
-1. PR #47 round 1 findings are in its comment "Gate results, round 1". A Sonnet worker was applying them on the branch, pushing after each item.
-   Check `git log origin/feat/8-expenses-fixed-categories` for what landed; if items remain and the worker is gone, spawn a fresh `ticket-worker` (`model: "sonnet"`, `isolation: "worktree"`) with: "Apply the open items of the 'Gate results, round 1' comment on PR #47, on branch feat/8-expenses-fixed-categories."
+1. PR #47 round 1 is fully applied (commits `933eabe`, `ed1f5f1`, `22dc77b`, PR body updated). Worker's local gates: api-service 101 tests, frontend 124, e2e 102, smoke test, all green.
+   Rerun CI on the new head and read the delta yourself; no new worker is needed unless a gate goes red.
 2. The user restarted the session to connect Claude in Chrome. Run `ui-qa` (gate b) on PR #47 against a running stack of the branch.
    The worker stack was on http://localhost:8001 (project `okane-feat-8-expenses`, worktree `.claude/worktrees/feat-8-expenses`); if it is gone, run `bash scripts/worktree-stack.sh` and `docker compose up --build --detach --wait` in that worktree.
    Ask `ui-qa` whether the populated list needs its own "Nuevo gasto" button (the worker removed it because the shell has "Registrar gasto").
