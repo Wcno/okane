@@ -1392,6 +1392,17 @@ class RefreshPricesTests(PerformanceTestCase):
         self.assertEqual(service.asked, [self.asset_held.id])
         self.assertEqual(report.skipped, 1)
 
+    def test_a_second_run_after_midnight_in_panama_but_the_same_real_day_does_not_ask_again(self):
+        # 05:24 UTC is 00:24 in Panama: the real day differs from the day the test clock pins.
+        real_instant = datetime.datetime(2026, 11, 17, 5, 24, tzinfo=datetime.timezone.utc)
+        service = StubClosings({"AAPL": closing("125")})
+        with mock.patch("django.utils.timezone.now", return_value=real_instant):
+            self.refresh(service)
+            report = self.refresh(service)
+
+        self.assertEqual(service.asked, [self.asset_held.id])
+        self.assertEqual(report.skipped, 1)
+
     def test_a_failing_service_keeps_the_last_known_price_and_its_date(self):
         self.refresh(StubClosings({"AAPL": closing("125", "2026-11-12")}))
         QuotedPrice.objects.update(fetched_at="2026-11-15T10:00:00Z")

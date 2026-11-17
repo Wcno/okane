@@ -36,9 +36,10 @@ def held_assets():
     return list(Asset.objects.filter(id__in=ids).order_by("id"))
 
 
-def quoted_today(asset, today):
+def quoted_today(asset):
+    # `fetched_at` is the real instant of the fetch, so it is compared with the real day, not the clock tests pin.
     latest = asset.quoted_prices.order_by("-fetched_at").first()
-    return latest is not None and timezone.localdate(latest.fetched_at) == today
+    return latest is not None and timezone.localdate(latest.fetched_at) == timezone.localdate()
 
 
 def refresh_prices(service=None, sleep=time.sleep, max_requests=quotes.CREDITS_PER_DAY):
@@ -51,7 +52,7 @@ def refresh_prices(service=None, sleep=time.sleep, max_requests=quotes.CREDITS_P
     today = clock.today()
     requests = 0
     for asset in held_assets():
-        if quoted_today(asset, today):
+        if quoted_today(asset):
             report.skipped += 1
             continue
         if requests >= max_requests:
