@@ -4,11 +4,12 @@ from accounts.models import Account
 from erasure.locks import lock_for_erasure
 from erasure.models import ErasedUser
 from expenses.models import Expense
+from incomes.models import Income
 
 # Children before parents: an Account with Expenses is protected from deletion.
 # Every module that stores data per User adds its model here;
 # `ErasureCoverageTests` fails until it does.
-ERASED_MODELS = (Expense, Account)
+ERASED_MODELS = (Expense, Income, Account)
 
 
 @transaction.atomic

@@ -5,8 +5,10 @@ import { useSignedInUser } from '../auth/context'
 import { categoryById } from '../data/categories'
 import { confirmationText, previewText, sampleRemainingAfter } from '../data/sampleRemaining'
 import { createExpense } from '../expenses/api'
-import { chooseDefaultAccount, typedAmount } from '../expenses/form'
-import { balanceSentence } from '../expenses/notices'
+import { chooseDefaultAccount } from '../expenses/form'
+import { typedAmount } from '../lib/amount'
+import { balanceSentence } from '../accounts/presentation'
+import { NEEDS_AN_ACCOUNT_FOR_EXPENSE } from '../expenses/presentation'
 import { announceExpenseRevision } from '../expenses/revision'
 import { useExpenseAccounts } from '../expenses/useExpenseAccounts'
 import { useExpenseForm } from '../expenses/useExpenseForm'
@@ -15,7 +17,7 @@ import { formatMoney } from '../lib/money'
 import { useData } from '../state/context'
 import { primaryButtonClassName, secondaryButtonClassName } from './buttons'
 import { ExpenseFields } from './expenses/ExpenseFields'
-import { NeedsAnAccount } from './expenses/NeedsAnAccount'
+import { NeedsAnAccount } from './record/NeedsAnAccount'
 import { FormAlert } from './FormAlert'
 
 /**
@@ -152,7 +154,7 @@ function QuickSheetContent() {
           </button>
         </>
       )}
-      {state.status === 'ready' && <NeedsAnAccount onLeave={closeForm} />}
+      {state.status === 'ready' && <NeedsAnAccount text={NEEDS_AN_ACCOUNT_FOR_EXPENSE} onLeave={closeForm} />}
     </div>
   )
 }

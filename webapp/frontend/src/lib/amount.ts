@@ -21,3 +21,16 @@ export function parseAmount(text: string): ParsedAmount {
   const amount = `${integer}.${(match[3] ?? '').padEnd(2, '0')}`
   return { amount: match[1] && amount !== '0.00' ? `-${amount}` : amount }
 }
+
+/** A record of money (Expense, Income) takes a positive amount: zero and a negative one are as invalid as text. */
+export function parsePositiveAmount(text: string): ParsedAmount {
+  const parsed = parseAmount(text)
+  if ('error' in parsed) return parsed
+  return parsed.amount.startsWith('-') || parsed.amount === '0.00' ? { error: 'invalid' } : parsed
+}
+
+/** The positive amount a typed text stands for, or null while it is not one. */
+export function typedAmount(text: string): string | null {
+  const parsed = parsePositiveAmount(text)
+  return 'amount' in parsed ? parsed.amount : null
+}

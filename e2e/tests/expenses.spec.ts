@@ -428,7 +428,7 @@ test.describe('on a phone', () => {
       const second = await options.nth(1).boundingBox()
       expect(second?.y, `first row at ${width}px`).toBe(first?.y)
       expect(second?.x, `second column at ${width}px`).toBeGreaterThan(first?.x ?? 0)
-      // Long names wrap onto a second line; none is cut off or shown with an ellipsis.
+      // Every name is one word: none is cut off, shown with an ellipsis, or broken inside the word.
       const names = page.locator('fieldset label span.min-w-0')
       const truncated = await names.evaluateAll((spans) =>
         spans.filter(
@@ -437,6 +437,14 @@ test.describe('on a phone', () => {
         ).length,
       )
       expect(truncated, `names truncated at ${width}px`).toBe(0)
+      const linesPerName = await names.evaluateAll((spans) =>
+        spans.map((span) => {
+          const range = document.createRange()
+          range.selectNodeContents(span)
+          return new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size
+        }),
+      )
+      expect(linesPerName, `names split across lines at ${width}px`).toEqual(linesPerName.map(() => 1))
       for (const option of await options.all()) {
         expect((await option.boundingBox())?.height).toBeGreaterThanOrEqual(44)
       }
