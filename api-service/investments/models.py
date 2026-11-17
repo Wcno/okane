@@ -87,3 +87,25 @@ class ReferencePrice(models.Model):
             ),
             models.CheckConstraint(condition=Q(value__gt=0), name="reference_price_positive"),
         ]
+
+
+class QuotedPrice(models.Model):
+    """The closing price the quotes service gave for an Asset on a day.
+
+    Public data, so it is shared by every User and fetched once per Asset. It is
+    kept apart from the User's own ReferencePrice, which it never replaces: which
+    one a valuation uses is decided when reading (investments.positions).
+    """
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="quoted_prices")
+    value = models.DecimalField(max_digits=20, decimal_places=8)
+    date = models.DateField()
+    provider = models.CharField(max_length=30)
+    fetched_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "asset_quotes"
+        constraints = [
+            models.UniqueConstraint(fields=["asset", "date"], name="quoted_price_one_per_day"),
+            models.CheckConstraint(condition=Q(value__gt=0), name="quoted_price_positive"),
+        ]

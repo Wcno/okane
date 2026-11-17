@@ -2,19 +2,20 @@
 
 Nothing here is stored (docs/matrices.md): a Position is the average-cost replay of
 the purchases and sales of one Asset in one Account, grouped by Asset for display.
-Its price is the User's own manual Reference Price or, without one as recent as the
-last transaction, that transaction's price, flagged as an estimate.
+Its price is the most recent of the User's own manual Reference Price, the quotes
+service's closing price and the last transaction's price, the last one flagged as an estimate.
 """
 
 from decimal import ROUND_HALF_UP, Decimal
 
 from investments.holdings import ZERO, Holding, exact, replay
-from investments.models import InvestmentTransaction, ReferencePrice
+from investments.models import InvestmentTransaction, QuotedPrice, ReferencePrice
 
 CENT = Decimal("0.01")
 EIGHT_PLACES = Decimal("0.00000001")
 LAST_TRANSACTION = "last_transaction"
 MANUAL = "manual"
+PROVIDER = "provider"
 
 
 def represent_asset(asset):
@@ -34,19 +35,29 @@ def fixed(value, step):
     return f"{value.quantize(step, rounding=ROUND_HALF_UP):f}"
 
 
-def reference_price(last_transaction, manual):
-    """The Reference Price of an Asset: the most recent date wins, the User's own price on a tie.
+def reference_price(last_transaction, manual, quoted=None):
+    """The Reference Price of an Asset: the most recent date wins.
 
-    A price that is not the User's own comes from the last known transaction, which
-    is an estimate. Callers only pass prices up to the valuation day, never a future one.
+    On a tie the User's own price beats the quotes service's, which beats the last
+    transaction. Only the last transaction is an estimate. Callers pass only prices
+    up to the valuation day, never a future one, and any of the three may be absent;
+    None means there is nothing to base a price on, never zero.
     """
-    if manual is not None and manual.date >= last_transaction.date:
-        return {"value": manual.value, "source": MANUAL, "date": manual.date}
-    return {
-        "value": last_transaction.unit_price,
-        "source": LAST_TRANSACTION,
-        "date": last_transaction.date,
-    }
+    candidates = []
+    if manual is not None:
+        candidates.append({"value": manual.value, "source": MANUAL, "date": manual.date})
+    if quoted is not None:
+        candidates.append({"value": quoted.value, "source": PROVIDER, "date": quoted.date})
+    if last_transaction is not None:
+        candidates.append(
+            {
+                "value": last_transaction.unit_price,
+                "source": LAST_TRANSACTION,
+                "date": last_transaction.date,
+            }
+        )
+    # max keeps the first of equal dates, which is the priority order above.
+    return max(candidates, key=lambda price: price["date"], default=None)
 
 
 def represent_price(price):
@@ -87,6 +98,11 @@ def held(user_id, as_of):
         user_id=user_id, date__lte=as_of, asset_id__in=last_transaction.keys()
     ).order_by("date"):
         manual[price.asset_id] = price
+    quoted = {}
+    for price in QuotedPrice.objects.filter(
+        date__lte=as_of, asset_id__in=last_transaction.keys()
+    ).order_by("date"):
+        quoted[price.asset_id] = price
 
     grouped = {}
     for (asset, account), history in by_holding.items():
@@ -97,7 +113,9 @@ def held(user_id, as_of):
     return [
         {
             "asset": asset,
-            "price": reference_price(last_transaction[asset.id], manual.get(asset.id)),
+            "price": reference_price(
+                last_transaction[asset.id], manual.get(asset.id), quoted.get(asset.id)
+            ),
             "holdings": sorted(holdings, key=lambda pair: pair[0].id),
         }
         for asset, holdings in grouped.items()
