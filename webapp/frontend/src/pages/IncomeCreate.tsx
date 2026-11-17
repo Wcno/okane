@@ -32,6 +32,8 @@ export function IncomeCreate() {
           accounts={state.value}
           save={(income) => createIncome(income, csrfToken)}
           onSaved={(income) => afterChange('created', income)}
+          idPrefix="income"
+          cancelTo={incomesBack.to}
           submitLabel="Registrar ingreso"
           submittingLabel="Registrando…"
         />

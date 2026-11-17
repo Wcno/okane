@@ -49,6 +49,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await page.goto('/investments/positions')
     await expect(page.getByRole('heading', { name: 'Aún no tienes Posiciones' })).toBeVisible()
     await expectScreenQuality(page, `investments-positions-empty-${colorScheme}`)
+    // Nothing to sell yet, and the empty state already asks for the first purchase.
+    await expect(page.getByRole('link', { name: 'Registrar compra' })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: /^Vender/ })).toHaveCount(0)
     await page.getByRole('link', { name: 'Registrar tu primera compra' }).click()
 
     await expect(page).toHaveURL(/\/investments\/transactions\/buy$/)
@@ -76,7 +79,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     for (const line of await row.locator('p').all()) expect(await lineCount(line)).toBeLessThanOrEqual(2)
     await expectScreenQuality(page, `investments-positions-${colorScheme}`)
 
-    await page.getByRole('link', { name: 'Registrar venta' }).click()
+    await page.getByRole('link', { name: 'Vender AAPL' }).click()
     await expect(page).toHaveURL(/\/investments\/transactions\/sell$/)
     await pickAsset(page, 'aapl', /^AAPL/)
     await fillTrade(page, '1', '150')
@@ -271,7 +274,7 @@ test('without an investment Account a purchase asks for one first', async ({ pag
 
   await page.goto('/investments/transactions/buy')
 
-  await expect(page.getByRole('heading', { name: 'Primero necesitas una Cuenta de inversión' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Necesitas una Cuenta de inversión' })).toBeVisible()
   await expectScreenQuality(page, 'investments-buy-needs-account')
   await page.getByRole('link', { name: 'Crear cuenta' }).click()
   await expect(page).toHaveURL(/\/accounts\/create$/)
@@ -313,8 +316,11 @@ test('the controls of the purchase screen are at least 44px tall on a phone', as
     const box = await control.boundingBox()
     expect(box!.height).toBeGreaterThanOrEqual(44)
   }
+  const account = await createAccount(page.request, { name: 'Bróker uno', type: 'investment', opening_balance: '1000.00' })
+  const asset = await findAsset(page.request, 'aapl')
+  await recordTrade(page.request, 'buy', { account_id: account.id, asset_id: asset.id, units: '1', unit_price: '100' })
   await page.goto('/investments/positions')
-  for (const name of ['Registrar compra', 'Registrar venta']) {
+  for (const name of ['Registrar compra', 'Vender AAPL']) {
     const box = await page.getByRole('link', { name }).boundingBox()
     expect(box!.height).toBeGreaterThanOrEqual(44)
   }

@@ -23,6 +23,7 @@ labels for the public interface.
 | Movimiento | Entry |
 | Ingreso | Income |
 | Gasto | Expense |
+| Movimiento con Cuenta | record |
 | Transferencia | Transfer |
 | Estado de cuenta | AccountStatement |
 | Proyección | Projection |

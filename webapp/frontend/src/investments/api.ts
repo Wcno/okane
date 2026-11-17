@@ -1,5 +1,5 @@
 import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
-import type { RecordPage } from '../lib/useRecordFeed'
+import type { RecordPage } from '../lib/recordPage'
 
 /** An Asset of the catalog: identified by provider, market and symbol, never by symbol alone. */
 export interface Asset {

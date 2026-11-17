@@ -13,7 +13,7 @@ export interface OneRecordWording {
   notHere: { title: string; text: string }
 }
 
-function LoadedRecord<Record>({
+function LoadedRecord<Entry>({
   recordId,
   title,
   load,
@@ -22,9 +22,9 @@ function LoadedRecord<Record>({
 }: {
   recordId: number
   title: string
-  load: (id: number) => Promise<Record>
+  load: (id: number) => Promise<Entry>
   wording: OneRecordWording
-  children: (record: Record, accounts: Account[]) => ReactNode
+  children: (record: Entry, accounts: Account[]) => ReactNode
 }) {
   const { state, retry } = useLoaded(async () => {
     const [record, accounts] = await Promise.all([load(recordId), listAccounts()])
@@ -47,16 +47,16 @@ function LoadedRecord<Record>({
  * Frame of the screens that act on one record, named by the `:id` of the
  * route. A foreign, unknown or malformed id gets the same answer: the record is not here.
  */
-export function OneRecordScreen<Record>({
+export function OneRecordScreen<Entry>({
   title,
   load,
   wording,
   children,
 }: {
   title: string
-  load: (id: number) => Promise<Record>
+  load: (id: number) => Promise<Entry>
   wording: OneRecordWording
-  children: (record: Record, accounts: Account[]) => ReactNode
+  children: (record: Entry, accounts: Account[]) => ReactNode
 }) {
   const { id } = useParams()
   if (!RECORD_ID.test(id ?? '')) return <NotHere {...wording.notHere} back={wording.back} />
