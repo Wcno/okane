@@ -325,7 +325,7 @@ los Saldos iniciales y el Rendimiento mensual está en el
   mayor que cero) y `date` (por defecto hoy, nunca futura); guardar otro valor
   el mismo día lo corrige. `GET` en la misma ruta devuelve `{asset, price}` con
   el precio que usan las valoraciones de ese Usuario:
-  `price = {value, source: "manual" | "last_transaction", date, estimated}`.
+  `price = {value, source: "manual" | "provider" | "last_transaction", date, estimated}`.
 - `GET /api/investments/dashboard` y `GET /api/investments/performance` aceptan
   `as_of` (hoy por defecto, nunca futuro) y calculan efectivo, Aporte neto,
   Posiciones y precios al cierre de ese día; una Cuenta que empieza después no
@@ -336,6 +336,14 @@ los Saldos iniciales y el Rendimiento mensual está en el
   `performance` añade `positions` con ganancia contra costo. Con `from` (primer
   día del período), `performance` añade `period`: el Rendimiento acumulado al
   cierre menos el acumulado al cierre del día anterior a `from`.
+- `refresh_prices` (comando de gestión, a diario en el servicio `price-refresher`
+  de Compose) consulta una vez por Activo con operaciones, sin importar cuántos
+  Usuarios lo tengan, y guarda en `asset_quotes` el cierre con su fecha real y
+  su proveedor (`source: "provider"`, `estimated: false`). Respeta los créditos
+  del proveedor (ADR 0006), descarta fechas futuras y valores no positivos, y
+  si el servicio falla conserva el último cierre conocido con su fecha. Con la
+  misma fecha, el precio manual del Usuario gana al del proveedor y este a la
+  última operación.
 - La consulta automática guarda la fecha real del dato y su origen; una
   respuesta tardía no reemplaza un dato manual más reciente por uno anterior.
   Cada cierre histórico usa datos conocidos a esa fecha. Un respaldo estimado

@@ -119,6 +119,9 @@ describe('what the investments screens say', () => {
     expect(priceOrigin({ value: '125.50000000', source: 'manual', date: '2026-11-10', estimated: false })).toBe(
       'Precio $125.50 fijado por ti, 10 nov 2026',
     )
+    expect(priceOrigin({ value: '125.50000000', source: 'provider', date: '2026-11-13', estimated: false })).toBe(
+      'Precio $125.50 del servicio de cotizaciones, 13 nov 2026',
+    )
   })
 
   it('tells a gain, a loss and nothing apart', () => {
