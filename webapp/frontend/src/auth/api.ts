@@ -1,4 +1,4 @@
-import { write as send, type Outcome } from '../lib/http'
+import { write, type Outcome } from '../lib/http'
 import type { Credentials, CredentialsMode, FormErrors, PasswordChange } from './validation'
 
 export interface SessionUser {
@@ -49,7 +49,7 @@ export async function fetchSession(): Promise<Session> {
   return toSession(await response.json())
 }
 
-function write(method: 'POST' | 'PUT', path: string, csrfToken: string, body?: unknown) {
+function sendJson(method: 'POST' | 'PUT', path: string, csrfToken: string, body?: unknown) {
   return fetch(path, {
     method,
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
@@ -76,7 +76,7 @@ async function submit<Field extends string>(
 ): Promise<{ ok: true; response: Response } | Rejected<Field>> {
   let response: Response
   try {
-    response = await write(method, path, csrfToken, body)
+    response = await sendJson(method, path, csrfToken, body)
   } catch {
     return { ok: false, errors: { form: [CONNECTION_LOST] } as FormErrors<Field> }
   }
@@ -122,7 +122,7 @@ export async function changePassword(
 ): Promise<SessionOutcome<keyof PasswordChange>> {
   let response: Response
   try {
-    response = await write('PUT', '/auth/password', csrfToken, {
+    response = await sendJson('PUT', '/auth/password', csrfToken, {
       current_password: currentPassword,
       new_password: newPassword,
     })
@@ -143,7 +143,7 @@ export async function changePassword(
 export async function endSession(csrfToken: string): Promise<void> {
   let response: Response
   try {
-    response = await write('POST', '/auth/logout', csrfToken)
+    response = await sendJson('POST', '/auth/logout', csrfToken)
   } catch {
     throw new AuthRequestError(CONNECTION_LOST)
   }
@@ -158,7 +158,7 @@ const API_SERVICE_DOWN =
 
 /** Deletes the User and their financial data; webapp keeps the User unless api-service confirms. */
 export function deleteUser(password: string, csrfToken: string): Promise<Outcome<void, 'password'>> {
-  return send({
+  return write({
     method: 'DELETE',
     path: '/users/me',
     csrfToken,

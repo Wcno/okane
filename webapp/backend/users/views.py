@@ -19,7 +19,7 @@ from django.http import HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.views.decorators.http import require_http_methods, require_POST, require_safe
 
-from gateway.views import erase_financial_data
+from gateway.erasure import erase_financial_data
 from users import recovery
 from users.models import User, normalize_email
 from users.throttling import login_limit, recovery_limit

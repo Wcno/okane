@@ -4,6 +4,7 @@ import httpx
 from django.test import Client
 
 from gateway.tests import StubApiServiceMixin
+from gateway.upstream import api_service
 from users.models import User
 from users.tests import PASSWORD, AuthTestCase
 
@@ -39,9 +40,18 @@ class DeleteUserTestCase(StubApiServiceMixin, AuthTestCase):
 
 class DeleteUserTests(DeleteUserTestCase):
     def test_deleting_asks_api_service_first_and_then_removes_the_user(self):
-        response = self.delete_account()
+        user_present_when_asked = []
+        ask_api_service = api_service.delete
+
+        def ask_while_user_exists(*args, **kwargs):
+            user_present_when_asked.append(User.objects.filter(pk=self.user.pk).exists())
+            return ask_api_service(*args, **kwargs)
+
+        with mock.patch("gateway.erasure.api_service.delete", side_effect=ask_while_user_exists):
+            response = self.delete_account()
 
         self.assertEqual(response.status_code, 204)
+        self.assertEqual(user_present_when_asked, [True])
         asked = self.api_service.received
         self.assertEqual([(call.method, call.path) for call in asked], [("DELETE", "/internal/users/me")])
         self.assertEqual(asked[0].headers["x-okane-service-key"], "expected-key")
@@ -161,20 +171,68 @@ class DeleteUserWhenApiServiceFailsTests(DeleteUserTestCase):
     def test_a_lost_answer_is_settled_by_asking_again_before_declaring_success(self):
         answers = [httpx.ReadTimeout("no answer"), httpx.Response(204)]
 
-        with mock.patch("gateway.views.api_service.delete", side_effect=answers) as delete:
+        with mock.patch("gateway.erasure.api_service.delete", side_effect=answers) as delete:
             response = self.delete_account()
 
         self.assertEqual(response.status_code, 204)
         self.assertEqual(delete.call_count, 2)
         self.assertFalse(User.objects.filter(pk=self.user.pk).exists())
 
+    def test_a_lost_answer_after_api_service_erased_the_data_is_settled_by_the_repeat(self):
+        ask_api_service = api_service.delete
+        attempts = []
+
+        def erase_and_lose_first_answer(*args, **kwargs):
+            attempts.append(None)
+            answer = ask_api_service(*args, **kwargs)
+            if len(attempts) == 1:
+                raise httpx.ReadTimeout("answer lost after the erasure")
+            return answer
+
+        with mock.patch("gateway.erasure.api_service.delete", side_effect=erase_and_lose_first_answer):
+            response = self.delete_account()
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(len(self.api_service.received), 2)
+        self.assertFalse(User.objects.filter(pk=self.user.pk).exists())
+
     def test_two_lost_answers_leave_the_result_uncertain_and_keep_the_user(self):
         answers = [httpx.ReadTimeout("no answer"), httpx.ReadTimeout("no answer")]
 
-        with mock.patch("gateway.views.api_service.delete", side_effect=answers):
+        with mock.patch("gateway.erasure.api_service.delete", side_effect=answers):
             response = self.delete_account()
 
         self.assert_user_kept_and_still_signed_in(response)
+
+
+class DeleteUserRepeatsOnceTests(DeleteUserTestCase):
+    def test_an_error_answer_is_asked_once_more_before_giving_up(self):
+        for status in (500, 503):
+            with self.subTest(status=status):
+                self.api_service.received.clear()
+                self.api_service.status = status
+
+                response = self.delete_account()
+
+                self.assertEqual(response.status_code, 502)
+                self.assertEqual(len(self.api_service.received), 2)
+                self.assertTrue(User.objects.filter(pk=self.user.pk).exists())
+
+    def test_a_transport_error_is_asked_once_more_before_giving_up(self):
+        with mock.patch(
+            "gateway.erasure.api_service.delete", side_effect=httpx.ConnectError("refused")
+        ) as delete:
+            response = self.delete_account()
+
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(delete.call_count, 2)
+        self.assertTrue(User.objects.filter(pk=self.user.pk).exists())
+
+    def test_a_confirmed_answer_is_asked_only_once(self):
+        response = self.delete_account()
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(len(self.api_service.received), 1)
 
 
 class InternalRoutesAreNotPublicTests(DeleteUserTestCase):

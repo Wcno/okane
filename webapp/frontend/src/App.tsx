@@ -15,10 +15,10 @@ import { ForgotPassword } from './pages/ForgotPassword'
 import { Login } from './pages/Login'
 import { Logout } from './pages/Logout'
 import { Menu } from './pages/Menu'
-import { UserDelete } from './pages/UserDelete'
 import { Register } from './pages/Register'
 import { ResetPassword } from './pages/ResetPassword'
 import { UnderConstruction } from './pages/UnderConstruction'
+import { UserDelete } from './pages/UserDelete'
 
 export default function App() {
   return (
