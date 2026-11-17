@@ -2,15 +2,18 @@ import { X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { currentAccount, type Account } from '../accounts/api'
 import { useSignedInUser } from '../auth/context'
+import { getBudgetMonth } from '../budgets/api'
+import { confirmationText, previewText, remainingAfter, remainingNow } from '../budgets/remaining'
+import { useBudgetMonth } from '../budgets/useBudgetMonth'
 import { categoryById } from '../data/categories'
-import { confirmationText, previewText, sampleRemainingAfter } from '../data/sampleRemaining'
-import { createExpense } from '../expenses/api'
+import { createExpense, type Expense } from '../expenses/api'
 import { chooseDefaultAccount, typedAmount } from '../expenses/form'
 import { balanceSentence } from '../expenses/notices'
 import { announceExpenseRevision } from '../expenses/revision'
 import { useExpenseAccounts } from '../expenses/useExpenseAccounts'
 import { useExpenseForm } from '../expenses/useExpenseForm'
 import { todayInPanama } from '../lib/dates'
+import { isMonth, monthOf } from '../lib/months'
 import { formatMoney } from '../lib/money'
 import { useData } from '../state/context'
 import { primaryButtonClassName, secondaryButtonClassName } from './buttons'
@@ -19,23 +22,30 @@ import { NeedsAnAccount } from './expenses/NeedsAnAccount'
 import { FormAlert } from './FormAlert'
 
 /**
- * The consequence of the Expense on its Category, from the sample Budgets
- * (TEMPORARY, removed with data/sampleRemaining.ts when Budgets arrive in #9).
- * Once a Category is chosen its room is kept, so the lines below do not move
- * while the amount is typed.
+ * The consequence of the Expense on the Restante of its Category, read from
+ * the Budgets of the month of its date. Once a Category is chosen its room is
+ * kept, so the lines below do not move while the amount is typed.
  */
-function RemainingHint({ categoryId, amount }: { categoryId: number | null; amount: string | null }) {
-  const { state } = useData()
+function RemainingHint({ categoryId, amount, date }: { categoryId: number | null; amount: string | null; date: string }) {
+  const { state } = useBudgetMonth(isMonth(monthOf(date)) ? monthOf(date) : monthOf(todayInPanama()))
   if (categoryId === null) return null
   const category = categoryById(categoryId).name
 
-  return (
-    <p className="mt-3 min-h-[2.8em] text-[0.9rem] leading-snug text-ink-2">
-      {amount === null
-        ? `Escribe el monto para ver lo que queda en ${category}.`
-        : previewText(category, sampleRemainingAfter(state.budgets, category, amount))}
-    </p>
-  )
+  let text = ''
+  if (amount === null) text = `Escribe el monto para ver lo que queda en ${category}.`
+  else if (state.status === 'ready') text = previewText(category, remainingAfter(state.value, categoryId, amount))
+
+  return <p className="mt-3 min-h-[2.8em] text-[0.9rem] leading-snug text-ink-2">{text}</p>
+}
+
+/** What the Expense left of its Category's Budget, read after it was saved; empty when it cannot be read. */
+async function restanteSentence(expense: Pick<Expense, 'categoryId' | 'date'>): Promise<string> {
+  try {
+    const month = await getBudgetMonth(monthOf(expense.date))
+    return confirmationText(categoryById(expense.categoryId).name, remainingNow(month, expense.categoryId))
+  } catch {
+    return ''
+  }
 }
 
 function SheetTitle({ onClose }: { onClose: () => void }) {
@@ -58,7 +68,7 @@ function SheetTitle({ onClose }: { onClose: () => void }) {
 
 function QuickForm({ accounts, lastUsed }: { accounts: Account[]; lastUsed: number | null }) {
   const { csrfToken } = useSignedInUser()
-  const { state, registerSampleSpend, closeForm } = useData()
+  const { announce, closeForm } = useData()
   const amountField = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -76,13 +86,8 @@ function QuickForm({ accounts, lastUsed }: { accounts: Account[]; lastUsed: numb
     accounts,
     save: (expense) => createExpense(expense, csrfToken),
     onSaved: async (expense) => {
-      const category = categoryById(expense.categoryId).name
-      const consequence = confirmationText(category, sampleRemainingAfter(state.budgets, category, expense.amount))
-      const account = await currentAccount(expense.accountId)
-      // TEMPORARY until #9 (Budgets): the sample Panel keeps following the quick form
-      // through its Budget spend only; the Account Balances come from api-service.
-      registerSampleSpend(
-        { amount: expense.amount, category },
+      const [account, consequence] = await Promise.all([currentAccount(expense.accountId), restanteSentence(expense)])
+      announce(
         [`Gasto de ${formatMoney(expense.amount)} registrado.`, consequence, balanceSentence(account)]
           .filter(Boolean)
           .join(' '),
@@ -106,7 +111,7 @@ function QuickForm({ accounts, lastUsed }: { accounts: Account[]; lastUsed: numb
           errors={errors}
           accounts={accounts}
           amountRef={amountField}
-          hint={<RemainingHint categoryId={draft.categoryId} amount={amount} />}
+          hint={<RemainingHint categoryId={draft.categoryId} amount={amount} date={draft.date} />}
         />
       </div>
       {/* Stays at the foot of the sheet while the fields scroll, so the action is never below the fold. */}
