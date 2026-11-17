@@ -66,6 +66,30 @@ class ExpenseApiTestCase(TestCase):
         self.assertTrue(errors[field][0])
 
 
+class PanamaClockTests(ExpenseApiTestCase):
+    """The real clock, not the pinned one: 02:00 UTC is still the evening before in Panama."""
+
+    def setUp(self):
+        # Skips the pinned clock of the base class on purpose.
+        instant = datetime.datetime(2026, 11, 17, 2, 0, tzinfo=datetime.timezone.utc)
+        patcher = mock.patch("django.utils.timezone.now", return_value=instant)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_the_date_starts_as_the_day_it_is_in_panama_not_in_utc(self):
+        account = self.account(opening_date="2026-11-01")
+
+        created = self.registered(account)
+
+        self.assertEqual(created["date"], "2026-11-16")
+
+    def test_the_day_that_has_not_started_in_panama_is_in_the_future(self):
+        account = self.account(opening_date="2026-11-01")
+
+        self.assert_rejected(self.register(account, date="2026-11-17"), "date")
+        self.assertEqual(self.registered(account, date="2026-11-16")["date"], "2026-11-16")
+
+
 class RegisterExpenseTests(ExpenseApiTestCase):
     def test_a_registered_expense_lowers_the_balance_of_its_account(self):
         account = self.account()
