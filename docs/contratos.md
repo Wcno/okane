@@ -128,6 +128,11 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - El Estado de cuenta empieza por el Saldo inicial con su fecha. Cada línea
   tiene un orden estable, importe con signo y Saldo resultante; su última
   línea coincide con el Saldo consultado por la API de Cuentas.
+- `GET /api/expenses/{id}` devuelve un Gasto del Usuario, para abrir sus
+  pantallas de edición y eliminación desde un enlace. `GET /api/expenses`
+  añade a la paginación `last_used_account_id`: la Cuenta del Gasto registrado
+  más recientemente por el Usuario, según el orden de registro y no la fecha del
+  Gasto, o `null` si no tiene Gastos. El registro rápido la propone al abrirse.
 
 ## Pagos recurrentes
 

@@ -227,7 +227,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar gastos | Sí | `GET /api/expenses` | `expenses` | api-service, api-db | A5 |
+| Consultar gastos | Sí | `GET /api/expenses`, `GET /api/expenses/{id}` | `expenses` | api-service, api-db | A5 |
 | Registrar gasto | Sí | `POST /api/expenses` | `expenses` | api-service, api-db | A5 |
 | Editar gasto | Sí | `PUT /api/expenses/{id}` | `expenses` | api-service, api-db | A5 |
 | Eliminar gasto | Sí | `DELETE /api/expenses/{id}` | `expenses` | api-service, api-db | A5 |
