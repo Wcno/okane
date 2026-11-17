@@ -16,6 +16,7 @@ const line = (fields: Partial<StatementLine>): StatementLine & { kind: Exclude<S
     counterpartAccountId: null,
     asset: null,
     units: null,
+    commission: null,
     ...fields,
   }) as StatementLine & { kind: Exclude<StatementLine['kind'], 'opening'> }
 
@@ -51,6 +52,22 @@ describe('describeMovement', () => {
         accounts,
       ),
     ).toEqual({ title: 'Compra de AAPL', details: 'Apple Inc · 2.5 unidades · Saldo $1,500.00' })
+  })
+})
+
+describe('dividends and commissions', () => {
+  it('names a Dividend by its Asset, with no units', () => {
+    expect(
+      describeMovement(line({ kind: 'dividend', asset: { symbol: 'AAPL', name: 'Apple Inc' }, amount: '4.20' }), accounts),
+    ).toEqual({ title: 'Dividendo de AAPL', details: 'Apple Inc · Saldo $1,500.00' })
+  })
+
+  it('shows the commission a trade paid, inside its amount', () => {
+    const details = describeMovement(
+      line({ kind: 'buy', asset: { symbol: 'AAPL', name: 'Apple Inc' }, units: '2.00000000', commission: '1.50' }),
+      accounts,
+    ).details
+    expect(details).toBe('Apple Inc · 2 unidades · Comisión $1.50 · Saldo $1,500.00')
   })
 })
 

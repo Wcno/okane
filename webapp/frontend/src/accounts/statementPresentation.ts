@@ -21,6 +21,7 @@ export function lineLink(line: MovementLine): { to: string; action: string } {
       return { to: `/transfers/${line.recordId}/edit`, action: 'Editar transferencia' }
     case 'buy':
     case 'sell':
+    case 'dividend':
       return { to: `/investments/transactions/${line.recordId}/edit`, action: 'Editar transacción' }
   }
 }
@@ -33,6 +34,10 @@ export const describeOpening = (line: StatementLine) => ({
   title: 'Saldo inicial',
   details: `${formatDay(line.date)} · ${balanceAfter(line)}`,
 })
+
+/** "Comisión $1.50": what the broker took, already counted in the line's amount. */
+const commissionText = (line: StatementLine) =>
+  line.commission && Number(line.commission) > 0 ? `Comisión ${formatMoney(line.commission)}` : ''
 
 /** What a movement is called and what is known about it; the Balance after it closes the details. */
 export function describeMovement(
@@ -65,9 +70,13 @@ export function describeMovement(
     case 'sell': {
       const symbol = line.asset?.symbol ?? 'un Activo'
       title = `${line.kind === 'buy' ? 'Compra' : 'Venta'} de ${symbol}`
-      detail = [line.asset?.name, line.units && unitsPhrase(line.units)].filter(Boolean).join(' · ')
+      detail = [line.asset?.name, line.units && unitsPhrase(line.units), commissionText(line)].filter(Boolean).join(' · ')
       break
     }
+    case 'dividend':
+      title = `Dividendo de ${line.asset?.symbol ?? 'un Activo'}`
+      detail = line.asset?.name ?? ''
+      break
   }
   return { title, details: [detail, balanceAfter(line)].filter(Boolean).join(' · ') }
 }

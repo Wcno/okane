@@ -217,3 +217,39 @@ class AccountStatementTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("order", response.json()["errors"])
+
+
+    def test_dividends_and_commissions_appear_with_their_effect_on_the_cash(self):
+        broker = self.account("investment", name="Bróker", opening_balance="1000.00")
+        asset = Asset.objects.create(
+            provider="fake", market="XNAS", symbol="AAPL", name="Apple", currency="USD"
+        )
+        self.post(
+            "/api/investments/transactions/buy",
+            {
+                "account_id": broker["id"],
+                "asset_id": asset.id,
+                "units": "2",
+                "unit_price": "100",
+                "commission": "1.50",
+                "date": "2026-11-03",
+            },
+        )
+        self.post(
+            "/api/investments/transactions/dividend",
+            {"account_id": broker["id"], "asset_id": asset.id, "amount": "4.20", "date": "2026-11-05"},
+        )
+
+        lines = self.statement(broker)["results"]
+
+        self.assertEqual(
+            [(line["kind"], line["amount"], line["balance"]) for line in lines],
+            [
+                ("opening", "1000.00", "1000.00"),
+                ("buy", "-201.50", "798.50"),
+                ("dividend", "4.20", "802.70"),
+            ],
+        )
+        self.assertEqual(lines[1]["commission"], "1.50")
+        self.assertIsNone(lines[2]["units"])
+        self.assertEqual(lines[-1]["balance"], self.balance(broker))

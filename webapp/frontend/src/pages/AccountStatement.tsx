@@ -34,6 +34,7 @@ function Chip({ line }: { line: StatementLine }) {
       return <TransferChip />
     case 'buy':
     case 'sell':
+    case 'dividend':
       return <TradeChip kind={line.kind} />
     case 'opening':
       return (

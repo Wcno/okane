@@ -1,7 +1,7 @@
 import { readJson } from '../lib/http'
 import type { RecordPage } from '../lib/recordPage'
 
-export type StatementLineKind = 'opening' | 'income' | 'expense' | 'transfer_in' | 'transfer_out' | 'buy' | 'sell'
+export type StatementLineKind = 'opening' | 'income' | 'expense' | 'transfer_in' | 'transfer_out' | 'buy' | 'sell' | 'dividend'
 
 /** One line of an Account's Statement. Amounts stay decimal strings. */
 export interface StatementLine {
@@ -19,7 +19,10 @@ export interface StatementLine {
   categoryId: number | null
   counterpartAccountId: number | null
   asset: { symbol: string; name: string } | null
+  /** Absent in a Dividend. */
   units: string | null
+  /** What the broker charged on a purchase or a sale; already inside `amount`. */
+  commission: string | null
 }
 
 interface StatementLineBody {
@@ -33,7 +36,8 @@ interface StatementLineBody {
   category_id?: number
   counterpart_account_id?: number
   asset?: { symbol: string; name: string }
-  units?: string
+  units?: string | null
+  commission?: string | null
 }
 
 const STATEMENT_FAILED = 'Okane no pudo consultar el estado de cuenta. Espera un momento e inténtalo de nuevo.'
@@ -53,6 +57,7 @@ const toLine = (body: StatementLineBody): StatementLine => ({
   counterpartAccountId: body.counterpart_account_id ?? null,
   asset: body.asset ?? null,
   units: body.units ?? null,
+  commission: body.commission ?? null,
 })
 
 /** One page of the Statement of an Account, newest line first; throws NotFoundError for an Account that is not the User's. */

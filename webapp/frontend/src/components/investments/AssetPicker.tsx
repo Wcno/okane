@@ -4,6 +4,7 @@ import { ASSET_QUERY_MAX_LENGTH, searchAssets, type Asset, type AssetSearch } fr
 import { useSessionEnd } from '../../lib/useSessionEnd'
 import { smallSecondaryButtonClassName } from '../buttons'
 import { TextField } from '../TextField'
+import { FieldError } from '../record/RecordFields'
 
 type Lookup =
   | { status: 'idle' }
@@ -92,6 +93,7 @@ export function AssetPicker({
               Cambiar
             </button>
           </div>
+          <FieldError id={`${id}-error`} errors={errors} />
         </div>
       ) : (
         <>

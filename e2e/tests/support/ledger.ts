@@ -12,7 +12,7 @@ async function csrfToken(request: APIRequestContext) {
   return (await session.json()).csrf_token as string
 }
 
-async function send(request: APIRequestContext, method: 'POST' | 'DELETE', path: string, data?: unknown) {
+async function send(request: APIRequestContext, method: 'POST' | 'PUT' | 'DELETE', path: string, data?: unknown) {
   return request.fetch(path, {
     method,
     data,
@@ -95,11 +95,29 @@ interface TradeFields {
   asset_id: number
   units: string
   unit_price: string
+  commission?: string
   date?: string
 }
 
-export async function recordTrade(request: APIRequestContext, kind: 'buy' | 'sell', fields: TradeFields) {
+interface DividendFields {
+  account_id: number
+  asset_id: number
+  amount: string
+  date?: string
+}
+
+export async function recordTrade(
+  request: APIRequestContext,
+  kind: 'buy' | 'sell' | 'dividend',
+  fields: TradeFields | DividendFields,
+) {
   const response = await send(request, 'POST', `/api/investments/transactions/${kind}`, fields)
   expect(response.status()).toBe(201)
   return (await response.json()) as { id: number }
+}
+
+/** Sets the User's own Reference Price of an Asset for a day, as the price screen does. */
+export async function setReferencePrice(request: APIRequestContext, assetId: number, value: string, date?: string) {
+  const response = await send(request, 'PUT', `/api/investments/assets/${assetId}/price`, { value, date })
+  expect(response.status()).toBe(200)
 }

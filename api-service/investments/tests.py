@@ -8,7 +8,7 @@ from django.test import Client, TransactionTestCase, override_settings, tag
 
 from expenses.tests import FOOD, TODAY, ExpenseApiTestCase
 from investments import quotes
-from investments.models import Asset
+from investments.models import Asset, InvestmentTransaction
 from investments.serializers import InvestmentTransactionSerializer
 
 
@@ -166,6 +166,7 @@ class BuyTests(InvestmentApiTestCase):
                 "units": "2.00000000",
                 "unit_price": "100.00000000",
                 "cash_amount": "200.00",
+                "commission": "0.00",
                 "date": "2026-11-16",
                 "account_balance": "800.00",
             },
@@ -285,8 +286,8 @@ class BuyTests(InvestmentApiTestCase):
 
         for kind in ("buy", "sell"):
             with self.subTest(kind=kind):
-                response = self.trade(kind, account, asset, "1", "10", commission="1.00")
-                self.assert_rejected(response, "commission")
+                response = self.trade(kind, account, asset, "1", "10", surcharge="1.00")
+                self.assert_rejected(response, "surcharge")
         self.assertEqual(self.balance(account), "1000.00")
 
     def test_a_missing_field_names_the_field(self):
@@ -542,7 +543,7 @@ class PositionTests(InvestmentApiTestCase):
 
         self.assertEqual(
             position["price"],
-            {"value": "150.00000000", "source": "last_transaction", "date": "2026-11-10"},
+            {"value": "150.00000000", "source": "last_transaction", "date": "2026-11-10", "estimated": True},
         )
         self.assertEqual(position["value"], "150.00")
 
@@ -959,14 +960,12 @@ class TransactionDeleteTests(TransactionsApiTestCase):
         self.assertEqual(self.read(recorded).status_code, 200)
 
 
+@tag("database")
+@override_settings(INTERNAL_SERVICE_KEY="expected-key")
 class ConcurrentChangeTests(TransactionTestCase):
     """Real commits on separate connections: a deletion and a sale of the same units must queue up."""
 
     def test_a_deletion_and_a_sale_cannot_both_succeed(self):
-        import json
-
-        from django.test import Client
-
         headers = {"X-Okane-Service-Key": "expected-key", "X-Okane-User-Id": "1"}
         patcher = mock.patch("accounts.clock.today", return_value=TODAY)
         patcher.start()
@@ -975,7 +974,7 @@ class ConcurrentChangeTests(TransactionTestCase):
         def post(path, body):
             return Client().post(path, json.dumps(body), content_type="application/json", headers=headers)
 
-        account = post(
+        account_response = post(
             "/api/accounts",
             {
                 "name": "Bróker",
@@ -983,18 +982,22 @@ class ConcurrentChangeTests(TransactionTestCase):
                 "opening_balance": "1000.00",
                 "opening_date": "2026-11-01",
             },
-        ).json()
+        )
+        self.assertEqual(account_response.status_code, 201, account_response.content)
+        account = account_response.json()
         asset = Asset.objects.create(provider="fake", market="XNAS", symbol="AAPL", name="Apple")
         trade = {"account_id": account["id"], "asset_id": asset.id, "units": "10", "unit_price": "10"}
-        purchase = post("/api/investments/transactions/buy", trade).json()
+        purchase_response = post("/api/investments/transactions/buy", trade)
+        self.assertEqual(purchase_response.status_code, 201, purchase_response.content)
+        purchase = purchase_response.json()
 
-        statuses = []
+        outcomes = {}
         barrier = threading.Barrier(2)
 
         def delete():
             try:
                 barrier.wait()
-                statuses.append(
+                outcomes["deletion"] = (
                     Client()
                     .delete(f"/api/investments/transactions/{purchase['id']}", headers=headers)
                     .status_code
@@ -1005,7 +1008,7 @@ class ConcurrentChangeTests(TransactionTestCase):
         def sell():
             try:
                 barrier.wait()
-                statuses.append(post("/api/investments/transactions/sell", trade).status_code)
+                outcomes["sale"] = post("/api/investments/transactions/sell", trade).status_code
             finally:
                 connection.close()
 
@@ -1015,8 +1018,13 @@ class ConcurrentChangeTests(TransactionTestCase):
         for thread in threads:
             thread.join()
 
-        self.assertEqual(sorted(statuses)[1], 400)
-        self.assertEqual(len([status for status in statuses if status < 300]), 1)
+        succeeded = [name for name, status in outcomes.items() if status < 300]
+        refused = [name for name, status in outcomes.items() if status == 400]
+        self.assertEqual(len(succeeded), 1, outcomes)
+        self.assertEqual(len(refused), 1, outcomes)
+
+        remaining = InvestmentTransaction.objects.filter(account_id=account["id"]).count()
+        self.assertEqual(remaining, 0 if succeeded == ["deletion"] else 2)
 
 
 class SampleProviderTests(InvestmentApiTestCase):
@@ -1027,3 +1035,662 @@ class SampleProviderTests(InvestmentApiTestCase):
         body = response.json()
         self.assertTrue(body["provider_available"])
         self.assertEqual(sorted(item["market"] for item in body["results"]), ["XNYS", "XTSE"])
+
+
+class PerformanceTestCase(InvestmentApiTestCase):
+    def transfer(self, source, destination, amount, user=1, **fields):
+        body = {
+            "amount": amount,
+            "source_account_id": source["id"],
+            "destination_account_id": destination["id"],
+            **fields,
+        }
+        response = self.call("POST", "/api/transfers", body, user=user)
+        self.assertEqual(response.status_code, 201, response.content)
+
+    def read(self, name, user=1, query=""):
+        response = self.call("GET", f"/api/investments/{name}{query}", user=user)
+        self.assertEqual(response.status_code, 200, response.content)
+        return response.json()
+
+    def set_price(self, asset, value, user=1, **fields):
+        return self.call(
+            "PUT", f"/api/investments/assets/{asset.id}/price", {"value": value, **fields}, user=user
+        )
+
+
+class ReturnTests(PerformanceTestCase):
+    def test_a_gain_is_value_minus_net_contribution_with_the_opening_balance_as_first_contribution(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "10", "50", date="2026-11-02")
+        self.set_price(asset, "62.50")
+
+        body = self.read("dashboard")
+
+        # Cash 500.00 plus 10 units at 62.50, against 1,000.00 put in.
+        self.assertEqual(body["cash"], "500.00")
+        self.assertEqual(body["positions_value"], "625.00")
+        self.assertEqual(body["value"], "1125.00")
+        self.assertEqual(body["net_contribution"], "1000.00")
+        self.assertEqual(body["return"], {"amount": "125.00", "percent": "12.50"})
+        [account] = body["accounts"]
+        self.assertEqual(account["return"], {"amount": "125.00", "percent": "12.50"})
+
+    def test_a_loss_is_negative_in_money_and_in_percent(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "10", "100", date="2026-11-02")
+        self.set_price(asset, "70")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["value"], "700.00")
+        self.assertEqual(body["return"], {"amount": "-300.00", "percent": "-30.00"})
+
+    def test_a_sale_below_cost_that_is_cashed_out_still_counts_as_a_loss(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "10", "100", date="2026-11-02")
+        self.sold(broker, asset, "10", "80", date="2026-11-03")
+
+        body = self.read("performance")
+
+        self.assertEqual(body["positions_value"], "0.00")
+        self.assertEqual(body["return"], {"amount": "-200.00", "percent": "-20.00"})
+        self.assertEqual(body["positions"], [])
+
+    def test_a_withdrawal_lowers_the_net_contribution_and_not_the_return(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        savings = self.account(name="Ahorro", type="savings", opening_balance="0.00")
+        self.transfer(broker, savings, "400.00")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["net_contribution"], "600.00")
+        self.assertEqual(body["cash"], "600.00")
+        self.assertEqual(body["return"], {"amount": "0.00", "percent": "0.00"})
+
+    def test_a_contribution_by_transfer_raises_the_net_contribution(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        spending = self.account(name="Corriente", opening_balance="800.00")
+        self.transfer(spending, broker, "300.00")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["net_contribution"], "1300.00")
+        self.assertEqual(body["return"]["amount"], "0.00")
+
+    def test_a_transfer_between_two_investment_accounts_cancels_in_the_portfolio(self):
+        first = self.investment_account(name="Una", opening_balance="1000.00")
+        second = self.investment_account(name="Otra", opening_balance="500.00")
+        self.transfer(first, second, "250.00")
+
+        body = self.read("dashboard")
+
+        by_name = {item["name"]: item for item in body["accounts"]}
+        self.assertEqual(by_name["Una"]["net_contribution"], "750.00")
+        self.assertEqual(by_name["Otra"]["net_contribution"], "750.00")
+        self.assertEqual(body["net_contribution"], "1500.00")
+        self.assertEqual(body["value"], "1500.00")
+        self.assertEqual(body["return"]["amount"], "0.00")
+
+    def test_the_percent_does_not_apply_without_a_positive_net_contribution(self):
+        broker = self.investment_account(opening_balance="0.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "1", "100", date="2026-11-02")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["net_contribution"], "0.00")
+        self.assertEqual(body["return"]["percent"], None)
+
+    def test_an_archived_account_still_counts_in_the_portfolio(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        self.bought(broker, self.asset(), "1", "100", date="2026-11-02")
+        self.archive(broker)
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["value"], "1000.00")
+        self.assertTrue(body["accounts"][0]["archived"])
+
+    def test_other_account_types_stay_out_of_the_portfolio(self):
+        self.account(name="Corriente", opening_balance="5000.00")
+        self.account(name="Ahorro", type="savings", opening_balance="2000.00")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["accounts"], [])
+        self.assertEqual(body["value"], "0.00")
+        self.assertEqual(body["return"], {"amount": "0.00", "percent": None})
+
+    def test_exact_cents_survive_large_values(self):
+        broker = self.investment_account(opening_balance="900000000000.01", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "3", "0.01", date="2026-11-02")
+        self.set_price(asset, "0.01")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["value"], "900000000000.01")
+        self.assertEqual(body["return"]["amount"], "0.00")
+
+    def test_the_distribution_lists_each_asset_by_value_with_its_share(self):
+        broker = self.investment_account(opening_balance="2000.00", opening_date="2026-11-01")
+        self.bought(broker, self.asset("AAPL"), "1", "300", date="2026-11-02")
+        self.bought(broker, self.asset("MSFT", name="Microsoft"), "1", "100", date="2026-11-02")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(
+            [(item["asset"]["symbol"], item["value"], item["portfolio_percent"]) for item in body["distribution"]],
+            [("AAPL", "300.00", "75.00"), ("MSFT", "100.00", "25.00")],
+        )
+        self.assertIsNone(body["others_value"])
+
+    def test_the_performance_lists_what_each_position_gained_against_its_cost(self):
+        broker = self.investment_account(opening_balance="2000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "4", "100", date="2026-11-02")
+        self.set_price(asset, "90")
+
+        [position] = self.read("performance")["positions"]
+
+        self.assertEqual((position["cost"], position["value"]), ("400.00", "360.00"))
+        self.assertEqual((position["gain"], position["gain_percent"]), ("-40.00", "-10.00"))
+
+    def test_the_figures_are_each_users_own(self):
+        broker = self.investment_account(opening_balance="1000.00")
+        self.bought(broker, self.asset(), "1", "100", date="2026-11-02")
+
+        body = self.read("dashboard", user=2)
+
+        self.assertEqual(body["accounts"], [])
+        self.assertEqual(body["distribution"], [])
+
+    def test_a_future_closing_is_refused(self):
+        response = self.call("GET", "/api/investments/dashboard?as_of=2026-11-17")
+
+        self.assertEqual(response.status_code, 400)
+
+
+class ReferencePriceTests(PerformanceTestCase):
+    def setUp(self):
+        super().setUp()
+        self.broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        self.asset_held = self.asset()
+        self.bought(self.broker, self.asset_held, "2", "100", date="2026-11-02")
+
+    def test_without_a_manual_price_the_last_transaction_is_an_estimate_with_its_date(self):
+        body = self.read("dashboard")
+
+        [item] = body["distribution"]
+        self.assertEqual(
+            item["price"],
+            {"value": "100.00000000", "source": "last_transaction", "date": "2026-11-02", "estimated": True},
+        )
+        self.assertTrue(body["estimated"])
+
+    def test_a_manual_price_is_saved_with_its_date_and_valued_as_not_estimated(self):
+        response = self.set_price(self.asset_held, "125.5", date="2026-11-10")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            response.json()["price"],
+            {"value": "125.50000000", "source": "manual", "date": "2026-11-10", "estimated": False},
+        )
+        body = self.read("dashboard")
+        self.assertEqual(body["positions_value"], "251.00")
+        self.assertFalse(body["estimated"])
+
+    def test_the_price_date_defaults_to_today(self):
+        self.assertEqual(self.set_price(self.asset_held, "110").json()["price"]["date"], "2026-11-16")
+
+    def test_a_correction_the_same_day_replaces_the_price(self):
+        self.set_price(self.asset_held, "110")
+        self.set_price(self.asset_held, "130")
+
+        self.assertEqual(self.read("positions")["results"][0]["price"]["value"], "130.00000000")
+
+    def test_a_manual_price_older_than_the_last_transaction_does_not_win(self):
+        self.set_price(self.asset_held, "999", date="2026-11-01")
+
+        [position] = self.read("positions")["results"]
+
+        self.assertEqual(position["price"]["source"], "last_transaction")
+
+    def test_a_manual_price_never_applies_to_a_closing_before_its_date(self):
+        self.set_price(self.asset_held, "150", date="2026-11-10")
+
+        [position] = self.read("positions", query="?as_of=2026-11-05")["results"]
+
+        self.assertEqual(position["price"]["value"], "100.00000000")
+
+    def test_a_future_price_is_refused(self):
+        response = self.set_price(self.asset_held, "150", date="2026-11-17")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("date", response.json()["errors"])
+
+    def test_a_price_must_be_positive_with_up_to_eight_decimals(self):
+        for value in ("0", "-5", "abc", "1.123456789", 5):
+            with self.subTest(value=value):
+                self.assertEqual(self.set_price(self.asset_held, value).status_code, 400)
+
+    def test_an_unknown_asset_is_not_found(self):
+        response = self.call("PUT", "/api/investments/assets/9999/price", {"value": "5"})
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_a_price_of_one_user_never_changes_the_valuation_of_another(self):
+        other = self.investment_account(user=2, opening_balance="1000.00", opening_date="2026-11-01")
+        self.bought(other, self.asset_held, "2", "100", user=2, date="2026-11-02")
+
+        self.set_price(self.asset_held, "500", user=1)
+
+        mine = self.read("dashboard", user=1)
+        theirs = self.read("dashboard", user=2)
+        self.assertEqual(mine["positions_value"], "1000.00")
+        self.assertEqual(theirs["positions_value"], "200.00")
+        self.assertEqual(theirs["distribution"][0]["price"]["source"], "last_transaction")
+
+    def test_reading_the_price_of_an_asset_answers_each_user_with_their_own(self):
+        self.set_price(self.asset_held, "180")
+
+        mine = self.call("GET", f"/api/investments/assets/{self.asset_held.id}/price").json()
+        theirs = self.call("GET", f"/api/investments/assets/{self.asset_held.id}/price", user=2).json()
+
+        self.assertEqual(mine["price"]["value"], "180.00000000")
+        self.assertEqual(mine["asset"]["symbol"], "AAPL")
+        # A User with nothing to base a price on gets none, never zero.
+        self.assertIsNone(theirs["price"])
+
+    def test_a_price_cannot_be_set_without_a_value(self):
+        response = self.call("PUT", f"/api/investments/assets/{self.asset_held.id}/price", {})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("value", response.json()["errors"])
+
+
+class PastDayAndPeriodTests(PerformanceTestCase):
+    def test_a_past_day_uses_the_cash_and_net_contribution_of_that_day(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        spending = self.account(name="Corriente", opening_balance="800.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "5", "100", date="2026-11-03")
+        self.transfer(spending, broker, "300.00", date="2026-11-10")
+
+        before = self.read("dashboard", query="?as_of=2026-11-05")
+        after = self.read("dashboard")
+
+        self.assertEqual(before["as_of"], "2026-11-05")
+        self.assertEqual(before["cash"], "500.00")
+        self.assertEqual(before["net_contribution"], "1000.00")
+        self.assertEqual(before["value"], "1000.00")
+        self.assertEqual(after["cash"], "800.00")
+        self.assertEqual(after["net_contribution"], "1300.00")
+
+    def test_an_account_that_starts_after_the_day_is_not_part_of_it(self):
+        self.investment_account(name="Vieja", opening_balance="1000.00", opening_date="2026-11-01")
+        self.investment_account(name="Nueva", opening_balance="400.00", opening_date="2026-11-10")
+
+        before = self.read("performance", query="?as_of=2026-11-05")
+
+        self.assertEqual([account["name"] for account in before["accounts"]], ["Vieja"])
+        self.assertEqual(before["net_contribution"], "1000.00")
+        self.assertEqual(before["value"], "1000.00")
+
+    def test_a_past_day_values_positions_with_the_prices_known_then(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "10", "50", date="2026-11-02")
+        self.set_price(asset, "80", date="2026-11-12")
+
+        body = self.read("performance", query="?as_of=2026-11-05")
+
+        self.assertEqual(body["positions_value"], "500.00")
+        self.assertEqual(body["return"]["amount"], "0.00")
+        self.assertEqual(body["positions"][0]["price"]["source"], "last_transaction")
+
+    def test_the_period_return_is_the_difference_between_two_cumulative_returns(self):
+        # Aporte neto $100: worth $110 at the start of the period and $115 at its close.
+        broker = self.investment_account(opening_balance="100.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "1", "100", date="2026-11-01")
+        self.set_price(asset, "110", date="2026-11-05")
+        self.set_price(asset, "115", date="2026-11-10")
+
+        body = self.read("performance", query="?from=2026-11-06")
+
+        self.assertEqual(body["return"]["amount"], "15.00")
+        self.assertEqual(
+            body["period"],
+            {
+                "from": "2026-11-06",
+                "to": "2026-11-16",
+                "opening_return": "10.00",
+                "closing_return": "15.00",
+                "return": "5.00",
+            },
+        )
+
+    def test_a_contribution_inside_the_period_is_not_return(self):
+        broker = self.investment_account(opening_balance="100.00", opening_date="2026-11-01")
+        spending = self.account(name="Corriente", opening_balance="500.00", opening_date="2026-11-01")
+        self.transfer(spending, broker, "200.00", date="2026-11-08")
+
+        body = self.read("performance", query="?from=2026-11-06")
+
+        self.assertEqual(body["net_contribution"], "300.00")
+        self.assertEqual(body["period"]["return"], "0.00")
+
+    def test_a_loss_in_the_period_is_negative(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "10", "100", date="2026-11-01")
+        self.set_price(asset, "90", date="2026-11-10")
+
+        body = self.read("performance", query="?from=2026-11-05")
+
+        self.assertEqual(body["period"]["return"], "-100.00")
+
+    def test_a_period_may_close_on_a_past_day(self):
+        broker = self.investment_account(opening_balance="100.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "1", "100", date="2026-11-01")
+        self.set_price(asset, "110", date="2026-11-05")
+        self.set_price(asset, "115", date="2026-11-10")
+
+        body = self.read("performance", query="?from=2026-11-02&as_of=2026-11-07")
+
+        self.assertEqual(body["period"]["return"], "10.00")
+
+    def test_a_bad_period_start_is_refused(self):
+        for query in ("?from=hoy", "?from=2026-11-10&as_of=2026-11-05"):
+            with self.subTest(query=query):
+                response = self.call("GET", f"/api/investments/performance{query}")
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("from", response.json()["errors"])
+
+    def test_without_a_start_there_is_no_period(self):
+        self.investment_account()
+
+        self.assertIsNone(self.read("performance")["period"])
+
+
+class CommissionTests(TransactionsApiTestCase):
+    def test_a_purchase_commission_takes_cash_and_joins_the_cost(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+
+        recorded = self.bought(account, asset, "2", "100", commission="1.50")
+
+        self.assertEqual(recorded["commission"], "1.50")
+        self.assertEqual(recorded["cash_amount"], "200.00")
+        self.assertEqual(recorded["account_balance"], "798.50")
+        [position] = self.positions()["results"]
+        self.assertEqual(position["cost"], "201.50")
+        self.assertEqual(position["average_cost"], "100.75000000")
+
+    def test_a_sale_commission_reduces_the_cash_received_and_leaves_the_cost_alone(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        sale = self.sold(account, asset, "1", "150", commission="2.25", date="2026-04-10")
+
+        self.assertEqual(sale["account_balance"], "947.75")
+        [position] = self.positions()["results"]
+        self.assertEqual(position["cost"], "100.00")
+
+    def test_the_commission_is_optional_and_zero_by_default(self):
+        account = self.bourse(opening_balance="1000.00")
+
+        recorded = self.bought(account, self.asset(), "1", "10")
+
+        self.assertEqual(recorded["commission"], "0.00")
+        self.assertEqual(recorded["account_balance"], "990.00")
+
+    def test_a_commission_is_never_negative_or_beyond_cents(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+
+        for value in ("-1.00", "1.005", "abc", 1.5):
+            with self.subTest(value=value):
+                response = self.trade("buy", account, asset, "1", "10", commission=value)
+                self.assert_rejected(response, "commission")
+        self.assertEqual(self.balance(account), "1000.00")
+
+    def test_the_commission_is_kept_exact_in_a_large_cost(self):
+        account = self.bourse(opening_balance="1000000000.00")
+        asset = self.asset()
+
+        self.bought(account, asset, "3", "333333333.33333333", commission="0.01")
+
+        [position] = self.positions()["results"]
+        self.assertEqual(position["cost"], "1000000000.01")
+
+    def test_correcting_a_purchase_commission_changes_a_later_sale_cost_and_the_balance(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        purchase = self.bought(account, asset, "2", "100", commission="10.00", date="2026-03-10")
+        self.sold(account, asset, "1", "150", date="2026-04-10")
+        self.assertEqual(self.positions()["results"][0]["cost"], "105.00")
+
+        response = self.edited(purchase, commission="0.00")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(self.positions()["results"][0]["cost"], "100.00")
+        self.assertEqual(self.balance(account), "950.00")
+
+    def test_a_commission_leaves_the_net_contribution_alone_and_lowers_the_return(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", commission="5.00", date="2026-11-02")
+        self.call("PUT", f"/api/investments/assets/{asset.id}/price", {"value": "50"})
+
+        body = self.call("GET", "/api/investments/dashboard").json()
+
+        self.assertEqual(body["net_contribution"], "1000.00")
+        self.assertEqual(body["return"]["amount"], "-5.00")
+
+
+class DividendTests(TransactionsApiTestCase):
+    def dividend(self, account, asset, amount, user=1, **fields):
+        body = {"account_id": account["id"], "asset_id": asset.id, "amount": amount, **fields}
+        return self.call("POST", "/api/investments/transactions/dividend", body, user=user)
+
+    def paid(self, account, asset, amount, user=1, **fields):
+        response = self.dividend(account, asset, amount, user=user, **fields)
+        self.assertEqual(response.status_code, 201, response.content)
+        return response.json()
+
+    def correct(self, paid, account, asset, **changes):
+        body = {
+            "account_id": account["id"],
+            "asset_id": asset.id,
+            "amount": paid["cash_amount"],
+            "date": paid["date"],
+            **changes,
+        }
+        return self.call("PUT", f"/api/investments/transactions/{paid['id']}", body)
+
+    def dashboard(self, query=""):
+        return self.call("GET", f"/api/investments/dashboard{query}").json()
+
+    def test_a_dividend_adds_cash_and_shows_without_units(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        recorded = self.paid(account, asset, "12.40", date="2026-04-01")
+
+        self.assertEqual(recorded["type"], "dividend")
+        self.assertEqual(recorded["cash_amount"], "12.40")
+        self.assertIsNone(recorded["units"])
+        self.assertEqual(recorded["account_balance"], "812.40")
+        self.assertEqual(self.balance(account), "812.40")
+
+    def test_a_dividend_counts_as_return_and_not_as_contribution(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", date="2026-11-02")
+        self.call("PUT", f"/api/investments/assets/{asset.id}/price", {"value": "50"})
+        before = self.dashboard()
+
+        self.paid(account, asset, "7.35", date="2026-11-03")
+
+        after = self.dashboard()
+        self.assertEqual(before["return"]["amount"], "0.00")
+        self.assertEqual(after["return"], {"amount": "7.35", "percent": "0.74"})
+        self.assertEqual(after["net_contribution"], before["net_contribution"])
+        self.assertEqual(after["cash"], "507.35")
+
+    def test_the_return_of_a_period_includes_only_the_dividends_paid_in_it(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", date="2026-11-02")
+        self.call("PUT", f"/api/investments/assets/{asset.id}/price", {"value": "50", "date": "2026-11-02"})
+        self.paid(account, asset, "5.00", date="2026-11-03")
+        self.paid(account, asset, "7.00", date="2026-11-10")
+
+        body = self.call("GET", "/api/investments/performance?from=2026-11-05").json()
+
+        self.assertEqual(body["return"]["amount"], "12.00")
+        self.assertEqual(body["period"]["return"], "7.00")
+        self.assertEqual(body["net_contribution"], "1000.00")
+
+    def test_a_closing_before_a_dividend_does_not_see_it(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", date="2026-11-02")
+        self.paid(account, asset, "7.00", date="2026-11-10")
+
+        body = self.dashboard("?as_of=2026-11-05")
+
+        self.assertEqual(body["cash"], "500.00")
+
+    def test_a_dividend_never_sets_the_price_or_changes_the_position(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        self.paid(account, asset, "5.00", date="2026-04-01")
+
+        [position] = self.positions()["results"]
+        self.assertEqual(
+            (position["units"], position["cost"], position["price"]["value"]),
+            ("2.00000000", "200.00", "100.00000000"),
+        )
+
+    def test_a_dividend_of_an_asset_the_user_does_not_hold_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+
+        response = self.dividend(account, self.asset(), "5.00")
+
+        self.assert_rejected(response, "asset_id")
+        self.assertEqual(self.balance(account), "1000.00")
+
+    def test_a_dividend_before_the_first_purchase_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        self.assert_rejected(self.dividend(account, asset, "5.00", date="2026-03-01"), "asset_id")
+
+    def test_a_dividend_of_units_held_in_another_account_is_rejected(self):
+        asset = self.asset()
+        holder = self.bourse(name="Uno")
+        other = self.bourse(name="Otro")
+        self.bought(holder, asset, "2", "100")
+
+        self.assert_rejected(self.dividend(other, asset, "5.00"), "asset_id")
+
+    def test_a_dividend_amount_is_positive_with_two_decimals(self):
+        account = self.bourse()
+        asset = self.asset()
+        self.bought(account, asset, "2", "100")
+
+        for value in ("0", "0.00", "-1.00", "1.005", "abc", 5):
+            with self.subTest(value=value):
+                self.assert_rejected(self.dividend(account, asset, value), "amount")
+
+    def test_a_dividend_takes_no_units_price_or_commission(self):
+        account = self.bourse()
+        asset = self.asset()
+        self.bought(account, asset, "2", "100")
+
+        for name in ("units", "unit_price", "commission"):
+            with self.subTest(name=name):
+                self.assert_rejected(self.dividend(account, asset, "5.00", **{name: "1"}), name)
+
+    def test_only_an_investment_account_takes_a_dividend(self):
+        checking = self.account(type="spending")
+
+        self.assert_rejected(self.dividend(checking, self.asset(), "5.00"), "account_id")
+
+    def test_another_users_account_is_not_found(self):
+        account = self.bourse()
+        asset = self.asset()
+        self.bought(account, asset, "2", "100")
+
+        self.assertEqual(self.dividend(account, asset, "5.00", user=2).status_code, 404)
+
+    def test_dividends_are_listed_with_the_other_operations(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        paid = self.paid(account, asset, "5.00", date="2026-04-01")
+
+        listed = self.listed()["results"]
+
+        self.assertEqual([item["type"] for item in listed], ["dividend", "buy"])
+        self.assertEqual(listed[0]["asset"]["symbol"], "AAPL")
+        self.assertEqual(self.read(paid).json()["cash_amount"], "5.00")
+
+    def test_a_dividend_can_be_corrected_and_deleted(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        paid = self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.correct(paid, account, asset, amount="6.00")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(self.balance(account), "806.00")
+        self.assertEqual(self.removed(paid).status_code, 204)
+        self.assertEqual(self.balance(account), "800.00")
+
+    def test_deleting_the_purchase_a_dividend_needs_is_rejected_and_changes_nothing(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        purchase = self.bought(account, asset, "2", "100", date="2026-03-10")
+        self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.removed(purchase)
+
+        self.assert_rejected(response, "form")
+        self.assertIn("Dividendo del 1 abr 2026", response.json()["errors"]["form"][0])
+        self.assertEqual(self.balance(account), "805.00")
+
+    def test_a_sale_that_would_leave_a_dividend_without_units_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.trade("sell", account, asset, "2", "120", date="2026-03-20")
+
+        self.assert_rejected(response, "units")
+        self.assertEqual(self.balance(account), "805.00")
+
+    def test_moving_a_dividend_before_the_purchase_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        paid = self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.correct(paid, account, asset, date="2026-03-01")
+
+        self.assert_rejected(response, "asset_id")

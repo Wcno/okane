@@ -128,6 +128,15 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - El Estado de cuenta empieza por el Saldo inicial con su fecha. Cada línea
   tiene un orden estable, importe con signo y Saldo resultante; su última
   línea coincide con el Saldo consultado por la API de Cuentas.
+- `GET /api/accounts/{id}/statement` devuelve el Estado de cuenta paginado, del
+  más antiguo al más reciente o, con `order=desc`, al revés; el Saldo de cada línea
+  se calcula sobre todo el historial, nunca sobre la página. Cada línea trae `id`
+  (su posición, única), `kind` (`opening`, `income`, `expense`, `transfer_in`,
+  `transfer_out`, `buy`, `sell`, `dividend`), `record_id`, `date`, `description`,
+  `amount` con signo y `balance`; según el tipo, `category_id`,
+  `counterpart_account_id`, `asset`, `units` y `commission` (ya incluida en el
+  `amount`). El empate de una misma fecha sigue el orden de registro. Una Cuenta
+  ajena responde `404`.
 - `GET /api/expenses/{id}` devuelve un Gasto del Usuario, para abrir sus
   pantallas de edición y eliminación desde un enlace. `GET /api/expenses`
   añade a la paginación `last_used_account_id`: la Cuenta del Gasto registrado
@@ -329,6 +338,26 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - El porcentaje de una Posición usa como denominador el valor total de las
   Posiciones, sin efectivo. Con denominador cero el porcentaje no aplica.
   El porcentaje de Rendimiento tampoco aplica si el Aporte neto no es positivo.
+- Precio de referencia de un Usuario y un Activo: gana la fecha más reciente
+  que no sea futura y, con la misma fecha, el precio manual del Usuario sobre
+  el de la última operación. Un precio manual anterior a la última operación
+  no la reemplaza. Un precio tomado de una operación se marca `estimated: true`;
+  un Activo sin ningún precio responde `price: null`, nunca cero.
+  `PUT /api/investments/assets/{id}/price` recibe `value` (hasta ocho decimales,
+  mayor que cero) y `date` (por defecto hoy, nunca futura); guardar otro valor
+  el mismo día lo corrige. `GET` en la misma ruta devuelve `{asset, price}` con
+  el precio que usan las valoraciones de ese Usuario:
+  `price = {value, source: "manual" | "last_transaction", date, estimated}`.
+- `GET /api/investments/dashboard` y `GET /api/investments/performance` aceptan
+  `as_of` (hoy por defecto, nunca futuro) y calculan efectivo, Aporte neto,
+  Posiciones y precios al cierre de ese día; una Cuenta que empieza después no
+  participa. Responden `value`, `cash`, `positions_value`, `net_contribution`,
+  `return {amount, percent}` (el porcentaje es `null` si el Aporte neto no es
+  positivo), `estimated` y `accounts`. El dashboard añade `distribution`
+  (hasta siete Activos por valor, más `others_value` y `others_percent`) y
+  `performance` añade `positions` con ganancia contra costo. Con `from` (primer
+  día del período), `performance` añade `period`: el Rendimiento acumulado al
+  cierre menos el acumulado al cierre del día anterior a `from`.
 - La consulta automática guarda la fecha real del dato y su origen; una
   respuesta tardía no reemplaza un dato manual más reciente por uno anterior.
   Cada cierre histórico usa datos conocidos a esa fecha. Un respaldo estimado

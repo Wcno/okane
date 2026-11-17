@@ -66,6 +66,7 @@ def account_detail(request, account_id):
 
 
 STATEMENT_FIELDS = ("category_id", "counterpart_account_id", "asset")
+STATEMENT_DECIMALS = ("units", "commission")
 
 
 def represent_statement_line(line):
@@ -78,7 +79,11 @@ def represent_statement_line(line):
         "amount": str(line["amount"]),
         "balance": str(line["balance"]),
         **{name: line[name] for name in STATEMENT_FIELDS if name in line},
-        **({"units": str(line["units"])} if "units" in line else {}),
+        **{
+            name: None if line[name] is None else str(line[name])
+            for name in STATEMENT_DECIMALS
+            if name in line
+        },
     }
 
 

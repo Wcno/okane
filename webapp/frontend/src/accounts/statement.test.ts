@@ -60,6 +60,7 @@ describe('listStatement', () => {
       balance: '1079.90',
       counterpartAccountId: 5,
       asset: null,
+      commission: null,
     })
     expect(page.records[1]).toMatchObject({ asset: { symbol: 'AAPL', name: 'Apple' }, units: '3.00000000' })
   })

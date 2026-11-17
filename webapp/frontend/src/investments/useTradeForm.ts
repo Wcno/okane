@@ -3,7 +3,7 @@ import type { Account } from '../accounts/api'
 import { useFieldErrors } from '../lib/useFieldErrors'
 import type { Outcome } from '../lib/http'
 import { useSubmission } from '../lib/useSubmission'
-import type { Asset, Trade, TradeErrors, TradeField, TradeInput } from './api'
+import type { Asset, Trade, TradeErrors, TradeField, TradeInput, TradeKind } from './api'
 import { validateTrade, type TradeDraft } from './form'
 
 /** The draft fields each api-service field is shown on. */
@@ -13,21 +13,25 @@ const fieldsOf = (patch: Partial<TradeDraft>): TradeField[] => {
   if ('asset' in patch) fields.push('assetId')
   if ('units' in patch) fields.push('units')
   if ('unitPrice' in patch) fields.push('unitPrice', 'units')
+  if ('commission' in patch) fields.push('commission')
+  if ('amount' in patch) fields.push('amount')
   if ('date' in patch) fields.push('date')
   return fields
 }
 
 /**
- * The state of the form that records a purchase or a sale: the draft, what is
+ * The state of the form that records a purchase, a sale or a Dividend: the draft, what is
  * wrong with it and the submit. Validation runs in the browser first;
  * api-service has the last word, and its errors land on the same fields.
  */
 export function useTradeForm({
+  kind,
   initial,
   accounts,
   save,
   onSaved,
 }: {
+  kind: TradeKind
   initial: TradeDraft
   accounts: Account[]
   save: (trade: TradeInput) => Promise<Outcome<Trade, TradeField>>
@@ -58,7 +62,7 @@ export function useTradeForm({
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     if (isSubmitting) return
-    const checked = validateTrade(draft, { accounts })
+    const checked = validateTrade(draft, { accounts, kind })
     if (!checked.ok) {
       showErrors(checked.errors)
       return
