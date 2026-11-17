@@ -42,12 +42,18 @@ class DecimalStringField(serializers.DecimalField):
     def to_internal_value(self, data):
         if not isinstance(data, str) or not PLAIN_DECIMAL.fullmatch(data.strip()):
             self.fail("invalid")
+        # DRF checks the total digits first, which would call "10.1234567890123" too
+        # large when only its decimals are wrong; the integer part is judged on its own.
+        whole = data.strip().lstrip("-").split(".")[0].lstrip("0")
+        if len(whole) > self.max_digits - self.decimal_places:
+            self.fail("max_whole_digits", max_whole_digits=self.max_digits - self.decimal_places)
         return super().to_internal_value(data)
 
 
-# `max_digits` and `max_whole_digits` are how DRF says the integer part is too long.
-TOO_LARGE_CODES = ("max_digits", "max_whole_digits")
-DECIMAL_ERRORS = ("invalid", "required", "null", "max_decimal_places", "min_value", "max_value")
+TOO_LARGE_CODES = ("max_whole_digits",)
+DECIMAL_ERRORS = (
+    "invalid", "required", "null", "max_digits", "max_decimal_places", "min_value", "max_value",
+)
 
 
 def amount_messages(invalid, too_large):

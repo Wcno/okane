@@ -15,6 +15,11 @@ const spanishDay = new Intl.DateTimeFormat('es', {
   year: 'numeric',
 })
 
+const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/
+
+/** Whether a date field holds a day written as 2026-11-01. */
+export const isCalendarDay = (text: string) => CALENDAR_DAY.test(text)
+
 /** 2026-11-01 as "1 nov 2026". */
 export function formatDay(day: string): string {
   const parts = spanishDay.formatToParts(new Date(`${day}T00:00:00Z`))

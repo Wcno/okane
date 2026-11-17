@@ -149,6 +149,12 @@ class CreateAccountTests(AccountApiTestCase):
                 self.assert_rejected(response, "opening_balance")
                 self.assertIn("demasiado grande", response.json()["errors"]["opening_balance"][0])
 
+    def test_too_many_decimals_in_an_opening_balance_are_not_called_too_large(self):
+        response = self.create(opening_balance="10.1234567890123")
+
+        self.assert_rejected(response, "opening_balance")
+        self.assertNotIn("demasiado grande", response.json()["errors"]["opening_balance"][0])
+
     def test_rejects_an_interest_rate_on_an_account_that_is_not_for_savings(self):
         for account_type in ("spending", "investment"):
             with self.subTest(type=account_type):

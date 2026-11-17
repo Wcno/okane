@@ -100,7 +100,7 @@ function QuickForm({ accounts, lastUsed }: { accounts: Account[]; lastUsed: numb
         <SheetTitle onClose={closeForm} />
         {errors.form && <FormAlert>{errors.form.join(' ')}</FormAlert>}
         <ExpenseFields
-          idPrefix="expense"
+          idPrefix="quick-expense"
           draft={draft}
           onChange={change}
           errors={errors}

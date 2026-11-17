@@ -38,7 +38,7 @@ export function ExpenseEditor({
   const { form, draft, change, errors, isSubmitting, submit } = useExpenseForm({
     initial,
     accounts,
-      save,
+    save,
     onSaved,
   })
 

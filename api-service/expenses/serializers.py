@@ -4,6 +4,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import NotFound
 
 from accounts import clock
+from accounts.dates import spanish_day
 from accounts.models import Account
 from accounts.serializers import AMOUNT_LIMIT, DecimalStringField, amount_messages, messages
 from expenses.categories import CATEGORY_IDS
@@ -18,6 +19,7 @@ ACCOUNT_IS_ARCHIVED = "Esta Cuenta está archivada y no admite registros nuevos.
 DATE_INVALID = "Escribe la fecha del gasto, por ejemplo 2026-11-16."
 DATE_IN_FUTURE = "La fecha no puede ser futura. Elige hoy o un día anterior."
 DATE_BEFORE_ACCOUNT = "La fecha no puede ser anterior al inicio del registro de la Cuenta ({opening_date})."
+DESCRIPTION_NOT_TEXT = "La descripción debe ser texto."
 DESCRIPTION_TOO_LONG = f"La descripción admite hasta {DESCRIPTION_MAX_LENGTH} caracteres."
 
 
@@ -59,7 +61,10 @@ class ExpenseSerializer(serializers.Serializer):
         max_length=DESCRIPTION_MAX_LENGTH,
         required=False,
         allow_blank=True,
-        error_messages=messages(DESCRIPTION_TOO_LONG, "max_length", "invalid", "null"),
+        error_messages={
+            **messages(DESCRIPTION_NOT_TEXT, "invalid", "null"),
+            "max_length": DESCRIPTION_TOO_LONG,
+        },
     )
 
     def validate_category_id(self, value):
@@ -96,7 +101,7 @@ class ExpenseSerializer(serializers.Serializer):
         if data["date"] > clock.today():
             raise serializers.ValidationError({"date": [DATE_IN_FUTURE]})
         if data["date"] < account.opening_date:
-            message = DATE_BEFORE_ACCOUNT.format(opening_date=account.opening_date.isoformat())
+            message = DATE_BEFORE_ACCOUNT.format(opening_date=spanish_day(account.opening_date))
             raise serializers.ValidationError({"date": [message]})
         data["account"] = account
         return data

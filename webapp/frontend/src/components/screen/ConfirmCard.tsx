@@ -50,19 +50,19 @@ export function ConfirmCard<Value, Field extends string>({
     label: string
     busyLabel: string
     run: () => Promise<Outcome<Value, Field>>
-    onDone: (value: Value) => void | Promise<void>
+    onSaved: (value: Value) => void | Promise<void>
     /** What to say when the write fails without a message of its own. */
     failure: string
   }
 }) {
   const { isSubmitting, submit } = useSubmission()
-  const [failure, setFailure] = useState<string | null>(null)
+  const [problem, setProblem] = useState<string | null>(null)
 
-  const run = async () => {
+  const handleConfirm = async () => {
     if (!confirm) return
-    setFailure(null)
-    const outcome = await submit(confirm.run, confirm.onDone)
-    if (outcome && !outcome.ok) setFailure(outcome.errors.form?.join(' ') ?? confirm.failure)
+    setProblem(null)
+    const outcome = await submit(confirm.run, confirm.onSaved)
+    if (outcome && !outcome.ok) setProblem(outcome.errors.form?.join(' ') ?? confirm.failure)
   }
 
   return (
@@ -70,9 +70,9 @@ export function ConfirmCard<Value, Field extends string>({
       {summary}
       <p className="mt-4 text-ink-2">{message}</p>
 
-      {failure && (
+      {problem && (
         <div className="mt-4">
-          <FormAlert>{failure}</FormAlert>
+          <FormAlert>{problem}</FormAlert>
         </div>
       )}
 
@@ -81,7 +81,7 @@ export function ConfirmCard<Value, Field extends string>({
           {cancel.label}
         </Link>
         {confirm && (
-          <button type="button" onClick={run} disabled={isSubmitting} className={`${primaryButtonClassName} sm:flex-[1.6]`}>
+          <button type="button" onClick={handleConfirm} disabled={isSubmitting} className={`${primaryButtonClassName} sm:flex-[1.6]`}>
             {isSubmitting ? confirm.busyLabel : confirm.label}
           </button>
         )}

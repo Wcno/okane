@@ -463,3 +463,17 @@ test('a comma works as the decimal separator', async ({ page }) => {
 
   await expect(page.getByRole('status').filter({ hasText: 'Registraste' })).toContainText('$12.50')
 })
+
+test('the quick sheet over a full-page form does not repeat its ids', async ({ page }) => {
+  await signUp(page.request)
+  await createAccount(page.request)
+  await page.goto('/expenses/create')
+  await openQuickForm(page)
+  await expect(page.getByRole('dialog').getByLabel('Monto')).toBeVisible()
+
+  const repeated = await page.evaluate(() => {
+    const ids = [...document.querySelectorAll('[id]')].map((element) => element.id)
+    return ids.filter((id, index) => ids.indexOf(id) !== index)
+  })
+  expect(repeated).toEqual([])
+})

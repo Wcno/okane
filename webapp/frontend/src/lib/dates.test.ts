@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { formatDay, todayInPanama } from './dates'
+import { formatDay, isCalendarDay, todayInPanama } from './dates'
 
 describe('calendar days', () => {
   it('is the day it is in Panama, not in UTC', () => {
@@ -23,5 +23,10 @@ describe('calendar days', () => {
   it('formats a day the way the app writes dates', () => {
     expect(formatDay('2026-11-01')).toBe('1 nov 2026')
     expect(formatDay('2026-11-16')).toBe('16 nov 2026')
+  })
+
+  it('tells a written day from anything else', () => {
+    expect(isCalendarDay('2026-11-01')).toBe(true)
+    for (const text of ['', '2026-1-1', '01/11/2026', 'hoy']) expect(isCalendarDay(text), text).toBe(false)
   })
 })

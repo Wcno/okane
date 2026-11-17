@@ -1,3 +1,4 @@
+import type { Account } from '../accounts/api'
 import { useSignedInUser } from '../auth/context'
 import { ExpenseEditor } from '../components/expenses/ExpenseEditor'
 import { OneExpenseScreen } from '../components/expenses/OneExpenseScreen'
@@ -6,7 +7,6 @@ import { ScreenHeader } from '../components/screen/Screen'
 import { updateExpense, type Expense } from '../expenses/api'
 import { expensesBack, offeredAccounts } from '../expenses/presentation'
 import { useAfterExpenseChange } from '../expenses/useAfterExpenseChange'
-import type { Account } from '../accounts/api'
 
 function EditForm({ expense, accounts }: { expense: Expense; accounts: Account[] }) {
   const { csrfToken } = useSignedInUser()
@@ -46,5 +46,9 @@ function EditForm({ expense, accounts }: { expense: Expense; accounts: Account[]
 
 /** Corrects an Expense: any field, including its Account. The Balances follow. */
 export function ExpenseEdit() {
-  return <OneExpenseScreen title="Editar gasto">{(expense, accounts) => <EditForm key={expense.id} expense={expense} accounts={accounts} />}</OneExpenseScreen>
+  return (
+    <OneExpenseScreen title="Editar gasto">
+      {(expense, accounts) => <EditForm key={expense.id} expense={expense} accounts={accounts} />}
+    </OneExpenseScreen>
+  )
 }

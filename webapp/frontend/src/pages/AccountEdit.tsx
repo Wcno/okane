@@ -142,5 +142,9 @@ function EditForm({ account }: { account: Account }) {
 
 /** Edit account: the name and, on savings, the annual rate. Never the Balance (ADR 0002). */
 export function AccountEdit() {
-  return <OneAccountScreen title="Editar cuenta">{(account) => <EditForm key={account.id} account={account} />}</OneAccountScreen>
+  return (
+    <OneAccountScreen title="Editar cuenta">
+      {(account) => <EditForm key={account.id} account={account} />}
+    </OneAccountScreen>
+  )
 }

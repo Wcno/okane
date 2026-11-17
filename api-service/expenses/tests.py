@@ -195,6 +195,14 @@ class ExpenseValidationTests(ExpenseApiTestCase):
 
         self.assertEqual(self.balance(account), "1000.00")
 
+    def test_too_many_decimals_are_not_called_too_large(self):
+        account = self.account()
+
+        response = self.register(account, amount="10.1234567890123")
+
+        self.assert_rejected(response, "amount")
+        self.assertNotIn("demasiado grande", response.json()["errors"]["amount"][0])
+
     def test_accepts_the_smallest_amount_and_a_large_one(self):
         account = self.account(opening_balance="0.00")
 
@@ -226,7 +234,10 @@ class ExpenseValidationTests(ExpenseApiTestCase):
     def test_rejects_a_date_before_the_account_started(self):
         account = self.account(opening_date="2026-11-10")
 
-        self.assert_rejected(self.register(account, date="2026-11-09"), "date")
+        response = self.register(account, date="2026-11-09")
+
+        self.assert_rejected(response, "date")
+        self.assertIn("(10 nov 2026)", response.json()["errors"]["date"][0])
         self.assertEqual(self.registered(account, date="2026-11-10")["date"], "2026-11-10")
 
     def test_accepts_today_and_a_past_date(self):
@@ -255,7 +266,7 @@ class ExpenseValidationTests(ExpenseApiTestCase):
             with self.subTest(description=description):
                 response = self.register(account, description=description)
                 self.assert_rejected(response, "description")
-                self.assertIn("descripción", response.json()["errors"]["description"][0])
+                self.assertEqual(response.json()["errors"]["description"], ["La descripción debe ser texto."])
 
     def test_rejects_an_investment_account(self):
         broker = self.account(type="investment")

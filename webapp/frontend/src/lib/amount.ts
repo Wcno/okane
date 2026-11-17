@@ -1,6 +1,9 @@
 /** The most integer digits a money field takes; api-service holds 14 digits with two decimals. */
 export const MAX_INTEGER_DIGITS = 12
 
+/** The largest amount a money field takes, as the Spanish messages say it. */
+export const MAX_AMOUNT_TEXT = '$999,999,999,999.99'
+
 export type ParsedAmount = { amount: string } | { error: 'invalid' | 'too-large' }
 
 const MINUS_SIGNS = /^[-−]/

@@ -38,7 +38,7 @@ function Confirmation({ expense, accounts }: { expense: Expense; accounts: Accou
           label: 'Eliminar gasto',
           busyLabel: 'Eliminando…',
           run: () => deleteExpense(expense.id, csrfToken),
-          onDone: () => afterChange('deleted', expense),
+          onSaved: () => afterChange('deleted', expense),
           failure: 'No pudimos eliminar el gasto. Inténtalo de nuevo.',
         }}
       />

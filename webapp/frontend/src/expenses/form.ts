@@ -1,6 +1,6 @@
 import type { Account } from '../accounts/api'
-import { parseAmount, type ParsedAmount } from '../lib/amount'
-import { formatDay, todayInPanama } from '../lib/dates'
+import { MAX_AMOUNT_TEXT, parseAmount, type ParsedAmount } from '../lib/amount'
+import { formatDay, isCalendarDay, todayInPanama } from '../lib/dates'
 import type { ExpenseErrors, ExpenseInput } from './api'
 
 /** What the form holds while the User types. */
@@ -14,7 +14,7 @@ export interface ExpenseDraft {
 
 export const DESCRIPTION_MAX_LENGTH = 140
 
-const AMOUNT_TOO_LARGE = 'El monto es demasiado grande. El máximo es $999,999,999,999.99.'
+const AMOUNT_TOO_LARGE = `El monto es demasiado grande. El máximo es ${MAX_AMOUNT_TEXT}.`
 const AMOUNT_INVALID = 'Escribe un monto mayor que cero, con dos decimales como máximo. Ejemplo: 12.50'
 const CATEGORY_REQUIRED = 'Elige la Categoría del gasto.'
 const ACCOUNT_REQUIRED = 'Elige la Cuenta de la que salió el dinero.'
@@ -22,7 +22,6 @@ const DATE_INVALID = 'Elige la fecha del gasto.'
 const DATE_IN_FUTURE = 'La fecha no puede ser futura. Elige hoy o un día anterior.'
 const DESCRIPTION_TOO_LONG = `La descripción admite hasta ${DESCRIPTION_MAX_LENGTH} caracteres.`
 
-const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/
 
 /** An Expense takes a positive amount: zero and a negative one are as invalid as text. */
 export function parseExpenseAmount(text: string): ParsedAmount {
@@ -55,7 +54,7 @@ export function validateExpense(draft: ExpenseDraft, context: { accounts: Accoun
   if ('error' in parsed) errors.amount = [parsed.error === 'too-large' ? AMOUNT_TOO_LARGE : AMOUNT_INVALID]
   if (draft.categoryId === null) errors.categoryId = [CATEGORY_REQUIRED]
   if (account === undefined) errors.accountId = [ACCOUNT_REQUIRED]
-  if (!CALENDAR_DAY.test(draft.date)) errors.date = [DATE_INVALID]
+  if (!isCalendarDay(draft.date)) errors.date = [DATE_INVALID]
   else if (draft.date > today) errors.date = [DATE_IN_FUTURE]
   else if (account !== undefined && draft.date < account.openingDate) {
     errors.date = [`La fecha no puede ser anterior al inicio del registro de la Cuenta (${formatDay(account.openingDate)}).`]

@@ -45,7 +45,7 @@ function Confirmation({ account }: { account: Account }) {
                 label: willArchive ? 'Archivar cuenta' : 'Eliminar cuenta',
                 busyLabel: willArchive ? 'Archivando…' : 'Eliminando…',
                 run: () => deleteAccount(account.id, csrfToken),
-                onDone: (removal) => {
+                onSaved: (removal) => {
                   const state: ScreenNotice = {
                     notice:
                       removal.result === 'deleted'
