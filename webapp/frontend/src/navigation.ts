@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   Calculator,
   ChartLine,
+  ChartPie,
   House,
   KeyRound,
   PiggyBank,
@@ -52,6 +53,7 @@ export const navigationGroups: NavigationGroup[] = [
     destinations: [
       { path: '/accounts', name: 'Cuentas', icon: Wallet },
       { path: '/investments/dashboard', name: 'Inversiones', icon: ChartLine },
+      { path: '/investments/positions', name: 'Posiciones', icon: ChartPie },
     ],
   },
 ]

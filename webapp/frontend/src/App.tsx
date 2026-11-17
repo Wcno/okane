@@ -19,8 +19,10 @@ import { ForgotPassword } from './pages/ForgotPassword'
 import { Login } from './pages/Login'
 import { Logout } from './pages/Logout'
 import { Menu } from './pages/Menu'
+import { Positions } from './pages/Positions'
 import { Register } from './pages/Register'
 import { ResetPassword } from './pages/ResetPassword'
+import { Trade } from './pages/Trade'
 import { UnderConstruction } from './pages/UnderConstruction'
 import { UserDelete } from './pages/UserDelete'
 
@@ -49,6 +51,9 @@ export default function App() {
             <Route path="/expenses/create" element={<ExpenseCreate />} />
             <Route path="/expenses/:id/edit" element={<ExpenseEdit />} />
             <Route path="/expenses/:id/delete" element={<ExpenseDelete />} />
+            <Route path="/investments/positions" element={<Positions />} />
+            <Route path="/investments/transactions/buy" element={<Trade kind="buy" />} />
+            <Route path="/investments/transactions/sell" element={<Trade kind="sell" />} />
             <Route path="/incomes" element={<Incomes />} />
             <Route path="/incomes/create" element={<IncomeCreate />} />
             <Route path="/incomes/:id/edit" element={<IncomeEdit />} />
