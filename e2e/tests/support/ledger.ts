@@ -192,6 +192,13 @@ export async function archiveCategory(request: APIRequestContext, categoryId: nu
   expect(response.status()).toBe(200)
 }
 
+/** Creates a personal API token; the secret is returned this once, so callers must not print it. */
+export async function createToken(request: APIRequestContext, name: string, scopes: ('finance:read' | 'movements:create')[]) {
+  const response = await send(request, 'POST', '/api/settings/tokens', { name, scopes })
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { token: { id: number }; secret: string }
+}
+
 /** The ids of the occurrences the list shows for a rule, oldest due first. */
 export async function listOccurrenceIds(request: APIRequestContext, ruleId: number) {
   const response = await request.get('/api/recurring-payments?page_size=50')
