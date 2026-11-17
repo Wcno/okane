@@ -6,17 +6,17 @@ from investments.models import InvestmentTransaction
 class InvestmentLedgerSource:
     """Lets the ledger derive Balances from purchases and sales (ADR 0002, ADR 0003)."""
 
-    def balance_changes(self, account_ids):
+    def balance_changes(self, account_ids, as_of=None):
         signed = Case(
             When(type=InvestmentTransaction.Type.BUY, then=-F("cash_amount")),
             default=F("cash_amount"),
             output_field=DecimalField(max_digits=14, decimal_places=2),
         )
+        records = InvestmentTransaction.objects.filter(account_id__in=account_ids)
+        if as_of is not None:
+            records = records.filter(date__lte=as_of)
         totals = (
-            InvestmentTransaction.objects.filter(account_id__in=account_ids)
-            .order_by()
-            .values("account_id")
-            .annotate(total=Sum(signed))
+            records.order_by().values("account_id").annotate(total=Sum(signed))
         )
         return {row["account_id"]: row["total"] for row in totals}
 

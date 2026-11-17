@@ -928,3 +928,109 @@ class ReferencePriceTests(PerformanceTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("value", response.json()["errors"])
+
+
+class PastDayAndPeriodTests(PerformanceTestCase):
+    def test_a_past_day_uses_the_cash_and_net_contribution_of_that_day(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        spending = self.account(name="Corriente", opening_balance="800.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "5", "100", date="2026-11-03")
+        self.transfer(spending, broker, "300.00", date="2026-11-10")
+
+        before = self.read("dashboard", query="?as_of=2026-11-05")
+        after = self.read("dashboard")
+
+        self.assertEqual(before["as_of"], "2026-11-05")
+        self.assertEqual(before["cash"], "500.00")
+        self.assertEqual(before["net_contribution"], "1000.00")
+        self.assertEqual(before["value"], "1000.00")
+        self.assertEqual(after["cash"], "800.00")
+        self.assertEqual(after["net_contribution"], "1300.00")
+
+    def test_an_account_that_starts_after_the_day_is_not_part_of_it(self):
+        self.investment_account(name="Vieja", opening_balance="1000.00", opening_date="2026-11-01")
+        self.investment_account(name="Nueva", opening_balance="400.00", opening_date="2026-11-10")
+
+        before = self.read("performance", query="?as_of=2026-11-05")
+
+        self.assertEqual([account["name"] for account in before["accounts"]], ["Vieja"])
+        self.assertEqual(before["net_contribution"], "1000.00")
+        self.assertEqual(before["value"], "1000.00")
+
+    def test_a_past_day_values_positions_with_the_prices_known_then(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "10", "50", date="2026-11-02")
+        self.set_price(asset, "80", date="2026-11-12")
+
+        body = self.read("performance", query="?as_of=2026-11-05")
+
+        self.assertEqual(body["positions_value"], "500.00")
+        self.assertEqual(body["return"]["amount"], "0.00")
+        self.assertEqual(body["positions"][0]["price"]["source"], "last_transaction")
+
+    def test_the_period_return_is_the_difference_between_two_cumulative_returns(self):
+        # Aporte neto $100: worth $110 at the start of the period and $115 at its close.
+        broker = self.investment_account(opening_balance="100.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "1", "100", date="2026-11-01")
+        self.set_price(asset, "110", date="2026-11-05")
+        self.set_price(asset, "115", date="2026-11-10")
+
+        body = self.read("performance", query="?from=2026-11-06")
+
+        self.assertEqual(body["return"]["amount"], "15.00")
+        self.assertEqual(
+            body["period"],
+            {
+                "from": "2026-11-06",
+                "to": "2026-11-16",
+                "opening_return": "10.00",
+                "closing_return": "15.00",
+                "return": "5.00",
+            },
+        )
+
+    def test_a_contribution_inside_the_period_is_not_return(self):
+        broker = self.investment_account(opening_balance="100.00", opening_date="2026-11-01")
+        spending = self.account(name="Corriente", opening_balance="500.00", opening_date="2026-11-01")
+        self.transfer(spending, broker, "200.00", date="2026-11-08")
+
+        body = self.read("performance", query="?from=2026-11-06")
+
+        self.assertEqual(body["net_contribution"], "300.00")
+        self.assertEqual(body["period"]["return"], "0.00")
+
+    def test_a_loss_in_the_period_is_negative(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "10", "100", date="2026-11-01")
+        self.set_price(asset, "90", date="2026-11-10")
+
+        body = self.read("performance", query="?from=2026-11-05")
+
+        self.assertEqual(body["period"]["return"], "-100.00")
+
+    def test_a_period_may_close_on_a_past_day(self):
+        broker = self.investment_account(opening_balance="100.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "1", "100", date="2026-11-01")
+        self.set_price(asset, "110", date="2026-11-05")
+        self.set_price(asset, "115", date="2026-11-10")
+
+        body = self.read("performance", query="?from=2026-11-02&as_of=2026-11-07")
+
+        self.assertEqual(body["period"]["return"], "10.00")
+
+    def test_a_bad_period_start_is_refused(self):
+        for query in ("?from=hoy", "?from=2026-11-10&as_of=2026-11-05"):
+            with self.subTest(query=query):
+                response = self.call("GET", f"/api/investments/performance{query}")
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("from", response.json()["errors"])
+
+    def test_without_a_start_there_is_no_period(self):
+        self.investment_account()
+
+        self.assertIsNone(self.read("performance")["period"])

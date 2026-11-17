@@ -1,41 +1,8 @@
-import { Minus, Plus, TrendingDown, TrendingUp } from 'lucide-react'
+import { Minus, TrendingDown, TrendingUp } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { smallSecondaryButtonClassName } from '../buttons'
 import type { Return } from '../../investments/portfolio'
 import { formatPercent, trendOf } from '../../investments/presentation'
 import { formatMoney, moneyParts } from '../../lib/money'
-
-/** Title of an investments screen with its create action at the top right, 44px tall on a phone. */
-export function InvestmentHeader({
-  title,
-  intro,
-  back,
-  action,
-}: {
-  title: string
-  intro: ReactNode
-  back?: ReactNode
-  action?: { to: string; label: string }
-}) {
-  return (
-    <header className="mb-5 lg:mb-7 lg:pr-48">
-      {back}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-[1.65rem] font-semibold leading-tight tracking-[-0.025em] lg:text-[1.95rem]">{title}</h1>
-          <p className="mt-1 max-w-[60ch] text-ink-2">{intro}</p>
-        </div>
-        {action && (
-          <Link to={action.to} className={`${smallSecondaryButtonClassName} shrink-0`}>
-            <Plus size={17} aria-hidden="true" />
-            {action.label}
-          </Link>
-        )}
-      </div>
-    </header>
-  )
-}
 
 /** The dominant figure of a screen: $ in tertiary ink, cents in secondary. Read whole by a screen reader. */
 export function HeroMoney({ amount }: { amount: string }) {
