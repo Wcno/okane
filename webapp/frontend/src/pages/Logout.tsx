@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useSession } from '../auth/context'
-import { isSignedOutState, useSignOut } from '../auth/useSignOut'
+import { isSignedOutState, isUserDeletedState, useSignOut } from '../auth/useSignOut'
 import { AuthLayout } from '../components/AuthLayout'
 import { primaryButtonClassName, secondaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
@@ -14,6 +14,22 @@ export function Logout() {
   const { user } = useSession()
   const location = useLocation()
   const { progress, signOutNow } = useSignOut()
+
+  if (!user && isUserDeletedState(location.state)) {
+    return (
+      <AuthLayout
+        title="Eliminaste tu usuario"
+        intro="Borramos tu usuario y todos tus datos financieros. Puedes registrarte de nuevo con el mismo correo."
+      >
+        <p role="status" className="sr-only">
+          Usuario eliminado.
+        </p>
+        <Link to="/register" className={primaryButtonClassName}>
+          Crear un usuario nuevo
+        </Link>
+      </AuthLayout>
+    )
+  }
 
   if (!user && isSignedOutState(location.state)) {
     return (

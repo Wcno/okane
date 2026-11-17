@@ -19,6 +19,7 @@ from django.http import HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.views.decorators.http import require_http_methods, require_POST, require_safe
 
+from gateway.erasure import erase_financial_data
 from users import recovery
 from users.models import User, normalize_email
 from users.throttling import login_limit, recovery_limit
@@ -33,6 +34,7 @@ TOO_MANY_ATTEMPTS = (
     "Hubo demasiados intentos fallidos. Por seguridad, espera hasta 15 minutos "
     "y vuelve a intentarlo."
 )
+WRONG_PASSWORD = "La contraseña no coincide. Revísala e inténtalo de nuevo."
 WRONG_CURRENT_PASSWORD = "La contraseña actual no coincide. Revísala e inténtalo de nuevo."
 TOO_MANY_REQUESTS = (
     "Hubo demasiadas solicitudes seguidas. Por seguridad, espera hasta 15 minutos "
@@ -243,6 +245,27 @@ def change_password(request):
     user.save(update_fields=["password"])
     update_session_auth_hash(request, user)
     return session_state(request)
+
+
+@require_http_methods(["DELETE"])
+def delete_me(request):
+    user = request.user
+    if not user.is_authenticated:
+        return JsonResponse({"detail": "authentication_required"}, status=401)
+    fields = read_fields(request, "password")
+    if fields is None:
+        return validation_errors({"form": [UNREADABLE_REQUEST]})
+    if not user.check_password(fields[0]):
+        return validation_errors({"password": [WRONG_PASSWORD]})
+
+    # The User stays until api-service confirms, so a failure can be retried.
+    if not erase_financial_data(user.pk):
+        return JsonResponse({"status": "unavailable", "service": "api-service"}, status=502)
+    # Deleting the User ends every one of their sessions: a session whose User
+    # no longer exists is anonymous.
+    logout(request)
+    user.delete()
+    return HttpResponse(status=204)
 
 
 def csrf_failure(request, reason=""):
