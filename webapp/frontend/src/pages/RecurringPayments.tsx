@@ -6,7 +6,7 @@ import { CategoryChip } from '../components/expenses/CategoryChip'
 import { RecordRow } from '../components/screen/RecordRow'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { offeredAccounts } from '../accounts/presentation'
-import { useExpenseRevision } from '../expenses/revision'
+import { useMovementsRevision } from '../movements/revision'
 import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
 import { useLoaded } from '../lib/useLoaded'
@@ -135,7 +135,7 @@ function Rules({ rules, accounts }: { rules: RecurringPayment[]; accounts: Accou
 
 /** The User's rules and the reservations waiting for a confirmation. */
 export function RecurringPayments() {
-  const revision = useExpenseRevision()
+  const revision = useMovementsRevision()
   const { state, retry } = useLoaded(listRecurringPayments, revision)
   const accounts = useAccounts()
   const location = useLocation()
