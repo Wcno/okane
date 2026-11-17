@@ -24,10 +24,10 @@ export interface RecordAccount {
 
 export const DESCRIPTION_MAX_LENGTH = 140
 
-const AMOUNT_TOO_LARGE = `El monto es demasiado grande. El máximo es ${MAX_AMOUNT_TEXT}.`
-const AMOUNT_INVALID = 'Escribe un monto mayor que cero, con dos decimales como máximo. Ejemplo: 12.50'
+export const AMOUNT_TOO_LARGE = `El monto es demasiado grande. El máximo es ${MAX_AMOUNT_TEXT}.`
+export const AMOUNT_INVALID = 'Escribe un monto mayor que cero, con dos decimales como máximo. Ejemplo: 12.50'
 const DATE_IN_FUTURE = 'La fecha no puede ser futura. Elige hoy o un día anterior.'
-const DESCRIPTION_TOO_LONG = `La descripción admite hasta ${DESCRIPTION_MAX_LENGTH} caracteres.`
+export const DESCRIPTION_TOO_LONG = `La descripción admite hasta ${DESCRIPTION_MAX_LENGTH} caracteres.`
 
 /** The messages that name the kind of record: whose money moved, which date. */
 export interface RecordWording {

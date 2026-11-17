@@ -16,6 +16,7 @@ const received = {
   account_id: 3,
   date: '2026-11-16',
   description: 'Supermercado',
+  recurring_payment_occurrence_id: null,
 }
 const expense = {
   id: 7,
@@ -24,6 +25,7 @@ const expense = {
   accountId: 3,
   date: '2026-11-16',
   description: 'Supermercado',
+  recurringPaymentOccurrenceId: null,
 }
 const draft = { amount: '12.50', categoryId: 2, accountId: 3, date: '2026-11-16', description: 'Supermercado' }
 
@@ -71,6 +73,12 @@ describe('listExpenses', () => {
 })
 
 describe('getExpense', () => {
+  it('knows the reservation an Expense came from', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(200, { ...received, recurring_payment_occurrence_id: 11 })))
+
+    await expect(getExpense(7)).resolves.toMatchObject({ recurringPaymentOccurrenceId: 11 })
+  })
+
   it('reads one Expense', async () => {
     const fetch = vi.fn().mockResolvedValue(json(200, received))
     vi.stubGlobal('fetch', fetch)

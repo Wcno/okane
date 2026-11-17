@@ -107,6 +107,7 @@ class RegisterExpenseTests(ExpenseApiTestCase):
                 "account_id": account["id"],
                 "date": "2026-11-16",
                 "description": "Supermercado",
+                "recurring_payment_occurrence_id": None,
             },
         )
         self.assertEqual(self.balance(account), "987.50")

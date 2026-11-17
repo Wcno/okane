@@ -6,12 +6,13 @@ from erasure.models import ErasedUser
 from expenses.models import Expense
 from incomes.models import Income
 from investments.models import InvestmentTransaction
+from recurring_payments.models import RecurringPayment, RecurringPaymentOccurrence
 from transfers.models import Transfer
 
 # Children before parents: an Account with Expenses is protected from deletion.
 # Every module that stores data per User adds its model here;
 # `ErasureCoverageTests` fails until it does.
-ERASED_MODELS = (Expense, Income, Transfer, InvestmentTransaction, Account)
+ERASED_MODELS = (RecurringPaymentOccurrence, RecurringPayment, Expense, Income, Transfer, InvestmentTransaction, Account)
 
 
 @transaction.atomic

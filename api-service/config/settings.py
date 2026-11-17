@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "health",
     "accounts",
     "expenses",
+    "recurring_payments",
     "transfers",
     "investments",
     "incomes",

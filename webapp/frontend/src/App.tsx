@@ -19,6 +19,12 @@ import { ForgotPassword } from './pages/ForgotPassword'
 import { Login } from './pages/Login'
 import { Logout } from './pages/Logout'
 import { Menu } from './pages/Menu'
+import { OccurrenceCancel } from './pages/OccurrenceCancel'
+import { OccurrenceConfirm } from './pages/OccurrenceConfirm'
+import { RecurringPaymentCreate } from './pages/RecurringPaymentCreate'
+import { RecurringPaymentDelete } from './pages/RecurringPaymentDelete'
+import { RecurringPaymentEdit } from './pages/RecurringPaymentEdit'
+import { RecurringPayments } from './pages/RecurringPayments'
 import { Positions } from './pages/Positions'
 import { Register } from './pages/Register'
 import { ResetPassword } from './pages/ResetPassword'
@@ -55,6 +61,12 @@ export default function App() {
             <Route path="/expenses/create" element={<ExpenseCreate />} />
             <Route path="/expenses/:id/edit" element={<ExpenseEdit />} />
             <Route path="/expenses/:id/delete" element={<ExpenseDelete />} />
+            <Route path="/recurring-payments" element={<RecurringPayments />} />
+            <Route path="/recurring-payments/create" element={<RecurringPaymentCreate />} />
+            <Route path="/recurring-payments/occurrences/:id/confirm" element={<OccurrenceConfirm />} />
+            <Route path="/recurring-payments/occurrences/:id/cancel" element={<OccurrenceCancel />} />
+            <Route path="/recurring-payments/:id/edit" element={<RecurringPaymentEdit />} />
+            <Route path="/recurring-payments/:id/delete" element={<RecurringPaymentDelete />} />
             <Route path="/transfers" element={<Transfers />} />
             <Route path="/transfers/create" element={<TransferCreate />} />
             <Route path="/transfers/:id/edit" element={<TransferEdit />} />
