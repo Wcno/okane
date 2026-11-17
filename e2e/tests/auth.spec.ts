@@ -29,7 +29,7 @@ test('a visitor is sent to login and comes back after registering', async ({ pag
   await page.getByRole('button', { name: 'Crear usuario' }).click()
 
   await expect(page).toHaveURL(/\/budgets$/)
-  await expect(page.getByRole('heading', { name: 'Presupuestos' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Presupuestos', level: 1 })).toBeVisible()
   await expectScreenQuality(page, 'auth-budgets-under-construction')
 })
 
