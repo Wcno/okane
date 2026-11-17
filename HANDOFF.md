@@ -18,7 +18,7 @@ Partners are not on any of these tickets (confirmed by the user 2026-11-16).
 - Each PR passes CI, `ui-qa`, the two-axis `mattpocock-skills:code-review` and the orchestrator's diff read before the next ticket stacks on it.
 - The user's main concern is the UI; they trust the backend.
   The user dropped the #8 pause on 2026-11-16: run the whole stack through every gate, then stop once for the user's final UI review.
-- Superseded: this run's instructions say Sonnet on every worker spawn, so #15 uses Sonnet. Earlier trial idea: build #15 with `model: "haiku"` on the `ticket-worker` spawn. All gates stay the same.
+- Model split (user, 2026-11-16): Sonnet builds tickets, does UI rework, runs `ui-qa` and the standards review axis; Haiku takes mechanical fixes after a red gate, restacks and the spec review axis. Earlier trial idea: build #15 with `model: "haiku"` on the `ticket-worker` spawn. All gates stay the same.
   If #15 clears in 1-2 rounds, try Haiku on #9 too; #17 stays on Sonnet. If #15 goes red 3 times at the same gate, switch #15 to Sonnet and tell the user.
 - Workers stop and report before editing `docs/contratos.md`, `docs/spec.md`, `docs/matrices.md` or adding an endpoint missing from `docs/matrices.md`.
 
