@@ -189,7 +189,7 @@ El navegador y los clientes externos solo se comunican con `webapp`, que autenti
 | Restablecer contraseña | Sí | `POST /auth/reset-password` | `users` | webapp, webapp-db | A5 |
 | Cambiar contraseña | Sí | `PUT /auth/password` | `users` | webapp, webapp-db | A5 |
 | Cerrar sesión | Sí | `POST /auth/logout` | `sessions` | webapp, webapp-db | A5 |
-| Eliminar usuario | Sí | `DELETE /users/me` | `users` | webapp, webapp-db | A5 |
+| Eliminar usuario | Sí | `DELETE /users/me`; interno: `DELETE /internal/users/me` | `users` y los datos financieros del Usuario | webapp, webapp-db, api-service, api-db | A5 |
 
 Las pantallas de esta sección consultan además `GET /auth/session`, que no es un caso de uso propio.
 Devuelve quién inició sesión (o `null` si nadie) y el token CSRF que el navegador envía en cada escritura, porque la cookie CSRF es HttpOnly.
@@ -199,7 +199,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar cuentas | Sí | `GET /api/accounts` | `accounts` | api-service, api-db | A5 |
+| Consultar cuentas | Sí | `GET /api/accounts` | `accounts`, `transfers` | api-service, api-db | A5 |
 | Crear cuenta | Sí | `POST /api/accounts` | `accounts` | api-service, api-db | A5 |
 | Editar cuenta | Sí | `PUT /api/accounts/{id}` | `accounts` | api-service, api-db | A5 |
 | Eliminar cuenta | Sí | `DELETE /api/accounts/{id}` | `accounts` | api-service, api-db | A5 |
@@ -245,7 +245,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar transferencias | Sí | `GET /api/transfers` | `transfers` | api-service, api-db | N2 |
+| Consultar transferencias | Sí | `GET /api/transfers`, `GET /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |
 | Registrar transferencia | Sí | `POST /api/transfers` | `transfers` | api-service, api-db | N2 |
 | Editar transferencia | Sí | `PUT /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |
 | Eliminar transferencia | Sí | `DELETE /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |

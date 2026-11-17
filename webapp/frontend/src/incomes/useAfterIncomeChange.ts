@@ -13,6 +13,6 @@ export const useAfterIncomeChange = () =>
   useAfterRecordChange<Pick<Income, 'amount' | 'accountId'>, Account>({
     listPath: '/incomes',
     announce: announceIncomeRevision,
-    loadAccount: currentAccount,
-    notice: savedIncomeNotice,
+    loadAccounts: async (income) => [await currentAccount(income.accountId)],
+    notice: (change, income, [account]) => savedIncomeNotice(change, income, account),
   })
