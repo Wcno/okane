@@ -81,7 +81,6 @@ function Sidebar() {
           iconSize={18}
           className="flex h-10 w-full items-center gap-3 rounded-xl px-2 text-left text-[0.95rem] font-medium text-ink-2 transition-colors duration-150 hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink disabled:opacity-70"
         />
-        <p className="px-2 text-[0.8rem] leading-snug text-ink-3">Estás viendo datos de ejemplo.</p>
       </div>
     </aside>
   )

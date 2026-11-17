@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import { initialState } from '../data/sample'
 import { DataContext } from './context'
 
 export function DataProvider({ children }: { children: ReactNode }) {
@@ -12,7 +11,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const closeForm = useCallback(() => setIsFormOpen(false), [])
 
   const value = useMemo(
-    () => ({ state: initialState, notice, announce, dismissNotice, isFormOpen, openForm, closeForm }),
+    () => ({ notice, announce, dismissNotice, isFormOpen, openForm, closeForm }),
     [notice, announce, dismissNotice, isFormOpen, openForm, closeForm],
   )
 
