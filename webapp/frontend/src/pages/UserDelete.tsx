@@ -7,7 +7,7 @@ import { USER_DELETED } from '../auth/useSignOut'
 import { TextField } from '../components/TextField'
 import { ConfirmCard, RecordSummary } from '../components/screen/ConfirmCard'
 import { ScreenHeader } from '../components/screen/Screen'
-import { useFieldErrors } from '../lib/fieldErrors'
+import { useFieldErrors } from '../lib/useFieldErrors'
 import type { Outcome } from '../lib/http'
 
 const PASSWORD_REQUIRED = 'Escribe tu contraseña para confirmar.'
