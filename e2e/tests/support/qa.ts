@@ -56,29 +56,11 @@ export const test = base.extend<QaFixtures>({
 export { expect }
 
 /**
- * Known axe problems of screens that exist today, to skip until the app fixes them.
- * Delete an entry, and its use in the specs, with the fix.
- */
-export const knownAxeRules = {
-  // The large balance figure is a <p aria-label>; a paragraph has no role that allows a label.
-  // AvailableCard (dashboard) and Total (accounts list) both do it. Fix: a visually hidden text in place of the label.
-  balanceFigureLabel: ['aria-prohibited-attr'],
-  // A record row (Expense, Account) is a link whose aria-label starts with "Editar ...", not with the visible text (WCAG 2.5.3, label in name).
-  // Fix: start the label with the visible title, or drop the label for the visible text plus a hidden hint.
-  recordRowLabel: ['label-content-name-mismatch'],
-}
-
-interface ScreenQualityOptions {
-  /** Axe rules to skip on this screen. Each entry needs a comment naming the known problem. */
-  skipAxeRules?: string[]
-}
-
-/**
  * The quality bar of one screen state: no horizontal overflow, no serious or
  * critical axe violation, and a full-page screenshot in qa-screenshots/<project>/
  * for the screenshot-qa review. Call it once per distinct state; the name is the file name.
  */
-export async function expectScreenQuality(page: Page, name: string, options: ScreenQualityOptions = {}) {
+export async function expectScreenQuality(page: Page, name: string) {
   const project = test.info().project.name
   await mkdir(`${screenshotsDirectory}${project}`, { recursive: true })
   await page.screenshot({ path: `${screenshotsDirectory}${project}/${name}.png`, fullPage: true, animations: 'disabled' })
@@ -86,7 +68,7 @@ export async function expectScreenQuality(page: Page, name: string, options: Scr
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow, `${name} scrolls horizontally`).toBeLessThanOrEqual(0)
 
-  const { violations } = await new AxeBuilder({ page }).disableRules(options.skipAxeRules ?? []).analyze()
+  const { violations } = await new AxeBuilder({ page }).analyze()
   const blocking = violations
     .filter((violation) => violation.impact === 'serious' || violation.impact === 'critical')
     .map((violation) => ({

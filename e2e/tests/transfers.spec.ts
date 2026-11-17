@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { expect, expectScreenQuality, knownAxeRules, test } from './support/qa.js'
+import { expect, expectScreenQuality, test } from './support/qa.js'
 import { archiveAccount, createAccount, createTransfer } from './support/ledger.js'
 import { signUp } from './support/session.js'
 
@@ -18,8 +18,11 @@ const submitButton = (page: Page, name = 'Registrar transferencia') =>
 const accountRow = (page: Page, name: string) => page.getByRole('listitem').filter({ hasText: name })
 
 /** The row of a Transfer in the list: one link to its edit screen. */
+/** The header action of a list: its short label on a phone, which the accessible name must start with. */
+const headerAction = (page: Page) => page.getByRole('main').getByRole('link', { name: /Registrar transferencia|Nueva/ })
+
 const transferRow = (page: Page, title: string) =>
-  page.getByRole('link', { name: new RegExp(`^Editar transferencia .*${title}`) })
+  page.getByRole('link', { name: new RegExp(`^${title}.*\\. Editar transferencia$`) })
 
 const panamaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Panama' }).format(new Date())
 
@@ -56,10 +59,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
     )
     await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
     await expect(transferRow(page, 'Ahorro de noviembre')).toBeVisible()
-    await expectScreenQuality(page, `transfers-list-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
+    await expectScreenQuality(page, `transfers-list-${colorScheme}`)
 
     // The list keeps its create action once it has records.
-    await page.getByRole('link', { name: 'Registrar transferencia' }).click()
+    await headerAction(page).click()
     await expect(page).toHaveURL(/\/transfers\/create$/)
     await page.goBack()
     await expect(transferRow(page, 'Ahorro de noviembre')).toBeVisible()
@@ -110,8 +113,8 @@ test('a Transfer into an investment Account is an Aporte', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: 'Registraste' })).toContainText(
     'Registraste un aporte de $400.00 de Cuenta corriente a Bróker.',
   )
-  await expect(transferRow(page, 'de Cuenta corriente a Bróker')).toContainText('Aporte')
-  await expectScreenQuality(page, 'transfers-list-contribution', { skipAxeRules: knownAxeRules.recordRowLabel })
+  await expect(transferRow(page, 'Cuenta corriente → Bróker')).toContainText('Aporte')
+  await expectScreenQuality(page, 'transfers-list-contribution')
 })
 
 test('registering shows what is wrong, keeps the typed values and clears each error on change', async ({
@@ -251,7 +254,7 @@ test('the list shows loading, explains a failure and recovers on retry', async (
   await expectScreenQuality(page, 'transfers-list-failed')
   await page.getByRole('button', { name: 'Reintentar' }).click()
   await expect(transferRow(page, 'Renta')).toBeVisible()
-  await expectScreenQuality(page, 'transfers-list-recovered', { skipAxeRules: knownAxeRules.recordRowLabel })
+  await expectScreenQuality(page, 'transfers-list-recovered')
 })
 
 test('a save that fails offline is explained and can be repeated', async ({ page, expectedProblems }) => {
@@ -319,11 +322,32 @@ test('the list shows the next page on request and keeps day headings', async ({ 
   await expect(page.locator('a[id^=transfer-]').nth(50)).toBeFocused()
   await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'mar 10 nov' })).toBeVisible()
-  await expectScreenQuality(page, 'transfers-list-all-pages', { skipAxeRules: knownAxeRules.recordRowLabel })
+  await expectScreenQuality(page, 'transfers-list-all-pages')
 })
 
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } })
+
+  test('the list heading is not clipped by the short action', async ({ page }) => {
+    await signUp(page.request)
+    const source = await createAccount(page.request, { name: 'Cuenta corriente del hogar' })
+    const destination = await createAccount(page.request, { name: 'Ahorro', type: 'savings' })
+    await createTransfer(page.request, {
+      source_account_id: source.id,
+      destination_account_id: destination.id,
+      amount: '250.00',
+      description: 'Ahorro de noviembre',
+    })
+
+    await page.goto('/transfers')
+    const heading = page.getByRole('heading', { level: 1, name: 'Transferencias' })
+    await expect(heading).toBeVisible()
+    const clipped = await heading.evaluate((title) => title.scrollWidth > title.clientWidth)
+    expect(clipped).toBe(false)
+    const action = headerAction(page)
+    await expect(action.getByText('Nueva')).toBeVisible()
+    expect(await fitsInViewport(action, 844)).toBe(true)
+  })
 
   test('the main action is visible without scrolling and every control is at least 44px tall', async ({ page }) => {
     await signUp(page.request)
@@ -347,13 +371,13 @@ test.describe('on a phone', () => {
     // A row is one link with the whole description and route, and nothing else to tap.
     const row = transferRow(page, 'Ahorro de la quincena larga')
     await expect(row).toContainText('Cuenta corriente del hogar → Ahorro')
-    await expect(row).toHaveAttribute('aria-label', /^Editar transferencia de Cuenta corriente del hogar a Ahorro, \$1,234\.50/)
+    await expect(row).toHaveAccessibleName(/^Ahorro de la quincena larga .*\$1,234\.50 \. Editar transferencia$/)
     expect((await row.boundingBox())?.height).toBeGreaterThanOrEqual(44)
     const clipped = await row.evaluate((link) =>
-      [...link.querySelectorAll('span')].some((span) => span.scrollWidth > span.clientWidth + 1),
+      [...link.querySelectorAll('span:not(.sr-only)')].some((span) => span.scrollWidth > span.clientWidth + 1),
     )
     expect(clipped).toBe(false)
-    expect((await page.getByRole('link', { name: 'Registrar transferencia' }).boundingBox())?.height).toBeGreaterThanOrEqual(44)
+    expect((await headerAction(page).boundingBox())?.height).toBeGreaterThanOrEqual(44)
     expect(await noOverflow(page)).toBe(true)
 
     await row.click()

@@ -1,7 +1,7 @@
 import type { Account } from '../../accounts/api'
 import type { TransferErrors } from '../../transfers/api'
 import type { TransferDraft } from '../../transfers/form'
-import { accountOptionLabel, isContribution } from '../../transfers/presentation'
+import { accountOptionLabel, isContribution, startOfRecords } from '../../transfers/presentation'
 import { AccountField, AmountField, DateField, DescriptionField, FieldError } from '../record/RecordFields'
 
 /** The fields of a Transfer: amount, the two Accounts, date and description. */
@@ -25,11 +25,6 @@ export function TransferFields({
   const id = (name: string) => `${idPrefix}-${name}`
   const shared = { idPrefix, draft, onChange, errors }
   const destination = accounts.find((account) => account.id === draft.destinationAccountId)
-  const startOfRecords = [draft.sourceAccountId, draft.destinationAccountId]
-    .map((accountId) => accounts.find((account) => account.id === accountId)?.openingDate)
-    .filter((day): day is string => day !== undefined)
-    .sort()
-    .at(-1)
 
   return (
     <>
@@ -70,7 +65,7 @@ export function TransferFields({
         {accountNote && <p className="-mt-1 text-[0.87rem] text-ink-3">{accountNote}</p>}
       </div>
 
-      <DateField {...shared} min={startOfRecords} />
+      <DateField {...shared} min={startOfRecords(accounts, [draft.sourceAccountId, draft.destinationAccountId])} />
       <FieldError id={id('date-error')} errors={errors.date} />
 
       <DescriptionField {...shared} placeholder="Ahorro de noviembre, aporte al bróker" />

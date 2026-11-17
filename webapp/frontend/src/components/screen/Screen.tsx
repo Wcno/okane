@@ -41,14 +41,8 @@ export function ScreenHeader({
         {action && (
           <Link to={action.to} className={primaryActionClassName}>
             <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
-            {action.shortLabel ? (
-              <>
-                <span className="sm:hidden">{action.shortLabel}</span>
-                <span className="hidden sm:inline">{action.label}</span>
-              </>
-            ) : (
-              action.label
-            )}
+            <span className="sm:hidden">{action.shortLabel ?? action.label}</span>
+            <span className="hidden sm:inline">{action.label}</span>
           </Link>
         )}
       </div>
