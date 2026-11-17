@@ -240,12 +240,23 @@ class ExpenseValidationTests(ExpenseApiTestCase):
 
         self.assertEqual(self.balance(account), "-1000000000000.00")
 
-    def test_rejects_a_category_that_is_not_the_users(self):
+    def test_rejects_a_category_that_is_not_a_category_id(self):
         account = self.account()
 
-        for category in (0, 99999, -1, "2", 2.0, True, None, "Alimentación"):
+        for category in ("2", 2.0, True, None, "Alimentación"):
             with self.subTest(category=category):
                 self.assert_rejected(self.register(account, category_id=category), "category_id")
+
+    def test_a_category_of_another_user_or_unknown_answers_not_found(self):
+        account = self.account()
+        theirs = self.initial_category("food", user=2)
+
+        for category in (theirs, 0, 99999, -1):
+            with self.subTest(category=category):
+                response = self.register(account, category_id=category)
+                self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.json(), {"detail": "not_found"})
+        self.assertEqual(self.call("GET", "/api/expenses").json()["total"], 0)
 
     def test_accepts_each_of_the_eight_categories(self):
         account = self.account()
@@ -620,7 +631,7 @@ class EditExpenseTests(ExpenseApiTestCase):
         expense = self.registered(account, amount="100.00")
 
         self.assert_rejected(self.put(expense, amount="0"), "amount")
-        self.assert_rejected(self.put(expense, category_id=99999), "category_id")
+        self.assertEqual(self.put(expense, category_id=99999).status_code, 404)
 
         self.assertEqual(self.call("GET", f"/api/expenses/{expense['id']}").json(), expense)
         self.assertEqual(self.balance(account), "900.00")

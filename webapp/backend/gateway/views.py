@@ -2,8 +2,7 @@ import httpx
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 
-SERVICE_KEY_HEADER = "X-Okane-Service-Key"
-USER_ID_HEADER = "X-Okane-User-Id"
+from gateway.upstream import api_service, service_headers
 
 # The forwarded request is built from scratch: only these client headers are
 # copied, so cookies, tokens and forged service identities never reach
@@ -15,8 +14,6 @@ PUBLIC_PATHS = frozenset({"/api/health"})
 # The public API authenticates personal tokens (#32); a session cookie never
 # substitutes for one.
 TOKEN_API = "/api/v1"
-
-api_service = httpx.Client(timeout=10)
 
 
 def authentication_required():
@@ -35,12 +32,13 @@ def forward(request):
         for name in FORWARDED_REQUEST_HEADERS
         if name in request.headers
     }
-    headers[SERVICE_KEY_HEADER] = settings.INTERNAL_SERVICE_KEY
+    user_id = None
     if request.path not in PUBLIC_PATHS:
         is_token_api = request.path == TOKEN_API or request.path.startswith(TOKEN_API + "/")
         if is_token_api or not request.user.is_authenticated:
             return authentication_required()
-        headers[USER_ID_HEADER] = str(request.user.pk)
+        user_id = request.user.pk
+    headers = service_headers(headers, user_id)
 
     # get_full_path keeps the query string exactly as the client sent it.
     url = settings.API_SERVICE_URL + request.get_full_path()

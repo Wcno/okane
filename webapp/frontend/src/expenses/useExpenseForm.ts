@@ -22,6 +22,7 @@ export function useExpenseForm({
       const checked = validateExpense(draft, { accounts })
       return checked.ok ? { ok: true, value: checked.expense } : checked
     },
+    dateDependsOn: ['accountId'],
     save,
     onSaved,
   })

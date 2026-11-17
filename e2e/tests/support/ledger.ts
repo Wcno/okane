@@ -5,6 +5,8 @@ interface AccountFields {
   type?: 'spending' | 'savings' | 'investment'
   opening_balance?: string
   opening_date?: string
+  /** A ratio: 4.25% is "0.0425". Only a savings Account takes one. */
+  annual_interest_rate?: string
 }
 
 async function csrfToken(request: APIRequestContext) {
@@ -25,7 +27,7 @@ export async function categoryIdOf(request: APIRequestContext, key: InitialCateg
   return found!.id
 }
 
-async function send(request: APIRequestContext, method: 'POST' | 'DELETE', path: string, data?: unknown) {
+async function send(request: APIRequestContext, method: 'POST' | 'PUT' | 'DELETE', path: string, data?: unknown) {
   return request.fetch(path, {
     method,
     data,
@@ -89,10 +91,60 @@ export async function createIncome(request: APIRequestContext, fields: IncomeFie
   return (await response.json()) as { id: number }
 }
 
+interface TransferFields {
+  source_account_id: number
+  destination_account_id: number
+  amount?: string
+  date?: string
+  description?: string
+}
+
+export async function createTransfer(request: APIRequestContext, fields: TransferFields) {
+  const response = await send(request, 'POST', '/api/transfers', { amount: '100.00', ...fields })
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number }
+}
+
 /** Archives an Account that has records, as deleting it in the screen does. */
 export async function archiveAccount(request: APIRequestContext, accountId: number) {
   const response = await send(request, 'DELETE', `/api/accounts/${accountId}`)
   expect(response.status()).toBe(200)
+}
+
+/** The first Asset the search finds for a query; the stack serves the sample catalog. */
+export async function findAsset(request: APIRequestContext, query: string, market?: string) {
+  const response = await request.get(`/api/investments/assets/search?q=${encodeURIComponent(query)}`)
+  expect(response.status()).toBe(200)
+  const { results } = (await response.json()) as { results: { id: number; market: string }[] }
+  const asset = results.find((item) => market === undefined || item.market === market)
+  expect(asset, `no ${query} in the catalog`).toBeTruthy()
+  return asset!
+}
+
+interface TradeFields {
+  account_id: number
+  asset_id: number
+  units: string
+  unit_price: string
+  commission?: string
+  date?: string
+}
+
+interface DividendFields {
+  account_id: number
+  asset_id: number
+  amount: string
+  date?: string
+}
+
+export async function recordTrade(
+  request: APIRequestContext,
+  kind: 'buy' | 'sell' | 'dividend',
+  fields: TradeFields | DividendFields,
+) {
+  const response = await send(request, 'POST', `/api/investments/transactions/${kind}`, fields)
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number }
 }
 
 interface RecurringPaymentFields {
@@ -121,6 +173,12 @@ export async function createRecurringPayment(
   return (await response.json()) as { id: number }
 }
 
+/** Sets the User's own Reference Price of an Asset for a day, as the price screen does. */
+export async function setReferencePrice(request: APIRequestContext, assetId: number, value: string, date?: string) {
+  const response = await send(request, 'PUT', `/api/investments/assets/${assetId}/price`, { value, date })
+  expect(response.status()).toBe(200)
+}
+
 /** Creates one of the User's own Categories. */
 export async function createCategory(request: APIRequestContext, name: string) {
   const response = await send(request, 'POST', '/api/categories', { name })
@@ -134,6 +192,13 @@ export async function archiveCategory(request: APIRequestContext, categoryId: nu
   expect(response.status()).toBe(200)
 }
 
+/** Creates a personal API token; the secret is returned this once, so callers must not print it. */
+export async function createToken(request: APIRequestContext, name: string, scopes: ('finance:read' | 'movements:create')[]) {
+  const response = await send(request, 'POST', '/api/settings/tokens', { name, scopes })
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { token: { id: number }; secret: string }
+}
+
 /** The ids of the occurrences the list shows for a rule, oldest due first. */
 export async function listOccurrenceIds(request: APIRequestContext, ruleId: number) {
   const response = await request.get('/api/recurring-payments?page_size=50')
@@ -145,8 +210,50 @@ export async function listOccurrenceIds(request: APIRequestContext, ruleId: numb
   return [...(rule?.occurrences ?? [])].sort((a, b) => a.due_date.localeCompare(b.due_date)).map(({ id }) => id)
 }
 
+export interface PreferenceFields {
+  movement_type: string | null
+  account_id: number | null
+  period: 'current_month' | 'all' | 'custom'
+  from: string | null
+  to: string | null
+  grouping: 'date' | 'type'
+  visible_sections: string[]
+}
+
+export const ALL_SECTIONS = ['available', 'budgets', 'net_worth', 'upcoming', 'accounts']
+
+/** What a User who never opened the settings screen has. */
+export const INITIAL_PREFERENCES: PreferenceFields = {
+  movement_type: null,
+  account_id: null,
+  period: 'current_month',
+  from: null,
+  to: null,
+  grouping: 'date',
+  visible_sections: ALL_SECTIONS,
+}
+
+/** Saves preferences as the settings screen does; the fields not given keep their initial value. */
+export async function savePreferences(request: APIRequestContext, fields: Partial<PreferenceFields> = {}) {
+  const response = await send(request, 'PUT', '/api/settings/preferences', { ...INITIAL_PREFERENCES, ...fields })
+  expect(response.status()).toBe(200)
+}
+
 /** Cancels an occurrence behind the screen's back, as another tab would. */
 export async function cancelOccurrence(request: APIRequestContext, occurrenceId: number) {
   const response = await send(request, 'POST', `/api/recurring-payments/occurrences/${occurrenceId}/cancel`)
   expect(response.status()).toBe(200)
+}
+
+interface DividendFields {
+  account_id: number
+  asset_id: number
+  amount: string
+  date?: string
+}
+
+export async function recordDividend(request: APIRequestContext, fields: DividendFields) {
+  const response = await send(request, 'POST', '/api/investments/transactions/dividend', fields)
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number }
 }

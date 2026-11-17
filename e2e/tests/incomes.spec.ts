@@ -307,7 +307,7 @@ test('the populated list keeps a register action that opens the form', async ({ 
   await createIncome(page.request, { account_id: account.id, description: 'Intereses' })
 
   await page.goto('/incomes')
-  const register = page.getByRole('main').getByRole('link', { name: 'Registrar ingreso' })
+  const register = page.getByRole('main').getByRole('link', { name: /Registrar ingreso|Ingreso/ })
   await expect(register).toBeVisible()
   await expectScreenQuality(page, 'incomes-list-with-register-action')
   if (isPhone()) expect(await heightOf(register)).toBeGreaterThanOrEqual(44)

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { changePassword, fetchSession, requestPasswordReset, resetPassword, submitCredentials } from './api'
+import { changePassword, deleteUser, fetchSession, requestPasswordReset, resetPassword, submitCredentials } from './api'
 
 function answer(status: number, body?: unknown, headers: Record<string, string> = {}) {
   return vi.fn().mockResolvedValue(
@@ -163,5 +163,39 @@ describe('changePassword', () => {
       ok: false,
       errors: { form: ['Tu sesión se cerró. Inicia sesión de nuevo para cambiar tu contraseña.'] },
     })
+  })
+})
+
+describe('deleteUser', () => {
+  it('sends the password with the CSRF token and resolves when the User is gone', async () => {
+    const fetch = answer(204)
+    vi.stubGlobal('fetch', fetch)
+
+    await expect(deleteUser('correct-horse-battery', 't1')).resolves.toMatchObject({ ok: true })
+
+    const [url, init] = fetch.mock.calls[0]
+    expect(url).toBe('/users/me')
+    expect(init.method).toBe('DELETE')
+    expect(init.headers['X-CSRFToken']).toBe('t1')
+    expect(JSON.parse(init.body)).toEqual({ password: 'correct-horse-battery' })
+  })
+
+  it('returns a wrong password as an error of the password field', async () => {
+    vi.stubGlobal('fetch', answer(400, { errors: { password: ['La contraseña no coincide.'] } }))
+
+    await expect(deleteUser('wrong', 't1')).resolves.toEqual({
+      ok: false,
+      sessionEnded: false,
+      errors: { password: ['La contraseña no coincide.'] },
+    })
+  })
+
+  it('says that nothing was deleted when api-service does not respond', async () => {
+    vi.stubGlobal('fetch', answer(502, { status: 'unavailable', service: 'api-service' }))
+
+    const outcome = await deleteUser('correct-horse-battery', 't1')
+
+    expect(outcome).toMatchObject({ ok: false, sessionEnded: false })
+    expect(outcome.ok ? [] : outcome.errors.form).toEqual([expect.stringContaining('No se eliminó nada')])
   })
 })

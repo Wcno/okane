@@ -5,6 +5,7 @@ from unittest import mock
 from django.db import connection
 from django.test import Client, TransactionTestCase, override_settings, tag
 
+from budgets.models import Budget
 from categories.models import Category
 from categories.provisioning import ensure_initial_catalog
 from expenses.tests import TODAY
@@ -110,13 +111,23 @@ class BudgetCrudTests(BudgetApiTestCase):
     def test_rejects_invalid_fields(self):
         cases = {
             "amount": [{"amount": "0"}, {"amount": "-5.00"}, {"amount": 300}, {"amount": "1.234"}],
-            "category_id": [{"category_id": 99}, {"category_id": "2"}, {"category_id": None}],
+            "category_id": [{"category_id": "2"}, {"category_id": None}],
             "month": [{"month": "2026-13"}, {"month": "2026-11-01"}, {"month": "0000-01"}],
         }
         for field, bodies in cases.items():
             for override in bodies:
                 with self.subTest(override):
                     self.assert_rejected(self.create_budget(**override), field)
+
+    def test_another_users_category_answers_not_found_before_other_fields(self):
+        theirs = self.initial_category("food", user=2)
+        response = self.call(
+            "POST", BUDGETS, {"amount": "0", "category_id": theirs, "month": "2026-13"}
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "not_found"})
+        self.assertFalse(Budget.objects.exists())
 
     def test_rejects_a_missing_field(self):
         for field in ("amount", "category_id", "month"):

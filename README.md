@@ -16,16 +16,15 @@ Tecnológica de Panamá, group 1M321.
 **The team approved the plan on 2026-11-15. The first ticket, the container
 skeleton ([#4](https://github.com/Wcno/okane/issues/4)), is implemented.**
 One command starts the four containers: `webapp` serves the frontend
-demonstration and forwards `/api/*` to `api-service`. The screens still use
-in-memory sample data that resets on refresh; there are no users or financial
-records yet.
+demonstration and forwards `/api/*` to `api-service`. The Panel reads its
+figures from `GET /api/dashboard`; no screen uses sample data.
 
 | Area | Status |
 |---|---|
 | Product, domain glossary, use-case matrices and design system | Documented |
 | Specification, contracts and ADRs 0001 to 0005 | Approved |
 | 25 implementation tickets (#4–#25, #30–#32) | Approved, labeled `ready-for-agent`; #4 implemented |
-| Frontend demonstration | Available with sample data |
+| Frontend | The Panel reads the API; no screen uses sample data |
 | Four containers with Docker Compose | Available: health checks and `/api/*` forwarding |
 | Authentication, accounts and the other features | Not implemented |
 | Tests | Frontend units, HTTP tests of both services, smoke test of the stack |

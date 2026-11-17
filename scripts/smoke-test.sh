@@ -74,7 +74,7 @@ pass "the built assets are served"
 [ "$(status_of "$base/api/accounts")" = "401" ] || fail "/api/accounts without a session should answer 401"
 pass "financial calls without a session answer 401"
 
-for route in /auth/unknown /api/../health /assets/missing.js; do
+for route in /auth/unknown /internal/users/me /api/../internal/users/me /api/../health /assets/missing.js; do
   [ "$(status_of "$base$route")" = "404" ] || fail "$route should answer 404"
   page=$(curl -s --path-as-is "$base$route")
   if contains "$page" 'id="root"'; then
