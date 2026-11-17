@@ -18,6 +18,8 @@ Partners are not on any of these tickets (confirmed by the user 2026-11-16).
 - Each PR passes CI, `ui-qa`, the two-axis `mattpocock-skills:code-review` and the orchestrator's diff read before the next ticket stacks on it.
 - The user's main concern is the UI; they trust the backend.
   Pause after #8 for the user's UI sign-off, since #15, #17 and #9 reuse its list and form patterns.
+- Model trial, decided by the user on 2026-11-16: build #15 with `model: "haiku"` on the `ticket-worker` spawn. All gates stay the same.
+  If #15 clears in 1-2 rounds, try Haiku on #9 too; #17 stays on Sonnet. If #15 goes red 3 times at the same gate, switch #15 to Sonnet and tell the user.
 - Workers stop and report before editing `docs/contratos.md`, `docs/spec.md`, `docs/matrices.md` or adding an endpoint missing from `docs/matrices.md`.
 
 ## Decisions for #8 (user, 2026-11-16)
