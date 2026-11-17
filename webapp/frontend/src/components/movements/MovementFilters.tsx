@@ -3,7 +3,7 @@ import { MOVEMENT_TYPES, isMovementType, type MovementFilter } from '../../movem
 import { movementTypeFilterNames } from '../../movements/presentation'
 import { smallSecondaryButtonClassName } from '../buttons'
 import { TextField } from '../TextField'
-import { borderClassName, fieldClassName } from '../record/RecordFields'
+import { borderClassName, fieldClassName } from '../record/fieldStyles'
 import { cardClassName } from '../screen/Screen'
 
 export const PERIOD_REVERSED = 'El período no puede terminar antes de empezar.'

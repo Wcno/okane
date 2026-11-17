@@ -60,6 +60,8 @@ function toMovement(body: MovementBody): Movement {
       accountId: body.account_id,
       categoryId: body.category_id ?? 0,
       description: body.description,
+      // The feed does not say which reservation an Expense confirmed; its own screen does.
+      recurringPaymentOccurrenceId: null,
     }
     return { type, id, date, record }
   }
