@@ -32,7 +32,7 @@ Partners are not on any of these tickets (confirmed by the user 2026-11-16).
 
 | Ticket | Base | Branch / PR | Status |
 |---|---|---|---|
-| #8 Gastos | `main` | pending | worker building |
+| #8 Gastos | `main` | `feat/8-expenses-fixed-categories`, PR #47 (draft) | round 1: CI pass, review requested changes, browser QA blocked (no Chrome) |
 | #15 Ingresos | #8 | - | waits for #8 sign-off |
 | #17 Pagos recurrentes | #15 | - | waits |
 | #9 Presupuestos | #17 | - | waits |
@@ -52,4 +52,10 @@ No other PR is open.
 
 ## Next step
 
-Gate #8 when its worker reports, then rebuild the port 8000 stack from its branch for the user's UI review.
+1. PR #47 round 1 findings are in its comment "Gate results, round 1". A Sonnet worker was applying them on the branch, pushing after each item.
+   Check `git log origin/feat/8-expenses-fixed-categories` for what landed; if items remain and the worker is gone, spawn a fresh `ticket-worker` (`model: "sonnet"`, `isolation: "worktree"`) with: "Apply the open items of the 'Gate results, round 1' comment on PR #47, on branch feat/8-expenses-fixed-categories."
+2. The user restarted the session to connect Claude in Chrome. Run `ui-qa` (gate b) on PR #47 against a running stack of the branch.
+   The worker stack was on http://localhost:8001 (project `okane-feat-8-expenses`, worktree `.claude/worktrees/feat-8-expenses`); if it is gone, run `bash scripts/worktree-stack.sh` and `docker compose up --build --detach --wait` in that worktree.
+   Ask `ui-qa` whether the populated list needs its own "Nuevo gasto" button (the worker removed it because the shell has "Registrar gasto").
+3. Rerun CI and read the delta yourself, comment gate results, `gh pr ready 47`.
+4. Rebuild port 8000 from the PR branch (`docker compose up --build --detach --wait`, `scripts/smoke-test.sh`) and stop for the user's UI sign-off before #15.
