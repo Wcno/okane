@@ -74,7 +74,7 @@ const OCCURRENCE_GONE = 'Esta reserva ya no existe. Vuelve a tus pagos recurrent
 
 const PAGE_SIZE = 50
 
-interface OccurrenceBody {
+export interface OccurrenceBody {
   id: number
   recurring_payment_id: number
   due_date: string
@@ -101,7 +101,7 @@ interface RecurringPaymentBody {
   occurrences?: OccurrenceBody[]
 }
 
-const toOccurrence = (body: OccurrenceBody): RecurringPaymentOccurrence => ({
+export const toOccurrence = (body: OccurrenceBody): RecurringPaymentOccurrence => ({
   id: body.id,
   recurringPaymentId: body.recurring_payment_id,
   dueDate: body.due_date,
