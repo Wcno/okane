@@ -1,5 +1,5 @@
 import { Check, Copy, KeyRound } from 'lucide-react'
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useSignedInUser } from '../auth/context'
 import { primaryButtonClassName, smallSecondaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
@@ -44,7 +44,7 @@ export function Integrations() {
             setVersion((count) => count + 1)
           }}
         />
-        {revealed && <SecretCard name={revealed.name} secret={revealed.secret} onDone={() => setRevealed(null)} />}
+        {revealed && <SecretCard key={revealed.secret} name={revealed.name} secret={revealed.secret} onDone={() => setRevealed(null)} />}
         {state.status === 'ready' ? (
           <TokenList tokens={state.value} onRevoked={() => setVersion((count) => count + 1)} />
         ) : (
@@ -143,7 +143,13 @@ function NewTokenCard({ onCreated }: { onCreated: (created: { name: string; secr
 
 /** The one time the secret is readable: it is not stored and cannot be asked for again. */
 function SecretCard({ name, secret, onDone }: { name: string; secret: string; onDone: () => void }) {
+  const card = useRef<HTMLElement>(null)
   const [copied, setCopied] = useState(false)
+  // The secret is shown once: bring it into view and to the keyboard, even below the form on a phone.
+  useEffect(() => {
+    card.current?.focus()
+    card.current?.scrollIntoView({ block: 'start' })
+  }, [])
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(secret)
@@ -154,7 +160,7 @@ function SecretCard({ name, secret, onDone }: { name: string; secret: string; on
   }
 
   return (
-    <section aria-label="Token nuevo" className={cardClassName}>
+    <section ref={card} tabIndex={-1} aria-label="Token nuevo" className={`${cardClassName} focus:outline-none`}>
       <h2 className="text-[1.15rem] font-semibold">Copia tu token ahora</h2>
       <p className="mt-1 text-ink-2">
         «{name}» se creó. Por seguridad no volverá a mostrarse: guárdalo en un lugar seguro, como las propiedades de tu

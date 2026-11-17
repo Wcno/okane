@@ -18,11 +18,11 @@ class TokenTestCase(StubApiServiceMixin, AuthTestCase):
         self.ana = User.objects.get(email="ana@example.com")
 
     def create(self, name="Google Sheets", scopes=("finance:read",), client=None):
-        return self.post("/users/me/tokens", {"name": name, "scopes": list(scopes)}, client)
+        return self.post("/api/settings/tokens", {"name": name, "scopes": list(scopes)}, client)
 
     def revoke(self, token_id, client=None):
         client = client or self.client
-        return client.delete(f"/users/me/tokens/{token_id}", headers={"X-CSRFToken": self.csrf_token(client)})
+        return client.delete(f"/api/settings/tokens/{token_id}", headers={"X-CSRFToken": self.csrf_token(client)})
 
     def call_api(self, secret):
         return Client().get("/api/v1/accounts", headers={"Authorization": f"Bearer {secret}"})
@@ -47,7 +47,7 @@ class CreateAndListTests(TokenTestCase):
         secret = self.create().json()["secret"]
         self.create(name="Otro")
 
-        listed = self.client.get("/users/me/tokens")
+        listed = self.client.get("/api/settings/tokens")
 
         self.assertEqual(listed.status_code, 200)
         self.assertNotIn(secret.split("_", 2)[2], listed.content.decode())
@@ -60,24 +60,24 @@ class CreateAndListTests(TokenTestCase):
     def test_a_user_sees_only_their_own_tokens(self):
         tokens.issue(User.objects.create_user("bruno@example.com", PASSWORD), "Ajeno", ["finance:read"])
 
-        self.assertEqual(self.client.get("/users/me/tokens").json()["results"], [])
+        self.assertEqual(self.client.get("/api/settings/tokens").json()["results"], [])
 
     def test_the_permissions_and_the_name_are_validated(self):
         for name, scopes in (("", ["finance:read"]), ("   ", ["finance:read"]), ("x" * 61, ["finance:read"]),
                              ("Script", []), ("Script", ["admin"]), ("Script", "finance:read")):
             with self.subTest(name=name, scopes=scopes):
-                response = self.post("/users/me/tokens", {"name": name, "scopes": scopes})
+                response = self.post("/api/settings/tokens", {"name": name, "scopes": scopes})
 
                 self.assertEqual(response.status_code, 400)
         self.assertEqual(PersonalToken.objects.count(), 0)
 
     def test_managing_tokens_needs_a_session_and_a_csrf_token(self):
         anonymous = Client(enforce_csrf_checks=True)
-        self.assertEqual(anonymous.get("/users/me/tokens").status_code, 401)
+        self.assertEqual(anonymous.get("/api/settings/tokens").status_code, 401)
         self.assertEqual(self.create(client=anonymous).status_code, 401)
 
         without_csrf = self.client.post(
-            "/users/me/tokens", data={"name": "x", "scopes": ["finance:read"]}, content_type="application/json"
+            "/api/settings/tokens", data={"name": "x", "scopes": ["finance:read"]}, content_type="application/json"
         )
 
         self.assertEqual(without_csrf.status_code, 403)
@@ -92,7 +92,7 @@ class RevocationTests(TokenTestCase):
 
         self.assertEqual(response.status_code, 204)
         self.assertEqual(self.call_api(created["secret"]).status_code, 401)
-        listed = self.client.get("/users/me/tokens").json()["results"][0]
+        listed = self.client.get("/api/settings/tokens").json()["results"][0]
         self.assertIsNotNone(listed["revoked_at"])
 
     def test_a_token_of_another_user_cannot_be_revoked(self):

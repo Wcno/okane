@@ -82,7 +82,7 @@ class PersonalToken(models.Model):
     revoked_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        db_table = "personal_tokens"
+        db_table = "personal_access_tokens"
         ordering = ["-created_at", "-id"]
 
 

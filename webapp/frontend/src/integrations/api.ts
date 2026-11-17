@@ -63,7 +63,7 @@ export function validateToken(token: NewToken): FieldErrors<TokenField> | null {
 }
 
 export async function listTokens(): Promise<PersonalToken[]> {
-  const body = await readJson<{ results: TokenBody[] }>('/users/me/tokens', { failed: LIST_FAILED })
+  const body = await readJson<{ results: TokenBody[] }>('/api/settings/tokens', { failed: LIST_FAILED })
   return body.results.map(toToken)
 }
 
@@ -74,7 +74,7 @@ export function createToken(
 ): Promise<Outcome<{ token: PersonalToken; secret: string }, TokenField>> {
   return write({
     method: 'POST',
-    path: '/users/me/tokens',
+    path: '/api/settings/tokens',
     csrfToken,
     body: { name: token.name.trim(), scopes: token.scopes },
     fields: { name: 'name', scopes: 'scopes' },
@@ -88,7 +88,7 @@ export function createToken(
 export function revokeToken(id: number, csrfToken: string): Promise<Outcome<void, 'form'>> {
   return write({
     method: 'DELETE',
-    path: `/users/me/tokens/${id}`,
+    path: `/api/settings/tokens/${id}`,
     csrfToken,
     gone: TOKEN_GONE,
     unavailable: REVOKE_FAILED,
