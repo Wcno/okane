@@ -34,7 +34,7 @@ Partners are not on any of these tickets (confirmed by the user 2026-11-16).
 
 | Ticket | Base | Branch / PR | Status |
 |---|---|---|---|
-| #8 Gastos | `main` | `feat/8-expenses-fixed-categories`, PR #47 (draft) | round 2 at `22dc77b`: CI pass, ui-qa PASS with UI findings, review found gaps; round-2 worker applying 23 fixes |
+| #8 Gastos | `main` | `feat/8-expenses-fixed-categories`, PR #47 | CLEARED at `8d26934`, ready for the user to merge |
 | #15 Ingresos | #8 | - | waits for #8 sign-off |
 | #17 Pagos recurrentes | #15 | - | waits |
 | #9 Presupuestos | #17 | - | waits |
@@ -75,10 +75,10 @@ Target 10-20 min per ticket: workers skip self-review; split backend and fronten
 
 ## Next step
 
-#47: round 2 CI green, standards review clean of breaches; Haiku applying round-3 mechanical fixes (44px px sizes, two-column Category grid per DESIGN.md with wrapping, shared date helpers, hook split, exact sample spend). Spec axis (Haiku) pending.
-
-In flight (all Sonnet):
-- #47 round-2 fixes in `.claude/worktrees/feat-8-expenses`.
-- Chore PR `chore/playwright-qa-gate` (on #47): QA fixture, seed script, `screenshot-qa` agent, ticket-loop update.
-- #15, #16, #11 and #14 on base #47, doing backend first. Each merges the updated #47 and the chore branch before its UI work.
-When #47's worker and the chore land, message the four workers to merge them. Gate each PR as it reports. Then start #17, then #12.
+Stack (merge order): #47 (#8, cleared) -> #49 `chore/playwright-qa-gate` (QA gate + workflow docs) -> tickets.
+In flight:
+- #49: Haiku fixing two axe defects (RecordRow accessible name, balance `<p aria-label>`) and dropping the opt-outs; then CI and clear. The skill still says "at most 3 workers"; this run uses 5-6 by the user's speed request.
+- #48 (#14 delete user, on #47): CI pass; review found the retry-on-non-204 contract gap and small cleanups; Haiku applying. Then re-run CI, clear, rebase onto #49 later.
+- #15, #16, #11 (Sonnet): building; told to merge #47 round 2 and #49 and base PRs on `chore/playwright-qa-gate`.
+- #17: split. Backend (Sonnet) on `feat/17-recurring-payments`; frontend (Sonnet) on `feat/17-recurring-payments-ui` owns the PR. Shape decided: rules list embeds occurrences; read-ones for a rule and an occurrence; confirm {amount, account_id, date}.
+Next to start: #12 after #11, #9 after #17, #13 after #16 and #11.
