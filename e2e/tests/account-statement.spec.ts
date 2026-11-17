@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { createAccount, createExpense, createIncome, createTransfer, findAsset, recordTrade } from './support/ledger.js'
+import { createAccount, createExpense, createIncome, createTransfer, findAsset, recordDividend, recordTrade } from './support/ledger.js'
 import { expect, expectScreenQuality, test } from './support/qa.js'
 import { signUp } from './support/session.js'
 
@@ -31,6 +31,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       asset_id: asset.id,
       units: '2',
       unit_price: '100',
+      commission: '1.50',
       date: '2026-03-10',
     })
     await recordTrade(page.request, 'sell', {
@@ -40,6 +41,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       unit_price: '150',
       date: '2026-06-10',
     })
+    await recordDividend(page.request, { account_id: broker.id, asset_id: asset.id, amount: '4.20', date: '2026-07-01' })
 
     // From the Account to its statement.
     await page.goto('/accounts')
@@ -48,11 +50,14 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     await expect(page).toHaveURL(new RegExp(`/accounts/${broker.id}/statement$`))
     await expect(page.getByRole('heading', { name: 'Estado de cuenta' })).toBeVisible()
-    await expect(page.getByRole('main')).toContainText('Bróker · Saldo $1,150.00')
+    await expect(page.getByRole('main')).toContainText('Bróker · Saldo $1,152.70')
+    await expect(statementRow(page, /Dividendo de AAPL/)).toContainText('+$4.20')
+    await expect(statementRow(page, /Dividendo de AAPL/)).toContainText('Saldo $1,152.70')
     await expect(statementRow(page, /Venta de AAPL/)).toContainText('+$150.00')
-    await expect(statementRow(page, /Venta de AAPL/)).toContainText('Saldo $1,150.00')
-    await expect(statementRow(page, /Compra de AAPL/)).toContainText('−$200.00')
-    await expect(statementRow(page, /Compra de AAPL/)).toContainText('Saldo $1,000.00')
+    await expect(statementRow(page, /Venta de AAPL/)).toContainText('Saldo $1,148.50')
+    await expect(statementRow(page, /Compra de AAPL/)).toContainText('−$201.50')
+    await expect(statementRow(page, /Compra de AAPL/)).toContainText('Comisión $1.50')
+    await expect(statementRow(page, /Compra de AAPL/)).toContainText('Saldo $998.50')
     await expect(statementRow(page, /Transferencia de Cuenta corriente/)).toContainText('+$200.00')
     await expect(statementRow(page, /Transferencia de Cuenta corriente/)).toContainText('Saldo $1,200.00')
     // The first line is the opening Balance with its date, and it is not a link.
