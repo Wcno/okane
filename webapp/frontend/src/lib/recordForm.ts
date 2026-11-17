@@ -1,5 +1,4 @@
-import type { Account } from '../accounts/api'
-import { MAX_AMOUNT_TEXT, parsePositiveAmount } from './amount'
+import { MAX_AMOUNT_TEXT, parsePositiveAmount, typedAmount } from './amount'
 import { formatDay, isCalendarDay, todayInPanama } from './dates'
 import type { FieldErrors } from './http'
 
@@ -15,6 +14,13 @@ export type RecordField = 'amount' | 'accountId' | 'date' | 'description'
 
 /** What every record of money holds, whatever Accounts it names. */
 export type MoneyDraft = Pick<RecordDraft, 'amount' | 'date' | 'description'>
+
+/** What the checks read of an Account: which one it is, its name and the first day it can hold a record. */
+export interface RecordAccount {
+  id: number
+  name: string
+  openingDate: string
+}
 
 export const DESCRIPTION_MAX_LENGTH = 140
 
@@ -38,7 +44,7 @@ export interface CheckedMoney {
 
 export interface CheckedRecord extends Omit<CheckedMoney, 'errors'> {
   errors: FieldErrors<RecordField>
-  account: Account | undefined
+  account: RecordAccount | undefined
 }
 
 /**
@@ -48,7 +54,7 @@ export interface CheckedRecord extends Omit<CheckedMoney, 'errors'> {
  * "Today" is the Panama day at the moment of the check, so a form left open
  * past midnight follows the new day.
  */
-export function checkMoney(draft: MoneyDraft, involved: Account[], dateInvalid: string): CheckedMoney {
+export function checkMoney(draft: MoneyDraft, involved: RecordAccount[], dateInvalid: string): CheckedMoney {
   const today = todayInPanama()
   const errors: CheckedMoney['errors'] = {}
   const parsed = parsePositiveAmount(draft.amount)
@@ -66,11 +72,11 @@ export function checkMoney(draft: MoneyDraft, involved: Account[], dateInvalid: 
   }
   if (description.length > DESCRIPTION_MAX_LENGTH) errors.description = [DESCRIPTION_TOO_LONG]
 
-  return { errors, amount: 'amount' in parsed ? parsed.amount : null, description }
+  return { errors, amount: typedAmount(draft.amount), description }
 }
 
 /** The checks of a record of money that names one Account (an Expense, an Income). */
-export function checkRecord(draft: RecordDraft, accounts: Account[], wording: RecordWording): CheckedRecord {
+export function checkRecord(draft: RecordDraft, accounts: RecordAccount[], wording: RecordWording): CheckedRecord {
   const account = accounts.find((candidate) => candidate.id === draft.accountId)
   const { errors, ...checked } = checkMoney(draft, account ? [account] : [], wording.dateInvalid)
   const withAccount: FieldErrors<RecordField> = { ...errors }

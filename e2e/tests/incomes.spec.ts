@@ -299,3 +299,18 @@ test('a row is one link that keeps the whole name and Account, and nothing else 
   await page.getByRole('link', { name: 'Eliminar este ingreso' }).click()
   await expect(page).toHaveURL(/\/incomes\/\d+\/delete$/)
 })
+
+test('the populated list keeps a register action that opens the form', async ({ page }) => {
+  forbidBrowserDialogs(page)
+  await signUp(page.request)
+  const account = await createAccount(page.request)
+  await createIncome(page.request, { account_id: account.id, description: 'Intereses' })
+
+  await page.goto('/incomes')
+  const register = page.getByRole('main').getByRole('link', { name: 'Registrar ingreso' })
+  await expect(register).toBeVisible()
+  await expectScreenQuality(page, 'incomes-list-with-register-action', { skipAxeRules: knownAxeRules.recordRowLabel })
+  if (isPhone()) expect(await heightOf(register)).toBeGreaterThanOrEqual(44)
+  await register.click()
+  await expect(page).toHaveURL(/\/incomes\/create$/)
+})

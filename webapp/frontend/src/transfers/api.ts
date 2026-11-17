@@ -1,5 +1,5 @@
 import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
-import type { RecordPage } from '../lib/useRecordFeed'
+import type { RecordPage } from '../lib/recordPage'
 
 /** A Transfer as api-service describes it. The amount stays a decimal string. */
 export interface Transfer {

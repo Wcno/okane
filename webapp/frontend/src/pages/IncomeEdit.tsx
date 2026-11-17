@@ -28,6 +28,8 @@ function EditForm({ income, accounts }: { income: Income; accounts: Account[] })
         accounts={offeredAccounts(accounts, income.accountId)}
         save={(input) => updateIncome(income.id, input, csrfToken)}
         onSaved={(saved) => afterChange('updated', saved)}
+        idPrefix="income"
+        cancelTo={incomesBack.to}
         submitLabel="Guardar cambios"
         submittingLabel="Guardando…"
         accountNote={

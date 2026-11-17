@@ -1,5 +1,4 @@
 import type { Account } from '../accounts/api'
-import { parsePositiveAmount } from '../lib/amount'
 import { checkMoney, type MoneyDraft } from '../lib/recordForm'
 import type { Validated } from '../lib/useRecordForm'
 import type { TransferErrors, TransferField, TransferInput } from './api'
@@ -14,12 +13,6 @@ const SOURCE_REQUIRED = 'Elige la Cuenta de la que sale el dinero.'
 const DESTINATION_REQUIRED = 'Elige la Cuenta a la que llega el dinero.'
 const SAME_ACCOUNT = 'El origen y el destino deben ser Cuentas distintas.'
 const DATE_INVALID = 'Elige la fecha de la transferencia.'
-
-/** The amount to show a consequence for, or null while what is typed is not one. */
-export function typedAmount(text: string): string | null {
-  const parsed = parsePositiveAmount(text)
-  return 'amount' in parsed ? parsed.amount : null
-}
 
 /**
  * Checks what the browser can know before sending; api-service has the last

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Account } from '../accounts/api'
-import { chooseDefaultAccounts, typedAmount, validateTransfer, type TransferDraft } from './form'
+import { chooseDefaultAccounts, validateTransfer, type TransferDraft } from './form'
 
 const account = (id: number, fields: Partial<Account> = {}): Account => ({
   id,
@@ -99,13 +99,6 @@ describe('validateTransfer', () => {
   it('refuses a description past 140 characters', () => {
     expect(check({ description: 'x'.repeat(141) })).toMatchObject({ ok: false, errors: { description: [expect.any(String)] } })
     expect(check({ description: 'x'.repeat(140) }).ok).toBe(true)
-  })
-})
-
-describe('typedAmount', () => {
-  it('is the amount once it is valid and null before', () => {
-    expect(typedAmount('12,5')).toBe('12.50')
-    expect(typedAmount('')).toBeNull()
   })
 })
 
