@@ -300,9 +300,6 @@ class RemainingTests(BudgetApiTestCase):
 class ConcurrentBudgetTests(TransactionTestCase):
     """Simultaneous requests hit the database, so each one commits for real."""
 
-    # The flush after each test would otherwise erase the Categories seeded by a migration.
-    serialized_rollback = True
-
     def setUp(self):
         clock = mock.patch("accounts.clock.today", return_value=TODAY)
         clock.start()

@@ -154,8 +154,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await signUp(page.request)
     const previous = shiftMonth(thisMonth(), -1)
     const archived = await createCategory(page.request, 'Suscripciones')
-    await createBudget(page.request, { month: previous, category_id: 4, amount: '80.50' })
-    await createBudget(page.request, { month: previous, category_id: 2, amount: '300.00' })
+    await createBudget(page.request, { month: previous, category: 'utilities', amount: '80.50' })
+    await createBudget(page.request, { month: previous, category: 'food', amount: '300.00' })
     await createBudget(page.request, { month: previous, category_id: archived.id, amount: '15.00' })
     await archiveCategory(page.request, archived.id)
 
