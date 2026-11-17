@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import type { Account } from '../../accounts/api'
 import { MOVEMENT_TYPES, isMovementType, type MovementFilter, type MovementType } from '../../movements/api'
 import { movementTypeFilterNames } from '../../movements/presentation'
@@ -34,10 +35,11 @@ export function MovementFilters({
   onChange: (filter: MovementFilter) => void
   onClear: () => void
 }) {
+  const section = useRef<HTMLElement>(null)
   const reversed = filter.from !== '' && filter.to !== '' && filter.from > filter.to
 
   return (
-    <section aria-label="Filtros" className={`${cardClassName} mb-4 max-w-[44rem] lg:mb-5`}>
+    <section ref={section} aria-label="Filtros" className={`${cardClassName} mb-4 max-w-[44rem] lg:mb-5`}>
       <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4">
         <SelectField
           id="movement-type"
@@ -87,7 +89,11 @@ export function MovementFilters({
         <button
           type="button"
           className={`${smallSecondaryButtonClassName} mt-4`}
-          onClick={onClear}
+          onClick={() => {
+            onClear()
+            // The button leaves with the filters, so the keyboard goes to the first one.
+            section.current?.querySelector<HTMLElement>('select, input')?.focus()
+          }}
         >
           Quitar filtros
         </button>

@@ -13,9 +13,9 @@ function forbidBrowserDialogs(page: Page) {
 const submit = (page: Page, name: string) => page.getByRole('main').getByRole('button', { name })
 
 async function pickAsset(page: Page, query: string, choice: RegExp) {
-  await page.getByRole('textbox', { name: 'Activo' }).fill(query)
+  await page.getByRole('combobox', { name: 'Activo' }).fill(query)
   await page.getByRole('button', { name: 'Buscar' }).click()
-  await page.getByRole('button', { name: choice }).click()
+  await page.getByRole('option', { name: choice }).click()
 }
 
 const accountRow = (page: Page, name: string) => page.getByRole('listitem').filter({ hasText: name })

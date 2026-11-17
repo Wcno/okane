@@ -267,7 +267,9 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `DELETE /api/categories/{id}` responde `204` y borra una Categoría sin Gastos,
   Presupuestos, reglas ni ocurrencias; con registros la archiva y responde `200`
   con la Categoría, igual que las Cuentas. `POST /api/categories/{id}/archive`
-  archiva sin borrar y es idempotente.
+  archiva sin borrar y es idempotente. `POST /api/categories/{id}/restore` la
+  vuelve a ofrecer (`archived_at` en `null`), también idempotente; responde `409`
+  si otra Categoría activa ya tiene su nombre.
 - Archivar devuelve `409` mientras la Categoría tenga Pagos recurrentes vigentes
   o reservas pendientes. Las Categorías archivadas se rechazan en Gastos,
   Presupuestos y Pagos recurrentes nuevos, pero se conservan en los registros

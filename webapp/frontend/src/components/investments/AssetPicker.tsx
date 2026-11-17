@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { ASSET_QUERY_MAX_LENGTH, searchAssets, type Asset, type AssetSearch } from '../../investments/api'
 import { useSessionEnd } from '../../lib/useSessionEnd'
 import { smallSecondaryButtonClassName } from '../buttons'
@@ -16,10 +16,16 @@ const NOT_FOUND = 'No encontramos Activos con esa búsqueda. Prueba con el símb
 const PROVIDER_DOWN =
   'No pudimos consultar el servicio de cotizaciones, así que solo vemos los Activos que Okane ya conoce.'
 
+/** The pause after the last key before the search runs, to spare the quotes provider's limit. */
+const SEARCH_DELAY_MS = 350
+
+const resultsCount = (count: number) => (count === 1 ? '1 resultado' : `${count} resultados`)
+
 /**
  * Picks an Asset from the catalog: the User searches by symbol or name and
  * chooses one result, so there is no free text and two markets stay apart.
- * The search runs on request, not on every key, to spare the provider's limit.
+ * It is a combobox (WAI-ARIA): the search runs after a pause in typing or on Enter,
+ * the arrows walk the listbox of results, Enter picks and Escape closes it.
  */
 export function AssetPicker({
   id,
@@ -34,7 +40,11 @@ export function AssetPicker({
 }) {
   const [query, setQuery] = useState('')
   const [lookup, setLookup] = useState<Lookup>({ status: 'idle' })
+  const [isOpen, setIsOpen] = useState(false)
+  const [active, setActive] = useState(-1)
   const endSession = useSessionEnd()
+  const latestSearch = useRef(0)
+  const pendingSearch = useRef<number>(undefined)
   const input = useRef<HTMLInputElement>(null)
   const changeButton = useRef<HTMLButtonElement>(null)
   const justChosen = useRef(false)
@@ -48,25 +58,92 @@ export function AssetPicker({
     }
   }, [asset])
 
-  const search = async () => {
+  const runSearch = useCallback(
+    async (text: string) => {
+      const attempt = ++latestSearch.current
+      setLookup({ status: 'searching' })
+      try {
+        const found = await searchAssets(text)
+        if (attempt !== latestSearch.current) return
+        setLookup({ status: 'found', ...found })
+        setActive(-1)
+        setIsOpen(found.assets.length > 0)
+      } catch (failure) {
+        if (attempt !== latestSearch.current || endSession(failure)) return
+        setLookup({ status: 'failed', message: failure instanceof Error ? failure.message : 'No pudimos buscar.' })
+        setIsOpen(false)
+      }
+    },
+    [endSession],
+  )
+
+  // Searching as the User types, after a pause.
+  useEffect(() => {
+    const text = query.trim()
+    if (!text) return
+    pendingSearch.current = window.setTimeout(() => void runSearch(text), SEARCH_DELAY_MS)
+    return () => window.clearTimeout(pendingSearch.current)
+  }, [query, runSearch])
+
+  const type = (text: string) => {
+    setQuery(text)
+    if (text.trim()) return
+    // An emptied field forgets the results and ignores the search still on its way.
+    latestSearch.current++
+    setLookup({ status: 'idle' })
+    setIsOpen(false)
+    setActive(-1)
+  }
+
+  const search = () => {
+    window.clearTimeout(pendingSearch.current)
     const text = query.trim()
     if (!text) {
       input.current?.focus()
       return
     }
-    setLookup({ status: 'searching' })
-    try {
-      setLookup({ status: 'found', ...(await searchAssets(text)) })
-    } catch (failure) {
-      if (endSession(failure)) return
-      setLookup({ status: 'failed', message: failure instanceof Error ? failure.message : 'No pudimos buscar.' })
+    void runSearch(text)
+  }
+
+  const results = lookup.status === 'found' ? lookup.assets : []
+  const isListOpen = isOpen && results.length > 0
+  const listId = `${id}-results`
+  const optionId = (index: number) => `${id}-option-${index}`
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    switch (event.key) {
+      case 'ArrowDown':
+      case 'ArrowUp': {
+        if (results.length === 0) return
+        event.preventDefault()
+        const step = event.key === 'ArrowDown' ? 1 : -1
+        setIsOpen(true)
+        setActive((current) => (current < 0 ? (step === 1 ? 0 : results.length - 1) : (current + step + results.length) % results.length))
+        return
+      }
+      case 'Enter':
+        // Enter picks the highlighted result or searches; it must not submit the operation being filled in.
+        event.preventDefault()
+        if (isListOpen && active >= 0) choose(results[active])
+        else search()
+        return
+      case 'Escape':
+        if (isListOpen) {
+          event.preventDefault()
+          setIsOpen(false)
+          setActive(-1)
+        }
     }
   }
 
   const choose = (chosen: Asset | null) => {
+    window.clearTimeout(pendingSearch.current)
+    latestSearch.current++
     justChosen.current = true
     onChange(chosen)
     setLookup({ status: 'idle' })
+    setIsOpen(false)
+    setActive(-1)
   }
 
   return (
@@ -102,20 +179,19 @@ export function AssetPicker({
             id={`${id}-query`}
             label="Activo"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              // Enter searches; it must not submit the operation that is being filled in.
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                void search()
-              }
-            }}
+            onChange={(event) => type(event.target.value)}
+            onKeyDown={handleKeyDown}
+            role="combobox"
+            aria-expanded={isListOpen}
+            aria-controls={listId}
+            aria-autocomplete="list"
+            aria-activedescendant={isListOpen && active >= 0 ? optionId(active) : undefined}
             autoComplete="off"
             maxLength={ASSET_QUERY_MAX_LENGTH}
             placeholder="Símbolo o nombre, por ejemplo AAPL"
             errors={errors}
           />
-          <button type="button" onClick={() => void search()} className={`${smallSecondaryButtonClassName} mt-2`}>
+          <button type="button" onClick={search} className={`${smallSecondaryButtonClassName} mt-2`}>
             <Search size={17} aria-hidden="true" />
             Buscar
           </button>
@@ -129,27 +205,39 @@ export function AssetPicker({
             {lookup.status === 'found' && lookup.assets.length === 0 && (
               <p className="mt-2 text-[0.9rem] text-ink-2">{NOT_FOUND}</p>
             )}
+            {lookup.status === 'found' && lookup.assets.length > 0 && (
+              <p className="mt-2 text-[0.9rem] text-ink-3">{resultsCount(lookup.assets.length)}</p>
+            )}
           </div>
 
-          {lookup.status === 'found' && lookup.assets.length > 0 && (
-            <ul aria-label="Resultados de la búsqueda" className="mt-2 divide-y divide-line rounded-2xl border border-line">
-              {lookup.assets.map((found) => (
-                <li key={found.id}>
-                  <button
-                    type="button"
-                    onClick={() => choose(found)}
-                    className="flex min-h-[56px] w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors duration-150 hover:bg-surface-2"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block break-words text-[1rem] font-semibold">{found.symbol}</span>
-                      <span className="block break-words text-[0.87rem] text-ink-3">{found.name}</span>
-                    </span>
-                    <span className="shrink-0 text-[0.87rem] text-ink-3">{found.market}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ul
+            id={listId}
+            role="listbox"
+            aria-label="Resultados de la búsqueda"
+            hidden={!isListOpen}
+            className="mt-2 divide-y divide-line rounded-2xl border border-line"
+          >
+            {results.map((found, index) => (
+              <li
+                key={found.id}
+                id={optionId(index)}
+                role="option"
+                aria-selected={index === active}
+                // Keeps the focus in the field, so the keyboard and the screen reader stay with the combobox.
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => choose(found)}
+                className={`flex min-h-[56px] cursor-pointer items-center gap-3 px-3.5 py-2.5 transition-colors duration-150 hover:bg-surface-2 ${
+                  index === active ? 'bg-surface-2' : ''
+                }`}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words text-[1rem] font-semibold">{found.symbol}</span>
+                  <span className="block break-words text-[0.87rem] text-ink-3">{found.name}</span>
+                </span>
+                <span className="shrink-0 text-[0.87rem] text-ink-3">{found.market}</span>
+              </li>
+            ))}
+          </ul>
         </>
       )}
     </div>

@@ -83,6 +83,18 @@ export function renameCategory(
   })
 }
 
+/** Offers an archived Category again; api-service refuses while another active one has its name. */
+export function restoreCategory(id: number, csrfToken: string): Promise<Outcome<Category, CategoryField>> {
+  return write({
+    method: 'POST',
+    path: `/api/categories/${id}/restore`,
+    csrfToken,
+    fields: FORM_FIELDS,
+    gone: CATEGORY_GONE,
+    read: readCategory,
+  })
+}
+
 /** What deleting a Category did: removed it, or archived it because records refer to it. */
 export type Removal = { result: 'deleted' } | { result: 'archived'; category: Category }
 

@@ -29,6 +29,9 @@ class CategoryApiTestCase(BudgetApiTestCase):
     def archive_category(self, category, user=1):
         return self.call("POST", f"{CATEGORIES}/{category['id']}/archive", user=user)
 
+    def restore_category(self, category, user=1):
+        return self.call("POST", f"{CATEGORIES}/{category['id']}/restore", user=user)
+
     def remove_category(self, category, user=1):
         return self.call("DELETE", f"{CATEGORIES}/{category['id']}", user=user)
 
@@ -142,6 +145,53 @@ class OwnCategoryTests(CategoryApiTestCase):
             next(item for item in self.listed() if item["id"] == mine["id"])["archived_at"]
         )
         self.assertEqual(self.archive_category(mine).status_code, 200)
+
+
+class RestoreCategoryTests(CategoryApiTestCase):
+    def test_restoring_an_archived_category_offers_it_again(self):
+        mine = self.category()
+        self.archive_category(mine)
+
+        restored = self.restore_category(mine)
+
+        self.assertEqual(restored.status_code, 200, restored.content)
+        self.assertIsNone(restored.json()["archived_at"])
+        self.assertIsNone(next(item for item in self.listed() if item["id"] == mine["id"])["archived_at"])
+        self.assertEqual(self.restore_category(mine).status_code, 200)
+
+    def test_restoring_an_active_category_changes_nothing(self):
+        mine = self.category()
+
+        restored = self.restore_category(mine)
+
+        self.assertEqual(restored.status_code, 200, restored.content)
+        self.assertIsNone(restored.json()["archived_at"])
+
+    def test_restoring_is_refused_while_an_active_category_has_the_name(self):
+        old = self.category(name="Mascotas")
+        self.archive_category(old)
+        self.category(name="mascotas")
+
+        refused = self.restore_category(old)
+
+        self.assertEqual(refused.status_code, 409, refused.content)
+        self.assertIn("errors", refused.json())
+        self.assertIsNotNone(
+            next(item for item in self.listed() if item["id"] == old["id"])["archived_at"]
+        )
+
+    def test_another_users_category_cannot_be_restored(self):
+        mine = self.category()
+        self.archive_category(mine)
+
+        self.assertEqual(self.restore_category(mine, user=2).status_code, 404)
+
+    def test_an_archived_category_without_records_can_be_deleted_for_good(self):
+        mine = self.category()
+        self.archive_category(mine)
+
+        self.assertEqual(self.remove_category(mine).status_code, 204)
+        self.assertNotIn(mine["id"], [item["id"] for item in self.listed()])
 
 
 class DeleteCategoryTests(CategoryApiTestCase):

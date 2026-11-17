@@ -345,7 +345,7 @@ test.describe('on a phone', () => {
     const clipped = await heading.evaluate((title) => title.scrollWidth > title.clientWidth)
     expect(clipped).toBe(false)
     const action = headerAction(page)
-    await expect(action.getByText('Nueva')).toBeVisible()
+    await expect(action.getByText('Nueva', { exact: true })).toBeVisible()
     expect(await fitsInViewport(action, 844)).toBe(true)
   })
 

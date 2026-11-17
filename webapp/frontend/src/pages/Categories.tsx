@@ -13,13 +13,13 @@ function Group({
   title,
   note,
   categories,
-  editable,
+  action,
 }: {
   id: string
   title: string
   note?: string
   categories: Category[]
-  editable: boolean
+  action: string
 }) {
   return (
     <section aria-labelledby={id} className={cardClassName}>
@@ -31,8 +31,8 @@ function Group({
         {categories.map((category) => (
           <RecordRow
             key={category.id}
-            to={editable ? `/categories/${category.id}/edit` : undefined}
-            action="Editar Categoría"
+            to={`/categories/${category.id}/edit`}
+            action={action}
             icon={<CategoryChip categoryId={category.id} />}
             title={category.name}
           />
@@ -69,14 +69,14 @@ export function Categories() {
         />
       ) : (
         <div className="max-w-[44rem] space-y-4 lg:space-y-5">
-          {active.length > 0 && <Group id="active-title" title="Tus Categorías" categories={active} editable />}
+          {active.length > 0 && <Group id="active-title" title="Tus Categorías" categories={active} action="Editar Categoría" />}
           {archived.length > 0 && (
             <Group
               id="archived-title"
               title="Archivadas"
               note="No se ofrecen para Gastos ni Presupuestos nuevos; los pasados se siguen viendo."
               categories={archived}
-              editable={false}
+              action="Restaurar o eliminar Categoría archivada"
             />
           )}
         </div>

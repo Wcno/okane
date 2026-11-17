@@ -11,12 +11,13 @@ export function groupCategories(categories: Category[]) {
 }
 
 /** What happened to a Category; the notice says it in Spanish. */
-export type CategoryChange = 'created' | 'renamed' | 'archived' | 'deleted'
+export type CategoryChange = 'created' | 'renamed' | 'archived' | 'restored' | 'deleted'
 
 const changeNotices: Record<CategoryChange, (name: string) => string> = {
   created: (name) => `Creaste la Categoría ${name}.`,
   renamed: (name) => `Guardaste los cambios de la Categoría ${name}.`,
   archived: (name) => `Archivaste la Categoría ${name}. Sus Gastos y Presupuestos pasados se siguen viendo.`,
+  restored: (name) => `Restauraste la Categoría ${name}. Ya puedes usarla en Gastos y Presupuestos nuevos.`,
   deleted: (name) => `Eliminaste la Categoría ${name}.`,
 }
 

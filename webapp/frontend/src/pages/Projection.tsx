@@ -1,4 +1,4 @@
-import { Calculator, Plus, X } from 'lucide-react'
+import { Calculator, ChevronDown, Plus, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import type { Account } from '../accounts/api'
@@ -166,11 +166,20 @@ function ResultCard({ position, scenario }: { position: number; scenario: Projec
 }
 
 function MonthlyTable({ scenarios }: { scenarios: ProjectionResult['scenarios'] }) {
+  const [open, setOpen] = useState(false)
   const months = Math.max(...scenarios.map((scenario) => scenario.months))
   return (
-    <details className="mt-4">
-      <summary className="inline-flex min-h-[44px] cursor-pointer items-center font-medium text-ink-2 hover:text-ink">
+    <details className="mt-4" onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary
+        aria-expanded={open}
+        className="inline-flex min-h-[44px] cursor-pointer list-none items-center gap-1.5 font-medium text-ink-2 hover:text-ink [&::-webkit-details-marker]:hidden"
+      >
         Ver la tabla mensual
+        <ChevronDown
+          size={17}
+          aria-hidden="true"
+          className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+        />
       </summary>
       <div role="region" aria-label="Tabla mensual de la proyección" tabIndex={0} className="mt-2 max-h-[22rem] overflow-auto rounded-xl border border-line">
         <table className="w-full min-w-max border-collapse text-left text-[0.9rem] tabular-nums">

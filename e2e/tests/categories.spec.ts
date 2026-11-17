@@ -86,8 +86,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     await expect(page.getByRole('status').filter({ hasText: 'Archivaste' })).toContainText('Mis mascotas')
     await expect(page.getByRole('heading', { name: 'Archivadas' })).toBeVisible()
-    await expect(page.getByRole('link', { name: /Mis mascotas/ })).toBeHidden()
-    await expect(page.getByRole('listitem').filter({ hasText: 'Mis mascotas' })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^Mis mascotas.*Restaurar o eliminar Categoría archivada$/ })).toBeVisible()
     await expectScreenQuality(page, `categories-archived-${colorScheme}`)
 
     // Archived: not offered for new records, but the past ones stay visible.

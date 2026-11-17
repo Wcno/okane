@@ -132,7 +132,7 @@
   }
 }
 
-/* Expense entry uses a bottom sheet on mobile and a centered dialog on larger screens. */
+/* Expense entry uses a bottom sheet on mobile and a dialog fixed near the top on larger screens, so it never re-centres as it grows. */
 dialog.sheet {
   transition:
     opacity 180ms var(--ease-out-quart),

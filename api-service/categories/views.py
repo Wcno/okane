@@ -9,6 +9,9 @@ from categories.serializers import NAME_TAKEN, CategorySerializer, represent
 from recurring_payments.models import RecurringPayment, RecurringPaymentOccurrence
 
 CATEGORY_HAS_RULES = "Mueve o elimina los pagos recurrentes de esta Categoría antes de archivarla."
+RESTORE_NAME_TAKEN = (
+    "Ya tienes una Categoría activa con ese nombre. Renómbrala o archívala antes de restaurar esta."
+)
 CATEGORY_HAS_PENDING = (
     "Confirma o cancela los pagos recurrentes pendientes de esta Categoría antes de archivarla."
 )
@@ -41,6 +44,16 @@ def save_unique(serializer):
         return None, refuse(NAME_TAKEN)
 
 
+def save_unique_instance(category):
+    """Save an already validated Category; a concurrent twin of the same name is a conflict."""
+    try:
+        with transaction.atomic():
+            category.save(update_fields=["archived_at"])
+            return category, None
+    except IntegrityError:
+        return None, refuse(RESTORE_NAME_TAKEN)
+
+
 def archive_blocker(category):
     """What must be resolved before archiving, or None."""
     if RecurringPayment.objects.filter(category=category, deleted_at__isnull=True).exists():
@@ -51,6 +64,23 @@ def archive_blocker(category):
     if pending.exists():
         return CATEGORY_HAS_PENDING
     return None
+
+
+def restore(category):
+    """Offer the Category again, unless another active one now has its name."""
+    if category.archived_at is not None:
+        taken = (
+            owned_by(category.user_id)
+            .filter(name__iexact=category.name, archived_at__isnull=True)
+            .exclude(pk=category.pk)
+        )
+        if taken.exists():
+            return refuse(RESTORE_NAME_TAKEN)
+        category.archived_at = None
+        category, conflict = save_unique_instance(category)
+        if conflict:
+            return conflict
+    return Response(shown(category))
 
 
 def archive(category):
@@ -101,3 +131,9 @@ def category_detail(request, category_id):
 @transaction.atomic
 def category_archive(request, category_id):
     return archive(owned_category(request, category_id, lock=True))
+
+
+@api_view(["POST"])
+@transaction.atomic
+def category_restore(request, category_id):
+    return restore(owned_category(request, category_id, lock=True))

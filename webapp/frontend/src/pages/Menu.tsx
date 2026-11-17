@@ -2,11 +2,13 @@ import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useSignedInUser } from '../auth/context'
 import { SignOutButton } from '../components/SignOutButton'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { navigationGroups, profileDestinations } from '../navigation'
 
 /** Mobile More screen for destinations outside the bottom bar, and the session. */
 export function Menu() {
   const { user } = useSignedInUser()
+  useDocumentTitle('Secciones')
   return (
     <>
       <header className="mb-5">

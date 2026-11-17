@@ -25,17 +25,17 @@ import { FormAlert } from './FormAlert'
 
 /**
  * The consequence of the Expense on the Restante of its Category, read from
- * the Budgets of the month of its date. Once a Category is chosen its room is
- * kept, so the lines below do not move while the amount is typed.
+ * the Budgets of the month of its date. Its room is kept from the start, so the
+ * lines below do not move when a Category is chosen or the amount is typed.
  */
 function RemainingHint({ categoryId, amount, date }: { categoryId: number | null; amount: string | null; date: string }) {
   const { state } = useBudgetMonth(isMonth(monthOf(date)) ? monthOf(date) : monthOf(todayInPanama()))
-  if (categoryId === null) return null
-  const category = categoryById(categoryId).name
-
   let text = ''
-  if (amount === null) text = `Escribe el monto para ver lo que queda en ${category}.`
-  else if (state.status === 'ready') text = previewText(category, remainingAfter(state.value, categoryId, amount))
+  if (categoryId !== null) {
+    const category = categoryById(categoryId).name
+    if (amount === null) text = `Escribe el monto para ver lo que queda en ${category}.`
+    else if (state.status === 'ready') text = previewText(category, remainingAfter(state.value, categoryId, amount))
+  }
 
   return <p className="mt-3 min-h-[2.8em] text-[0.9rem] leading-snug text-ink-2">{text}</p>
 }
@@ -184,7 +184,7 @@ export function ExpenseForm() {
         if (event.target === dialog.current) closeForm()
       }}
       aria-labelledby="expense-form-title"
-      className="sheet mx-0 mb-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-y-auto rounded-t-[1.75rem] bg-surface text-ink shadow-float sm:m-auto sm:w-[30rem] sm:rounded-[1.75rem]"
+      className="sheet mx-0 mb-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-y-auto rounded-t-[1.75rem] bg-surface text-ink shadow-float sm:mx-auto sm:mb-auto sm:mt-[10dvh] sm:max-h-[84dvh] sm:w-[30rem] sm:rounded-[1.75rem]"
     >
       {isFormOpen && <QuickSheetContent />}
     </dialog>

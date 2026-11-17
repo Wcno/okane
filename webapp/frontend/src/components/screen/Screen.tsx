@@ -1,6 +1,7 @@
 import { ArrowLeft, CircleCheck, Plus, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { useDocumentTitle } from '../../lib/useDocumentTitle'
 import type { Loaded } from '../../lib/useLoaded'
 import { smallSecondaryButtonClassName } from '../buttons'
 import { FormAlert } from '../FormAlert'
@@ -12,16 +13,28 @@ const primaryActionClassName =
   'inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-primary pl-4 pr-5 text-[1rem] font-semibold text-on-primary transition-transform duration-150 hover:-translate-y-px active:scale-[0.98]'
 
 /**
- * The words of a header action. On a phone only `shortLabel` shows; the rest of `label`
- * stays in the accessible name, so the name always starts with what is visible and reads in full.
+ * The words of a header action. On a phone only `shortLabel` shows; the accessible name is
+ * always the full `label`, set once on the link, so it reads the same at any width.
  */
 function ActionLabel({ label, shortLabel }: { label: string; shortLabel?: string }) {
   if (!shortLabel || !label.startsWith(shortLabel) || label === shortLabel) return <>{label}</>
   return (
     <>
-      {shortLabel}
-      <span className="sr-only sm:not-sr-only">{label.slice(shortLabel.length)}</span>
+      <span className="sm:hidden">{shortLabel}</span>
+      <span className="hidden sm:inline">{label}</span>
     </>
+  )
+}
+
+function BackLink({ to, label, className }: { to: string; label: string; className: string }) {
+  return (
+    <Link
+      to={to}
+      className={`-mt-2 mb-0.5 min-h-[44px] items-center gap-1.5 rounded-md text-[0.9rem] font-medium text-ink-2 transition-colors duration-150 hover:text-ink ${className}`}
+    >
+      <ArrowLeft size={16} aria-hidden="true" />
+      {label}
+    </Link>
   )
 }
 
@@ -33,20 +46,19 @@ export function ScreenHeader({
 }: {
   title: string
   intro?: ReactNode
-  back?: { to: string; label: string }
+  /** `desktop` replaces the way back on a wide screen, when the phone's does not exist there. */
+  back?: { to: string; label: string; desktop?: { to: string; label: string } }
   /** `label` starts with `shortLabel`, the part a phone shows. */
   action?: { to: string; label: string; shortLabel?: string }
 }) {
+  useDocumentTitle(title)
   return (
     <header className="mb-5 lg:mb-7 lg:pr-48">
       {back && (
-        <Link
-          to={back.to}
-          className="-mt-2 mb-0.5 inline-flex min-h-[44px] items-center gap-1.5 rounded-md text-[0.9rem] font-medium text-ink-2 transition-colors duration-150 hover:text-ink"
-        >
-          <ArrowLeft size={16} aria-hidden="true" />
-          {back.label}
-        </Link>
+        <>
+          <BackLink {...back} className={back.desktop ? 'inline-flex lg:hidden' : 'inline-flex'} />
+          {back.desktop && <BackLink {...back.desktop} className="hidden lg:inline-flex" />}
+        </>
       )}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
@@ -54,7 +66,7 @@ export function ScreenHeader({
           {intro && <p className="mt-1 max-w-[60ch] text-ink-2">{intro}</p>}
         </div>
         {action && (
-          <Link to={action.to} className={primaryActionClassName}>
+          <Link to={action.to} aria-label={action.label} className={`${primaryActionClassName} lg:h-10`}>
             <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
             <ActionLabel label={action.label} shortLabel={action.shortLabel} />
           </Link>

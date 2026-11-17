@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } fr
 import type { ProjectedScenario } from '../../investments/projection'
 import { scenarioName, scenarioTone } from '../../investments/projectionPresentation'
 import { formatMoney } from '../../lib/money'
+import { compactMoney } from '../../netWorth/chart'
 
 const HEIGHT = 220
 const MARGIN = { top: 14, right: 14, bottom: 28, left: 52 }
@@ -17,8 +18,6 @@ function niceStep(maximum: number) {
   const power = 10 ** Math.floor(Math.log10(raw))
   return ([1, 2, 2.5, 5, 10].find((factor) => factor * power >= raw) ?? 10) * power
 }
-
-const axisMoney = (value: number) => `$${value.toLocaleString('en-US')}`
 
 /** Capital month by month for each scenario, from the initial capital at month 0. Shown also as a table by the screen. */
 export function ProjectionChart({ scenarios }: { scenarios: ProjectedScenario[] }) {
@@ -128,7 +127,7 @@ export function ProjectionChart({ scenarios }: { scenarios: ProjectedScenario[] 
                 <g key={tick}>
                   <line x1={MARGIN.left} x2={width - MARGIN.right} y1={y(tick)} y2={y(tick)} stroke="var(--line)" strokeWidth="1" />
                   <text x={MARGIN.left - 10} y={y(tick)} dy="0.32em" textAnchor="end" className="fill-ink-3 text-[11.5px] tabular-nums">
-                    {axisMoney(tick)}
+                    {compactMoney(tick)}
                   </text>
                 </g>
               ))}

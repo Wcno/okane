@@ -1,5 +1,5 @@
 import { Check, Copy, KeyRound } from 'lucide-react'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type Ref } from 'react'
 import { useSignedInUser } from '../auth/context'
 import { primaryButtonClassName, smallSecondaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
@@ -29,12 +29,15 @@ export function Integrations() {
   const [version, setVersion] = useState(0)
   const { state, retry } = useLoaded(listTokens, version)
   const [revealed, setRevealed] = useState<{ name: string; secret: string } | null>(null)
+  const listHeading = useRef<HTMLHeadingElement>(null)
+  // The control that was pressed disappears, so the keyboard continues at the list.
+  const focusList = () => listHeading.current?.focus()
 
   return (
     <>
       <ScreenHeader
         title="Integraciones"
-        back={{ to: '/menu', label: 'Secciones' }}
+        back={{ to: '/menu', label: 'Secciones', desktop: { to: '/settings', label: 'Preferencias' } }}
         intro="Los tokens personales dejan que tus propios scripts lean tus datos o creen Movimientos. No dan acceso a otras personas ni a tu contraseña."
       />
       <div className="max-w-[40rem] space-y-5">
@@ -44,9 +47,26 @@ export function Integrations() {
             setVersion((count) => count + 1)
           }}
         />
-        {revealed && <SecretCard key={revealed.secret} name={revealed.name} secret={revealed.secret} onDone={() => setRevealed(null)} />}
+        {revealed && (
+          <SecretCard
+            key={revealed.secret}
+            name={revealed.name}
+            secret={revealed.secret}
+            onDone={() => {
+              setRevealed(null)
+              focusList()
+            }}
+          />
+        )}
         {state.status === 'ready' ? (
-          <TokenList tokens={state.value} onRevoked={() => setVersion((count) => count + 1)} />
+          <TokenList
+            tokens={state.value}
+            headingRef={listHeading}
+            onRevoked={() => {
+              setVersion((count) => count + 1)
+              focusList()
+            }}
+          />
         ) : (
           state.status !== 'gone' && <Pending state={state} retry={retry} loading="Cargando tus tokens…" />
         )}
@@ -185,10 +205,18 @@ function SecretCard({ name, secret, onDone }: { name: string; secret: string; on
   )
 }
 
-function TokenList({ tokens, onRevoked }: { tokens: PersonalToken[]; onRevoked: () => void }) {
+function TokenList({
+  tokens,
+  headingRef,
+  onRevoked,
+}: {
+  tokens: PersonalToken[]
+  headingRef: Ref<HTMLHeadingElement>
+  onRevoked: () => void
+}) {
   return (
     <section aria-labelledby="tokens-title" className={cardClassName}>
-      <h2 id="tokens-title" className="text-[1.15rem] font-semibold">
+      <h2 id="tokens-title" ref={headingRef} tabIndex={-1} className="text-[1.15rem] font-semibold focus:outline-none">
         Tus tokens
       </h2>
       {tokens.length === 0 ? (

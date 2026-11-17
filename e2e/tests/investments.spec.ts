@@ -16,9 +16,9 @@ const submit = (page: Page, name: 'Registrar compra' | 'Registrar venta') =>
   page.getByRole('main').getByRole('button', { name })
 
 async function pickAsset(page: Page, query: string, choice: RegExp) {
-  await page.getByRole('textbox', { name: 'Activo' }).fill(query)
+  await page.getByRole('combobox', { name: 'Activo' }).fill(query)
   await page.getByRole('button', { name: 'Buscar' }).click()
-  await page.getByRole('button', { name: choice }).click()
+  await page.getByRole('option', { name: choice }).click()
 }
 
 async function fillTrade(page: Page, units: string, price: string) {
@@ -194,11 +194,11 @@ test('the search keeps markets apart, explains an empty result and never submits
   await createAccount(page.request, { name: 'Bróker', type: 'investment' })
 
   await page.goto('/investments/transactions/buy')
-  const search = page.getByRole('textbox', { name: 'Activo' })
+  const search = page.getByRole('combobox', { name: 'Activo' })
   await search.fill('shop')
   await search.press('Enter')
-  const results = page.getByRole('list', { name: 'Resultados de la búsqueda' })
-  await expect(results.getByRole('button')).toHaveCount(2)
+  const results = page.getByRole('listbox', { name: 'Resultados de la búsqueda' })
+  await expect(results.getByRole('option')).toHaveCount(2)
   await expect(results).toContainText('XNYS')
   await expect(results).toContainText('XTSE')
   await expect(page).toHaveURL(/\/transactions\/buy$/)
@@ -220,14 +220,14 @@ test('a search that cannot connect says so and works again on retry', async ({ p
   await page.route('**/api/investments/assets/search*', (route) => (blocked ? route.abort() : route.continue()))
 
   await page.goto('/investments/transactions/buy')
-  await page.getByRole('textbox', { name: 'Activo' }).fill('aapl')
+  await page.getByRole('combobox', { name: 'Activo' }).fill('aapl')
   await page.getByRole('button', { name: 'Buscar' }).click()
   await expect(page.getByText('No pudimos conectar con Okane. Revisa tu conexión e inténtalo de nuevo.')).toBeVisible()
   await expectScreenQuality(page, 'investments-buy-search-failed')
 
   blocked = false
   await page.getByRole('button', { name: 'Buscar' }).click()
-  await expect(page.getByRole('button', { name: /^AAPL/ })).toBeVisible()
+  await expect(page.getByRole('option', { name: /^AAPL/ })).toBeVisible()
   await expect(page.getByText('No pudimos conectar con Okane.')).toHaveCount(0)
 })
 
@@ -302,12 +302,12 @@ test('the controls of the purchase screen are at least 44px tall on a phone', as
   await createAccount(page.request, { name: 'Bróker', type: 'investment' })
 
   await page.goto('/investments/transactions/buy')
-  await page.getByRole('textbox', { name: 'Activo' }).fill('aapl')
+  await page.getByRole('combobox', { name: 'Activo' }).fill('aapl')
   await page.getByRole('button', { name: 'Buscar' }).click()
 
   const controls = [
     page.getByRole('button', { name: 'Buscar' }),
-    page.getByRole('button', { name: /^AAPL/ }),
+    page.getByRole('option', { name: /^AAPL/ }),
     page.getByLabel('Unidades'),
     page.getByLabel('Precio por unidad'),
     submit(page, 'Registrar compra'),

@@ -1,12 +1,13 @@
 import { Wallet } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { listAccounts } from '../accounts/api'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { listAccounts, type Account } from '../accounts/api'
 import { useSignedInUser } from '../auth/context'
 import { TradeEditor } from '../components/investments/TradeEditor'
 import { EmptyState, Pending, ScreenHeader } from '../components/screen/Screen'
 import { recordTrade, type TradeKind } from '../investments/api'
 import { tradingAccounts } from '../investments/form'
 import { positionsBack, tradeNotice } from '../investments/presentation'
+import { presetFrom, type TradePreset } from '../investments/tradePreset'
 import { todayInPanama } from '../lib/dates'
 import type { ScreenNotice } from '../lib/notice'
 import { useLoaded } from '../lib/useLoaded'
@@ -26,10 +27,15 @@ const headings: Record<TradeKind, { title: string; intro: string }> = {
   },
 }
 
+/** The Account the form starts on: the one the link chose when it can take trades, else the first. */
+const presetAccount = (accounts: Account[], preset: TradePreset | null) =>
+  accounts.find((account) => account.id === preset?.accountId)?.id ?? accounts[0].id
+
 /** Records a purchase, a sale or a Dividend of an Asset in an investment Account. */
 export function Trade({ kind }: { kind: TradeKind }) {
   const { csrfToken } = useSignedInUser()
   const navigate = useNavigate()
+  const preset = presetFrom(useLocation().state)
   const { state, retry } = useLoaded(async () => tradingAccounts(await listAccounts()))
 
   return (
@@ -47,7 +53,7 @@ export function Trade({ kind }: { kind: TradeKind }) {
       ) : (
         <TradeEditor
           kind={kind}
-          initial={{ accountId: state.value[0].id, asset: null, units: '', unitPrice: '', commission: '', amount: '', date: todayInPanama() }}
+          initial={{ accountId: presetAccount(state.value, preset), asset: preset?.asset ?? null, units: '', unitPrice: '', commission: '', amount: '', date: todayInPanama() }}
           accounts={state.value}
           save={(trade) => recordTrade(kind, trade, csrfToken)}
           onSaved={(trade, asset) => {

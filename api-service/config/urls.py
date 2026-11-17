@@ -31,6 +31,7 @@ urlpatterns = [
     path("api/categories", categories.category_collection),
     path("api/categories/<int:category_id>", categories.category_detail),
     path("api/categories/<int:category_id>/archive", categories.category_archive),
+    path("api/categories/<int:category_id>/restore", categories.category_restore),
     path("api/accounts/<int:account_id>/statement", accounts.account_statement),
     path("api/expenses", expenses.expense_collection),
     path("api/expenses/<int:expense_id>", expenses.expense_detail),
