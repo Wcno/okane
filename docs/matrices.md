@@ -245,7 +245,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar transferencias | Sí | `GET /api/transfers` | `transfers` | api-service, api-db | N2 |
+| Consultar transferencias | Sí | `GET /api/transfers`, `GET /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |
 | Registrar transferencia | Sí | `POST /api/transfers` | `transfers` | api-service, api-db | N2 |
 | Editar transferencia | Sí | `PUT /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |
 | Eliminar transferencia | Sí | `DELETE /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |
