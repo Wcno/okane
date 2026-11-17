@@ -117,6 +117,33 @@ test('the positions screen leads to the transactions', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Transacciones de inversión' })).toBeVisible()
 })
 
+test('the populated list opens the purchase screen from its header, and its title fits a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await signUp(page.request)
+  const account = await createAccount(page.request, { name: 'Bróker', type: 'investment', opening_balance: '1000.00' })
+  const asset = await findAsset(page.request, 'aapl', 'XNAS')
+  await recordTrade(page.request, 'buy', {
+    account_id: account.id,
+    asset_id: asset.id,
+    units: '1',
+    unit_price: '100',
+    date: '2026-03-10',
+  })
+
+  await page.goto('/investments/transactions')
+  await expect(page.getByText('Mostrando 1 de 1 transacciones de inversión.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Registrar venta' })).toHaveCount(0)
+
+  const title = page.getByRole('heading', { level: 1, name: 'Transacciones de inversión' })
+  await expect(title).toBeVisible()
+  expect(await title.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  expect(await noOverflow(page)).toBe(true)
+
+  await page.getByRole('link', { name: 'Comprar' }).click()
+  await expect(page).toHaveURL(/\/investments\/transactions\/buy$/)
+  await expect(page.getByRole('heading', { name: 'Registrar compra' })).toBeVisible()
+})
+
 test('a transaction that is not the User’s is not here', async ({ page, expectedProblems }) => {
   // api-service answers 404 on purpose, and the browser logs it.
   expectedProblems.push(/status of 404/)

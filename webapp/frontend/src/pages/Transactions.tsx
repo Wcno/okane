@@ -1,7 +1,6 @@
-import { ChartLine, Plus, TrendingDown } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { ChartLine } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import { useAccounts } from '../accounts/useAccounts'
-import { smallSecondaryButtonClassName } from '../components/buttons'
 import { TradeChip } from '../components/investments/TradeChip'
 import { DayFeed } from '../components/record/DayFeed'
 import { RecordRow } from '../components/screen/RecordRow'
@@ -36,10 +35,16 @@ export function Transactions() {
   const notice = noticeFrom(useLocation().state)
   const known = accounts.state.status === 'ready' ? accounts.state.value : []
   const names = new Map(known.map((account) => [account.id, account.name]))
+  const hasRecords = state.status === 'ready' && state.value.records.length > 0
 
   return (
     <>
-      <ScreenHeader title="Transacciones de inversión" intro="Tus compras y ventas, de la más reciente a la más antigua." />
+      <ScreenHeader
+        title="Transacciones de inversión"
+        intro="Tus compras y ventas, de la más reciente a la más antigua."
+        // With nothing registered, the empty state already asks for the first purchase.
+        action={hasRecords ? { to: '/investments/transactions/buy', label: 'Registrar compra', shortLabel: 'Comprar' } : undefined}
+      />
 
       <NoticeBanner notice={notice} className="max-w-[44rem]" />
 
@@ -53,27 +58,15 @@ export function Transactions() {
           action={{ to: '/investments/transactions/buy', label: 'Registrar tu primera compra' }}
         />
       ) : (
-        <>
-          <div className="mb-5 flex flex-wrap justify-end gap-3 lg:mb-6">
-            <Link to="/investments/transactions/buy" className={smallSecondaryButtonClassName}>
-              <Plus size={17} aria-hidden="true" />
-              Registrar compra
-            </Link>
-            <Link to="/investments/transactions/sell" className={smallSecondaryButtonClassName}>
-              <TrendingDown size={17} aria-hidden="true" />
-              Registrar venta
-            </Link>
-          </div>
-          <DayFeed
-            feed={state.value}
-            showMore={showMore}
-            rowId={rowId}
-            row={(transaction) => (
-              <Row key={transaction.id} transaction={transaction} accountName={names.get(transaction.accountId) ?? ''} />
-            )}
-            countText={(shown, total) => `Mostrando ${shown} de ${total} transacciones de inversión.`}
-          />
-        </>
+        <DayFeed
+          feed={state.value}
+          showMore={showMore}
+          rowId={rowId}
+          row={(transaction) => (
+            <Row key={transaction.id} transaction={transaction} accountName={names.get(transaction.accountId) ?? ''} />
+          )}
+          countText={(shown, total) => `Mostrando ${shown} de ${total} transacciones de inversión.`}
+        />
       )}
     </>
   )
