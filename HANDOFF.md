@@ -70,15 +70,21 @@ Target 10-20 min per ticket: workers skip self-review; split backend and fronten
 
 ## Contract decisions (user, 2026-11-16 evening)
 
+- #16: additive `net_contribution` on GET /api/accounts approved; documented in the #16 PR.
+
 - Blanket yes: any ticket may add a read-one `GET /api/<resource>/{id}` mirroring #8, documented in matrices.md and contratos.md in its own PR. Any other contract change still asks.
 - #14: `DELETE /internal/users/me` on api-service, outside /api/, service-key auth, idempotent with a deleting lock (writes answer 409); webapp deletes the User only after a confirmed 204, else answers 502 and keeps the User. Documented in the #14 PR.
 
 ## Next step
 
-Stack (merge order): #47 (#8, cleared) -> #49 `chore/playwright-qa-gate` (QA gate + workflow docs) -> tickets.
-In flight:
-- #49: Haiku fixing two axe defects (RecordRow accessible name, balance `<p aria-label>`) and dropping the opt-outs; then CI and clear. The skill still says "at most 3 workers"; this run uses 5-6 by the user's speed request.
-- #48 (#14 delete user, on #47): CI pass; review found the retry-on-non-204 contract gap and small cleanups; Haiku applying. Then re-run CI, clear, rebase onto #49 later.
-- #15, #16, #11 (Sonnet): building; told to merge #47 round 2 and #49 and base PRs on `chore/playwright-qa-gate`.
-- #17: split. Backend (Sonnet) on `feat/17-recurring-payments`; frontend (Sonnet) on `feat/17-recurring-payments-ui` owns the PR. Shape decided: rules list embeds occurrences; read-ones for a rule and an occurrence; confirm {amount, account_id, date}.
-Next to start: #12 after #11, #9 after #17, #13 after #16 and #11.
+Cleared, ready for the user to merge (bottom first): #47 (#8) -> #49 (QA gate chore) ; #48 (#14) also on #47.
+
+Canonical shared record pieces: PR #52 (#15, `feat/15-incomes`, on #49): lib/useRecordForm, lib/useRecordFeed, components/record/*, lib/dayGroups. #15, #16 and #17 had each refactored #8 differently; #15's version wins and the others restack onto it.
+- #52 (#15): CI green; screenshot-qa and both review axes running.
+- #51 (#16, Sonnet worker): restacking onto #52, dropping its own extraction, documenting net_contribution.
+- #53 (#17 UI+backend merged): restacking onto #52 (drop fieldParts.tsx), 409 archive message.
+- #54 (#9, on #53): waits for #53's restack, then merges it; sample Restante bridge removed; Panel still shows sample Budgets until #18.
+- #50 (#11): 8 review fixes + restack onto #52.
+- #55 (#12, on #50): gates after #50 restacks; then merge #50 into it.
+Next to start once restacks land: #13 (needs #16, #11), #18 (needs #15, #9), #20 (needs #9).
+Docker address pools ran out with ~8 stacks; tear down stacks of cleared PRs promptly.
