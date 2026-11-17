@@ -133,6 +133,9 @@ los Saldos iniciales y el Rendimiento mensual está en el
   añade a la paginación `last_used_account_id`: la Cuenta del Gasto registrado
   más recientemente por el Usuario, según el orden de registro y no la fecha del
   Gasto, o `null` si no tiene Gastos. El registro rápido la propone al abrirse.
+- `GET /api/incomes/{id}` devuelve un Ingreso del Usuario, para abrir sus
+  pantallas de edición y eliminación desde un enlace; el identificador de otro
+  Usuario responde `404`.
 
 ## Pagos recurrentes
 
