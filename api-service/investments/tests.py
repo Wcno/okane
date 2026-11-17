@@ -1138,6 +1138,14 @@ class TwelveDataClosingTests(InvestmentApiTestCase):
             with self.assertRaises(quotes.QuotesRateLimited):
                 quotes.TwelveDataQuotes("secret").latest_close(self.held)
 
+    def test_an_http_limit_status_is_reported_as_rate_limited(self):
+        limit = urllib.error.HTTPError("https://x/?apikey=secret", 429, "Too Many Requests", {}, None)
+
+        with mock.patch("urllib.request.urlopen", side_effect=limit):
+            with self.assertRaises(quotes.QuotesRateLimited) as raised:
+                quotes.TwelveDataQuotes("secret").latest_close(self.held)
+        self.assertIsNone(raised.exception.__cause__)
+
     def test_a_network_failure_or_malformed_reply_is_unavailable_and_carries_no_key(self):
         failures = [urllib.error.URLError("https://x/?apikey=secret"), TimeoutError()]
         for failure in failures:

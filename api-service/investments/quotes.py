@@ -18,7 +18,7 @@ from django.conf import settings
 from accounts import clock
 
 TWELVE_DATA = "twelvedata"
-SEARCH_TIMEOUT_SECONDS = 5
+PROVIDER_TIMEOUT_SECONDS = 5
 # Free plan (ADR 0006): 8 credits per minute and 800 per day; a closing price costs 1 credit.
 CREDITS_PER_MINUTE = 8
 CREDITS_PER_DAY = 800
@@ -61,7 +61,7 @@ class TwelveDataQuotes:
             {"symbol": query, "outputsize": 20, "apikey": self.api_key}
         )
         try:
-            with urllib.request.urlopen(url, timeout=SEARCH_TIMEOUT_SECONDS) as response:
+            with urllib.request.urlopen(url, timeout=PROVIDER_TIMEOUT_SECONDS) as response:
                 body = json.load(response)
             rows = body["data"]
             return [self._candidate(row) for row in rows]
@@ -81,7 +81,7 @@ class TwelveDataQuotes:
             }
         )
         try:
-            with urllib.request.urlopen(url, timeout=SEARCH_TIMEOUT_SECONDS) as response:
+            with urllib.request.urlopen(url, timeout=PROVIDER_TIMEOUT_SECONDS) as response:
                 body = json.load(response)
             if body.get("code") == RATE_LIMIT_CODE:
                 raise QuotesRateLimited
@@ -92,6 +92,10 @@ class TwelveDataQuotes:
             )
         except QuotesUnavailable:
             raise
+        except urllib.error.HTTPError as error:
+            if error.code == RATE_LIMIT_CODE:
+                raise QuotesRateLimited from None
+            raise QuotesUnavailable from None
         # No `from error`: urllib messages may carry the request URL, which holds the key.
         except (
             urllib.error.URLError,
