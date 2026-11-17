@@ -421,19 +421,23 @@ test.describe('on a phone', () => {
       await page.goto('/expenses/create')
       // The chosen option is in bolder type, so it is the widest.
       await page.getByText('Entretenimiento', { exact: true }).click()
+      const options = page.locator('fieldset label')
+      await expect(options).toHaveCount(8)
+      // The grid is two columns at every width: the first two options share a row.
+      const first = await options.nth(0).boundingBox()
+      const second = await options.nth(1).boundingBox()
+      expect(second?.y, `first row at ${width}px`).toBe(first?.y)
+      expect(second?.x, `second column at ${width}px`).toBeGreaterThan(first?.x ?? 0)
+      // Long names wrap onto a second line; none is cut off or shown with an ellipsis.
       const names = page.locator('fieldset label span.min-w-0')
-      await expect(names).toHaveCount(8)
-      // A name that does not fit would break inside the word: it fits when it stays on one line.
-      const clipped = await names.evaluateAll(
-        (spans) =>
-          spans.filter(
-            (span) =>
-              span.scrollWidth > span.clientWidth + 1 ||
-              span.getBoundingClientRect().height > parseFloat(getComputedStyle(span).lineHeight) * 1.5,
-          ).length,
+      const truncated = await names.evaluateAll((spans) =>
+        spans.filter(
+          (span) =>
+            span.scrollWidth > span.clientWidth + 1 || getComputedStyle(span).textOverflow === 'ellipsis',
+        ).length,
       )
-      expect(clipped, `names clipped at ${width}px`).toBe(0)
-      for (const option of await page.locator('fieldset label').all()) {
+      expect(truncated, `names truncated at ${width}px`).toBe(0)
+      for (const option of await options.all()) {
         expect((await option.boundingBox())?.height).toBeGreaterThanOrEqual(44)
       }
       expect((await page.getByRole('link', { name: 'Gastos' }).first().boundingBox())?.height).toBeGreaterThanOrEqual(44)
