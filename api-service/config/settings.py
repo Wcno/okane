@@ -40,12 +40,14 @@ INSTALLED_APPS = [
     "investments",
     "transfers",
     "incomes",
+    "erasure",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
     "service_access.middleware.ServiceCredentialMiddleware",
+    "erasure.middleware.ErasedUserWritesMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
