@@ -16,9 +16,9 @@ export interface Create {
   needs?: Need
 }
 
-const income: Create = { to: '/incomes/create', label: 'Registrar ingreso', shortLabel: 'Ingreso', needs: 'money' }
-const transfer: Create = { to: '/transfers/create', label: 'Registrar transferencia', shortLabel: 'Nueva', needs: 'transfers' }
-const purchase: Create = { to: '/investments/transactions/buy', label: 'Registrar compra', shortLabel: 'Comprar' }
+const income: Create = { to: '/incomes/create', label: 'Registrar ingreso', shortLabel: 'Registrar', needs: 'money' }
+const transfer: Create = { to: '/transfers/create', label: 'Nueva transferencia', shortLabel: 'Nueva', needs: 'transfers' }
+const purchase: Create = { to: '/investments/transactions/buy', label: 'Comprar activo', shortLabel: 'Comprar' }
 const dividend: Create = { to: '/investments/transactions/dividend', label: 'Registrar dividendo' }
 
 /** What an address with nothing registered asks for first, and what it asks for instead when an Account is missing. */

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import vm from 'node:vm'
 import { expect, expectScreenQuality, test } from './support/qa.js'
-import { createAccount } from './support/ledger.js'
+import { categoryIdOf, createAccount } from './support/ledger.js'
 import { signUp } from './support/session.js'
 
 const APPS_SCRIPT = fileURLToPath(new URL('../../docs/examples/google-apps-script/okane.gs', import.meta.url))
@@ -86,7 +86,7 @@ test('the public API checks permissions, validates, and answers a retry with the
   const reader = await createTokenInScreen(page, 'Solo lectura', ['Leer datos financieros'])
   await page.getByRole('button', { name: 'Ya lo guardé' }).click()
   const writer = await createTokenInScreen(page, 'Escritura', ['Crear Movimientos'])
-  const expense = { type: 'expense', account_id: account.id, category_id: 2, amount: '12.50', description: 'Almuerzo' }
+  const expense = { type: 'expense', account_id: account.id, category_id: await categoryIdOf(page.request, 'food'), amount: '12.50', description: 'Almuerzo' }
 
   expect((await fetch(baseURL + '/api/v1/accounts')).status).toBe(401)
   expect((await asScript(reader, '/api/v1/movements', { method: 'POST', key: 'k0', body: expense })).status).toBe(403)
@@ -139,7 +139,7 @@ test('the Google Apps Script example reuses its key when it retries and follows 
     },
   }
   vm.runInNewContext(readFileSync(APPS_SCRIPT, 'utf8'), sandbox)
-  ;(sandbox as any).createMovement({ type: 'expense', account_id: account.id, category_id: 2, amount: '5.00' })
+  ;(sandbox as any).createMovement({ type: 'expense', account_id: account.id, category_id: 1, amount: '5.00' })
 
   expect(requests).toHaveLength(2)
   const [lost, retry] = requests

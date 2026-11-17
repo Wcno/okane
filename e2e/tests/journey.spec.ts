@@ -33,7 +33,9 @@ async function registerExpenseFromPanel(page: Page, amount: string) {
   await expect(sheet).toBeHidden()
 }
 
-test('a User walks the whole product and stays alone in it', async ({ page, browser, isMobile }) => {
+test('a User walks the whole product and stays alone in it', async ({ page, browser, isMobile, expectedProblems }) => {
+  // Signing out and deleting the User end the session the screen was still reading: its next read is a 401.
+  expectedProblems.push('status of 401')
   // The whole product in one test: it needs more than the default budget.
   test.setTimeout(120_000)
   forbidBrowserDialogs(page)
