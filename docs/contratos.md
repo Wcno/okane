@@ -281,6 +281,26 @@ los Saldos iniciales y el Rendimiento mensual está en el
   capital aportado. Se conserva precisión interna y se redondean solo salidas,
   incluida cada fila mensual sin realimentar el redondeo al siguiente cálculo.
   Las simulaciones no modifican Cuentas, tasas guardadas ni registros reales.
+- `POST /api/investments/projection` recibe `selection` (`{"kind": "portfolio"}`
+  o `{"kind": "account", "account_id": n}`, de una Cuenta de ahorro o de inversión
+  propia; otra ajena o inexistente devuelve `404`) y `scenarios`, de uno a tres,
+  cada uno con `initial_capital` (cadena decimal o `null` para el valor de la
+  selección), `monthly_contribution`, `months` (entero) y `annual_rate` (razón
+  decimal). Devuelve `convention`, `source` (`kind`, `account`, `value`, `as_of`,
+  `basis`: `balance` o `valuation`, `estimated` y `saved_annual_rate` de una
+  Cuenta de ahorro, que solo se ofrece) y `scenarios`, cada uno con los datos
+  aplicados más `contributed`, `final_capital`, `result` y `series` mensual
+  (`month`, `capital`, `contributed`). Los errores usan la clave
+  `scenarios.<posición>.<campo>`. Un precio de referencia ausente se sustituye por
+  el de la última transacción del Activo y se marca `estimated`.
+- `GET /api/savings/projection?account_id=` es la Proyección original de una
+  Cuenta de ahorro propia: un escenario con `initial_capital`,
+  `monthly_contribution`, `months` y `annual_rate` opcionales en la consulta.
+  Omitidos, parte del Saldo, con aporte cero, doce meses y la tasa guardada en la
+  Cuenta (cero sin ella). Responde con la misma forma que el `POST` y sus errores
+  usan el nombre del campo. Una Cuenta de otro tipo devuelve `400`.
+- Validación de entrada: el plazo admite hasta 600 meses y un capital proyectado
+  mayor que $999,999,999,999.99 se rechaza.
 - El importe diario del Disponible divide entre los días desde hoy hasta el
   último del mes, incluido hoy. El último día divide entre uno; un Disponible
   negativo permanece negativo y nunca causa una división entre cero.

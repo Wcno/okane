@@ -5,6 +5,8 @@ interface AccountFields {
   type?: 'spending' | 'savings' | 'investment'
   opening_balance?: string
   opening_date?: string
+  /** A ratio: 4.25% is "0.0425". Only a savings Account takes one. */
+  annual_interest_rate?: string
 }
 
 async function csrfToken(request: APIRequestContext) {

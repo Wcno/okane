@@ -38,6 +38,7 @@ import { RecurringPayments } from './pages/RecurringPayments'
 import { Register } from './pages/Register'
 import { Settings } from './pages/Settings'
 import { ResetPassword } from './pages/ResetPassword'
+import { Projection } from './pages/Projection'
 import { Trade } from './pages/Trade'
 import { TransferCreate } from './pages/TransferCreate'
 import { TransferDelete } from './pages/TransferDelete'
@@ -82,6 +83,8 @@ export default function App() {
             <Route path="/investments/transactions/buy" element={<Trade kind="buy" />} />
             <Route path="/investments/transactions/sell" element={<Trade kind="sell" />} />
             <Route path="/investments/transactions/dividend" element={<Trade kind="dividend" />} />
+            <Route path="/savings/projection" element={<Projection />} />
+            <Route path="/investments/projection" element={<Projection />} />
             <Route path="/transfers" element={<Transfers />} />
             <Route path="/transfers/create" element={<TransferCreate />} />
             <Route path="/transfers/:id/edit" element={<TransferEdit />} />
