@@ -70,6 +70,9 @@ Target 10-20 min per ticket: workers skip self-review; split backend and fronten
 
 ## Contract decisions (user, 2026-11-16 evening)
 
+- Ingresos follow the Gastos rules (archived-Account edits, 404 precedence), documented in #52.
+- #17: additive read-only `recurring_payment_occurrence_id` on the Expense JSON so edit/delete screens warn (contratos.md 169-171).
+
 - #16: additive `net_contribution` on GET /api/accounts approved; documented in the #16 PR.
 
 - Blanket yes: any ticket may add a read-one `GET /api/<resource>/{id}` mirroring #8, documented in matrices.md and contratos.md in its own PR. Any other contract change still asks.
@@ -77,14 +80,12 @@ Target 10-20 min per ticket: workers skip self-review; split backend and fronten
 
 ## Next step
 
-Cleared, ready for the user to merge (bottom first): #47 (#8) -> #49 (QA gate chore) ; #48 (#14) also on #47.
-
-Canonical shared record pieces: PR #52 (#15, `feat/15-incomes`, on #49): lib/useRecordForm, lib/useRecordFeed, components/record/*, lib/dayGroups. #15, #16 and #17 had each refactored #8 differently; #15's version wins and the others restack onto it.
-- #52 (#15): CI green; screenshot-qa and both review axes running.
-- #51 (#16, Sonnet worker): restacking onto #52, dropping its own extraction, documenting net_contribution.
-- #53 (#17 UI+backend merged): restacking onto #52 (drop fieldParts.tsx), 409 archive message.
-- #54 (#9, on #53): waits for #53's restack, then merges it; sample Restante bridge removed; Panel still shows sample Budgets until #18.
-- #50 (#11): 8 review fixes + restack onto #52.
-- #55 (#12, on #50): gates after #50 restacks; then merge #50 into it.
-Next to start once restacks land: #13 (needs #16, #11), #18 (needs #15, #9), #20 (needs #9).
-Docker address pools ran out with ~8 stacks; tear down stacks of cleared PRs promptly.
+Cleared, ready to merge (bottom first): #47 (#8) -> #49 (QA chore) -> #52 (#15, canonical shared record layer) -> #50 (#11). Also #48 (#14) on #47.
+Last fix round (gate findings sent), then clear each:
+- #51 (#16, on #52): Haiku fixing the 390 header clip (shortLabel "Nueva"), StrictIntegerField import, startOfRecords move.
+- #53 (#17, on #52): Sonnet adding `recurring_payment_occurrence_id` + warning; re-merging #52 2f45e6f.
+- #54 (#9, on #53): after #53 pushes, merge it (CategoryField mid-word fix), concurrency test, doc month fix.
+- #55 (#12, on #50): Haiku merging #50 1483057 and using ScreenHeader `action`.
+- #56 (#13, on #50 + #51): Sonnet implementing period Rendimiento with as_of, docs for the price read-one, ScreenHeader, AssetPrice on useRecordForm.
+Not started (time ran out): #18, #20, #25, #10, #22, #23, #24, #21, #30, #31, #32, #19.
+After the round: one seeded Chrome `ui-qa` polish pass on a stack built from the top of the stack, then the user's final UI review on port 8000.
