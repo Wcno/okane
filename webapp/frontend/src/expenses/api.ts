@@ -1,4 +1,4 @@
-import { RequestError, readJson, write, type FieldErrors, type Outcome as SharedOutcome } from '../lib/http'
+import { RequestError, readJson, write, type FieldErrors, type Outcome } from '../lib/http'
 
 /** An Expense as api-service describes it. The amount stays a decimal string. */
 export interface Expense {
@@ -16,7 +16,6 @@ export type ExpenseInput = Omit<Expense, 'id'>
 
 export type ExpenseField = 'amount' | 'categoryId' | 'accountId' | 'date' | 'description'
 export type ExpenseErrors = FieldErrors<ExpenseField>
-export type Outcome<T> = SharedOutcome<T, ExpenseField>
 
 export interface ExpensePage {
   expenses: Expense[]
@@ -31,7 +30,7 @@ const EXPENSE_GONE = 'Este gasto ya no existe. Vuelve a tus gastos para ver la l
 const EXPENSE_OR_ACCOUNT_GONE =
   'No encontramos este gasto o la Cuenta elegida. Vuelve a tus gastos para ver la lista al día.'
 
-export const PAGE_SIZE = 50
+const EXPENSES_PAGE_SIZE = 50
 
 interface ExpenseBody {
   id: number
@@ -67,7 +66,7 @@ const FORM_FIELDS: Record<string, ExpenseField> = {
   description: 'description',
 }
 
-export async function listExpenses(page: number, pageSize = PAGE_SIZE): Promise<ExpensePage> {
+export async function listExpenses(page: number, pageSize = EXPENSES_PAGE_SIZE): Promise<ExpensePage> {
   const body = await readJson<{
     results: ExpenseBody[]
     total: number
@@ -99,7 +98,7 @@ export async function getExpense(id: number): Promise<Expense> {
 
 const readExpense = async (response: Response) => toExpense(await response.json())
 
-export function createExpense(expense: ExpenseInput, csrfToken: string): Promise<Outcome<Expense>> {
+export function createExpense(expense: ExpenseInput, csrfToken: string): Promise<Outcome<Expense, ExpenseField>> {
   return write({
     method: 'POST',
     path: '/api/expenses',
@@ -111,7 +110,7 @@ export function createExpense(expense: ExpenseInput, csrfToken: string): Promise
   })
 }
 
-export function updateExpense(id: number, expense: ExpenseInput, csrfToken: string): Promise<Outcome<Expense>> {
+export function updateExpense(id: number, expense: ExpenseInput, csrfToken: string): Promise<Outcome<Expense, ExpenseField>> {
   return write({
     method: 'PUT',
     path: `/api/expenses/${id}`,
@@ -123,7 +122,7 @@ export function updateExpense(id: number, expense: ExpenseInput, csrfToken: stri
   })
 }
 
-export function deleteExpense(id: number, csrfToken: string): Promise<Outcome<void>> {
+export function deleteExpense(id: number, csrfToken: string): Promise<Outcome<void, ExpenseField>> {
   return write({
     method: 'DELETE',
     path: `/api/expenses/${id}`,

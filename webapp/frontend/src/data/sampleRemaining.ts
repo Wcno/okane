@@ -1,9 +1,10 @@
 // TEMPORARY until the Budgets ticket (#9): Budgets are not in api-service yet, so
 // the quick form still tells the Restante of its Category from the sample
-// Budgets. Only the amount and the Category of the Expense reach this module.
+// Budgets. Only the amount and the Category of the Expense reach this module,
+// and it never touches the sample Accounts: their Balances come from api-service.
 import { sumAmounts } from '../lib/decimal'
 import { formatMoney } from '../lib/money'
-import { remainingBudget, type BudgetLine } from './sample'
+import { remainingBudget, type BudgetLine, type DemoState } from './sample'
 
 export type SampleRemaining =
   | { kind: 'no-budget' }
@@ -21,6 +22,16 @@ export function sampleRemainingAfter(budgets: BudgetLine[], category: string, am
   const after = sumAmounts([before, `-${amount}`])
   if (after.startsWith('-')) return { kind: 'exceeded', before, excess: after.slice(1) }
   return { kind: 'remaining', before, after }
+}
+
+/** The sample Budgets after `amount` (a decimal string) was spent in `category`; nothing else changes. */
+export function recordSampleSpend(state: DemoState, category: string, amount: string): DemoState {
+  return {
+    ...state,
+    budgets: state.budgets.map((line) =>
+      line.category === category ? { ...line, spent: Number(sumAmounts([line.spent.toFixed(2), amount])) } : line,
+    ),
+  }
 }
 
 /** The line under the Category while the form is open. */

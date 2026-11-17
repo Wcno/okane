@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Account } from '../accounts/api'
-import { chooseDefaultAccount, parseAmount, validateExpense, type ExpenseDraft } from './form'
+import { chooseDefaultAccount, parseExpenseAmount, validateExpense, type ExpenseDraft } from './form'
 
 const account = (fields: Partial<Account> = {}): Account => ({
   id: 1,
@@ -24,22 +24,37 @@ const draft = (fields: Partial<ExpenseDraft> = {}): ExpenseDraft => ({
   ...fields,
 })
 
-const check = (fields: Partial<ExpenseDraft> = {}, accounts = [account()]) =>
-  validateExpense(draft(fields), { accounts, today: '2026-11-16' })
+// 17:00 in Panama on 2026-11-16.
+const NOW = new Date('2026-11-16T22:00:00Z')
 
-describe('parseAmount', () => {
-  it('reads an exact amount in cents as the decimal string the API takes', () => {
-    expect(parseAmount('12.5')).toBe('12.50')
-    expect(parseAmount(' 12,50 ')).toBe('12.50')
-    expect(parseAmount('007')).toBe('7.00')
-    expect(parseAmount('0.01')).toBe('0.01')
-    expect(parseAmount('999999999999.99')).toBe('999999999999.99')
+beforeEach(() => {
+  vi.useFakeTimers()
+  vi.setSystemTime(NOW)
+})
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
+const check = (fields: Partial<ExpenseDraft> = {}, accounts = [account()]) =>
+  validateExpense(draft(fields), { accounts })
+
+describe('parseExpenseAmount', () => {
+  it('reads a positive amount, with a comma or a point', () => {
+    expect(parseExpenseAmount('12.5')).toEqual({ amount: '12.50' })
+    expect(parseExpenseAmount(' 12,50 ')).toEqual({ amount: '12.50' })
+    expect(parseExpenseAmount('0.01')).toEqual({ amount: '0.01' })
+    expect(parseExpenseAmount('999999999999.99')).toEqual({ amount: '999999999999.99' })
   })
 
-  it('refuses what is not a positive amount with at most two decimals', () => {
-    for (const text of ['', ' ', '0', '0.00', '-5', '12.505', 'abc', '1e3', '1,250.00', '1.', '.5', '9999999999999']) {
-      expect(parseAmount(text), text).toBeNull()
+  it('refuses zero, a negative amount and what is not an amount', () => {
+    for (const text of ['', '0', '0.00', '-5', '12.505', 'abc', '1,250.00']) {
+      expect(parseExpenseAmount(text), text).toEqual({ error: 'invalid' })
     }
+  })
+
+  it('says an amount past twelve integer digits is too large', () => {
+    expect(parseExpenseAmount('9999999999999')).toEqual({ error: 'too-large' })
   })
 })
 
@@ -60,11 +75,30 @@ describe('validateExpense', () => {
     expect(outcome.errors.amount?.[0]).toContain('Ejemplo: 12.50')
   })
 
+  it('does not call a too large amount "not greater than zero"', () => {
+    const outcome = check({ amount: '1000000000000' })
+
+    expect(outcome.ok ? [] : outcome.errors.amount).toEqual([expect.stringContaining('demasiado grande')])
+  })
+
   it('refuses a date in the future, an unreadable one and one before the Account started', () => {
     expect(check({ date: '2026-11-17' })).toMatchObject({ ok: false, errors: { date: [expect.any(String)] } })
     expect(check({ date: '' })).toMatchObject({ ok: false, errors: { date: [expect.any(String)] } })
+  })
+
+  it('names the day the Account started in the way the app writes dates', () => {
     const early = check({ date: '2026-10-31' })
-    expect(early).toMatchObject({ ok: false, errors: { date: [expect.stringContaining('2026-11-01')] } })
+
+    expect(early).toMatchObject({ ok: false, errors: { date: [expect.stringContaining('(1 nov 2026)')] } })
+  })
+
+  it('reads the Panama day when it validates, so a form left open past midnight follows the new day', () => {
+    // 04:00Z is 23:00 on the 16th in Panama: the 17th has not started.
+    vi.setSystemTime(new Date('2026-11-17T04:00:00Z'))
+    expect(check({ date: '2026-11-17' })).toMatchObject({ ok: false, errors: { date: [expect.any(String)] } })
+
+    vi.setSystemTime(new Date('2026-11-17T05:00:00Z'))
+    expect(check({ date: '2026-11-17' }).ok).toBe(true)
   })
 
   it('accepts today and the day the Account started', () => {

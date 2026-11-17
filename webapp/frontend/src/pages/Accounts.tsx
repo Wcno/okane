@@ -1,48 +1,31 @@
-import { Archive, Pencil, Plus, Trash2, Wallet } from 'lucide-react'
+import { Archive, Plus, Wallet } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import type { Account } from '../accounts/api'
-import { formatDay } from '../accounts/form'
 import { accountTypeLabels, accountTypes, formatRate } from '../accounts/presentation'
 import { useAccounts } from '../accounts/useAccounts'
 import { AccountIcon } from '../components/accounts/AccountIcon'
-import { NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
+import { RecordRow } from '../components/screen/RecordRow'
+import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { smallSecondaryButtonClassName } from '../components/buttons'
+import { formatDay } from '../lib/dates'
 import { sumAmounts } from '../lib/decimal'
 import { formatMoney, moneyParts } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
 
-const rowActionClassName =
-  'grid size-10 shrink-0 place-items-center rounded-full text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink'
-
 function Row({ account }: { account: Account }) {
-  const isArchived = account.archivedAt !== null
   const details = [`Desde ${formatDay(account.openingDate)}`]
   if (account.annualInterestRate !== null) details.push(`Tasa anual ${formatRate(account.annualInterestRate)}`)
-  if (isArchived) details.unshift(accountTypeLabels[account.type])
+  if (account.archivedAt !== null) details.unshift(accountTypeLabels[account.type])
 
   return (
-    <li className="flex items-center gap-3 py-3 first:pt-1 last:pb-0">
-      <AccountIcon account={account} />
-      <div className="min-w-0 flex-1">
-        <h3 className="truncate text-[1rem] font-medium">{account.name}</h3>
-        <p className="mt-0.5 text-[0.87rem] leading-snug text-ink-3">{details.join(' · ')}</p>
-      </div>
-      <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatMoney(account.balance)}</span>
-      <div className="-mr-2 flex shrink-0">
-        <Link to={`/accounts/${account.id}/edit`} aria-label={`Editar ${account.name}`} className={rowActionClassName}>
-          <Pencil size={17} aria-hidden="true" />
-        </Link>
-        {!isArchived && (
-          <Link
-            to={`/accounts/${account.id}/delete`}
-            aria-label={`Eliminar ${account.name}`}
-            className={rowActionClassName}
-          >
-            <Trash2 size={17} aria-hidden="true" />
-          </Link>
-        )}
-      </div>
-    </li>
+    <RecordRow
+      to={`/accounts/${account.id}/edit`}
+      label={`Editar cuenta ${account.name}, ${formatMoney(account.balance)}`}
+      icon={<AccountIcon account={account} />}
+      title={account.name}
+      details={details.join(' · ')}
+      amount={account.balance}
+    />
   )
 }
 
@@ -101,28 +84,6 @@ function Total({ accounts }: { accounts: Account[] }) {
   )
 }
 
-function NoAccounts() {
-  return (
-    <section className={`${cardClassName} lg:p-8`}>
-      <span className="grid size-11 place-items-center rounded-xl bg-surface-2 text-ink-2">
-        <Wallet size={20} aria-hidden="true" />
-      </span>
-      <h2 className="mt-4 text-[1.2rem] font-semibold tracking-[-0.01em]">Aún no tienes Cuentas</h2>
-      <p className="mt-2 max-w-[60ch] text-ink-2">
-        Empieza por la Cuenta que más usas: tu cuenta del banco, tu efectivo o tu tarjeta de crédito. Le pones un
-        nombre, el dinero que tiene hoy y desde cuándo quieres llevar su registro.
-      </p>
-      <Link
-        to="/accounts/create"
-        className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-primary pl-4 pr-5 text-[1rem] font-semibold text-on-primary transition-transform duration-150 hover:-translate-y-px active:scale-[0.98]"
-      >
-        <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
-        Crear tu primera cuenta
-      </Link>
-    </section>
-  )
-}
-
 /** The User's Accounts with their derived Balances, grouped by type. */
 export function Accounts() {
   const { state, retry } = useAccounts()
@@ -138,7 +99,12 @@ export function Accounts() {
       {state.status !== 'ready' ? (
         <Pending state={state} retry={retry} loading="Cargando tus Cuentas…" />
       ) : state.value.length === 0 ? (
-        <NoAccounts />
+        <EmptyState
+          icon={Wallet}
+          title="Aún no tienes Cuentas"
+          text="Empieza por la Cuenta que más usas: tu cuenta del banco, tu efectivo o tu tarjeta de crédito. Le pones un nombre, el dinero que tiene hoy y desde cuándo quieres llevar su registro."
+          action={{ to: '/accounts/create', label: 'Crear tu primera cuenta' }}
+        />
       ) : (
         <AccountGroups accounts={state.value} />
       )}

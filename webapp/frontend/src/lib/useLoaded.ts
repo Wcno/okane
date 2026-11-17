@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAuth } from '../auth/context'
-import { NotFoundError, SessionEndedError } from './http'
+import { NotFoundError } from './http'
+import { useSessionEnd } from './useSessionEnd'
 
 export type Loaded<T> =
   | { status: 'loading' }
@@ -15,7 +15,7 @@ export type Loaded<T> =
  * can be retried. A User whose session ended is sent to sign in again.
  */
 export function useLoaded<T>(load: () => Promise<T>, reloadOn?: unknown) {
-  const { reload: reloadSession } = useAuth()
+  const endSession = useSessionEnd()
   const [state, setState] = useState<Loaded<T>>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const latestLoad = useRef(load)
@@ -29,15 +29,15 @@ export function useLoaded<T>(load: () => Promise<T>, reloadOn?: unknown) {
       (value) => current && setState({ status: 'ready', value }),
       (error: Error) => {
         if (!current) return
-        if (error instanceof SessionEndedError) reloadSession()
-        else if (error instanceof NotFoundError) setState({ status: 'gone', message: error.message })
+        if (endSession(error)) return
+        if (error instanceof NotFoundError) setState({ status: 'gone', message: error.message })
         else setState({ status: 'failed', message: error.message })
       },
     )
     return () => {
       current = false
     }
-  }, [reloadOn, attempt, reloadSession])
+  }, [reloadOn, attempt, endSession])
 
   const retry = useCallback(() => {
     setState({ status: 'loading' })
