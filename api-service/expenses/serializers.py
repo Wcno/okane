@@ -5,11 +5,12 @@ from rest_framework.exceptions import NotFound
 
 from accounts import clock
 from accounts.models import Account
-from accounts.serializers import DECIMAL_ERRORS, DecimalStringField, messages
+from accounts.serializers import AMOUNT_LIMIT, DecimalStringField, amount_messages, messages
 from expenses.categories import CATEGORY_IDS
 from expenses.models import DESCRIPTION_MAX_LENGTH, Expense
 
 AMOUNT_INVALID = "Escribe un monto mayor que cero, con dos decimales como máximo. Ejemplo: 12.50"
+AMOUNT_TOO_LARGE = f"El monto es demasiado grande. El máximo es ${AMOUNT_LIMIT}."
 CATEGORY_INVALID = "Elige la Categoría del gasto."
 ACCOUNT_REQUIRED = "Elige la Cuenta de la que salió el dinero."
 ACCOUNT_IS_INVESTMENT = "Una Cuenta de inversión no admite Gastos. Elige una Cuenta de gastos o de ahorro."
@@ -42,7 +43,7 @@ class ExpenseSerializer(serializers.Serializer):
         max_digits=14,
         decimal_places=2,
         min_value=Decimal("0.01"),
-        error_messages=messages(AMOUNT_INVALID, *DECIMAL_ERRORS),
+        error_messages=amount_messages(AMOUNT_INVALID, AMOUNT_TOO_LARGE),
     )
     category_id = StrictIntegerField(
         error_messages=messages(CATEGORY_INVALID, "required", "null", "invalid"),

@@ -5,12 +5,16 @@ from rest_framework import serializers
 from accounts import clock
 from accounts.models import Account
 
+# What 14 digits with 2 decimals can hold; the largest amount any money field takes.
+AMOUNT_LIMIT = "999,999,999,999.99"
+
 NAME_REQUIRED = "Escribe el nombre de la Cuenta, por ejemplo Cuenta corriente."
 NAME_TOO_LONG = "El nombre admite hasta 80 caracteres."
 TYPE_INVALID = "Elige el tipo de Cuenta: gastos, ahorro o inversión."
 OPENING_BALANCE_INVALID = (
     "Escribe el Saldo inicial con dos decimales como máximo, por ejemplo 1250.00 o -312.45."
 )
+OPENING_BALANCE_TOO_LARGE = f"El Saldo inicial es demasiado grande. El máximo es ${AMOUNT_LIMIT}."
 OPENING_DATE_INVALID = "Escribe la fecha de inicio del registro, por ejemplo 2026-11-01."
 OPENING_DATE_IN_FUTURE = "La fecha de inicio no puede ser futura. Elige hoy o un día anterior."
 RATE_INVALID = "La tasa anual debe ser cero o mayor, con hasta seis decimales como razón."
@@ -41,8 +45,14 @@ class DecimalStringField(serializers.DecimalField):
         return super().to_internal_value(data)
 
 
-DECIMAL_ERRORS = ("invalid", "required", "null", "max_digits", "max_decimal_places",
-                  "max_whole_digits", "min_value", "max_value")
+# `max_digits` and `max_whole_digits` are how DRF says the integer part is too long.
+TOO_LARGE_CODES = ("max_digits", "max_whole_digits")
+DECIMAL_ERRORS = ("invalid", "required", "null", "max_decimal_places", "min_value", "max_value")
+
+
+def amount_messages(invalid, too_large):
+    """Error messages of a money field: one for a bad amount, one for an amount past the limit."""
+    return {**messages(invalid, *DECIMAL_ERRORS), **messages(too_large, *TOO_LARGE_CODES)}
 
 
 def name_field():
@@ -62,7 +72,7 @@ def rate_field():
         min_value=0,
         required=False,
         allow_null=True,
-        error_messages=messages(RATE_INVALID, *DECIMAL_ERRORS),
+        error_messages=messages(RATE_INVALID, *DECIMAL_ERRORS, *TOO_LARGE_CODES),
     )
 
 
@@ -75,7 +85,7 @@ class AccountSerializer(serializers.ModelSerializer):
     opening_balance = DecimalStringField(
         max_digits=14,
         decimal_places=2,
-        error_messages=messages(OPENING_BALANCE_INVALID, *DECIMAL_ERRORS),
+        error_messages=amount_messages(OPENING_BALANCE_INVALID, OPENING_BALANCE_TOO_LARGE),
     )
     opening_date = serializers.DateField(
         error_messages=messages(OPENING_DATE_INVALID, "required", "null", "invalid", "datetime"),

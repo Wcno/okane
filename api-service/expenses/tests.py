@@ -184,6 +184,17 @@ class ExpenseValidationTests(ExpenseApiTestCase):
 
         self.assertEqual(self.balance(account), "1000.00")
 
+    def test_an_amount_past_twelve_digits_says_it_is_too_large_and_not_that_it_is_not_positive(self):
+        account = self.account()
+
+        for amount in ("1000000000000.00", "1234567890123456", "1000000000000.123"):
+            with self.subTest(amount=amount):
+                response = self.register(account, amount=amount)
+                self.assert_rejected(response, "amount")
+                self.assertIn("demasiado grande", response.json()["errors"]["amount"][0])
+
+        self.assertEqual(self.balance(account), "1000.00")
+
     def test_accepts_the_smallest_amount_and_a_large_one(self):
         account = self.account(opening_balance="0.00")
 
@@ -296,6 +307,28 @@ class ExpenseIsolationTests(ExpenseApiTestCase):
         response = self.register(account, account_id=999999)
 
         self.assertEqual(response.status_code, 404)
+
+    def test_not_found_wins_over_the_validation_of_the_other_fields(self):
+        theirs = self.account(user=2)
+        mine = self.account(user=1)
+        expense = self.registered(mine)
+
+        registering = self.register(theirs, user=1, amount="0", category_id=99, date="2999-01-01")
+        correcting = self.call(
+            "PUT",
+            f"/api/expenses/{expense['id']}",
+            {"amount": "0", "category_id": 99, "account_id": theirs["id"], "date": "2999-01-01"},
+        )
+        unknown_expense = self.call(
+            "PUT",
+            "/api/expenses/999999",
+            {"amount": "0", "category_id": 99, "account_id": mine["id"]},
+        )
+
+        self.assertEqual(
+            [registering.status_code, correcting.status_code, unknown_expense.status_code],
+            [404, 404, 404],
+        )
 
     def test_the_owner_comes_from_webapp_and_never_from_the_body(self):
         account = self.account(user=1)
