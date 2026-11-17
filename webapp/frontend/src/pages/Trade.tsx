@@ -55,7 +55,9 @@ export function Trade({ kind }: { kind: TradeKind }) {
           save={(trade) => recordTrade(kind, trade, csrfToken)}
           onSaved={(trade, asset) => {
             const account = state.value.find((candidate) => candidate.id === trade.accountId)
-            const notice: ScreenNotice = { notice: tradeNotice(trade, asset, { name: account?.name ?? 'la Cuenta' }) }
+            const notice: ScreenNotice = {
+              notice: tradeNotice('created', trade, asset, { name: account?.name ?? 'la Cuenta', balance: trade.accountBalance }),
+            }
             navigate(positionsBack.to, { state: notice })
           }}
         />

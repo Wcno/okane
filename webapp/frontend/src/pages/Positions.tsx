@@ -1,4 +1,4 @@
-import { ChartLine, Plus, TrendingDown } from 'lucide-react'
+import { ChartLine, History, Plus, TrendingDown } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { smallSecondaryButtonClassName } from '../components/buttons'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
@@ -65,6 +65,10 @@ export function Positions() {
         <Link to="/investments/transactions/sell" className={smallSecondaryButtonClassName}>
           <TrendingDown size={17} aria-hidden="true" />
           Registrar venta
+        </Link>
+        <Link to="/investments/transactions" className={smallSecondaryButtonClassName}>
+          <History size={17} aria-hidden="true" />
+          Ver transacciones
         </Link>
       </div>
 

@@ -19,6 +19,9 @@ import { Positions } from './pages/Positions'
 import { Register } from './pages/Register'
 import { ResetPassword } from './pages/ResetPassword'
 import { Trade } from './pages/Trade'
+import { TransactionDelete } from './pages/TransactionDelete'
+import { TransactionEdit } from './pages/TransactionEdit'
+import { Transactions } from './pages/Transactions'
 import { UnderConstruction } from './pages/UnderConstruction'
 
 export default function App() {
@@ -49,6 +52,9 @@ export default function App() {
             <Route path="/investments/positions" element={<Positions />} />
             <Route path="/investments/transactions/buy" element={<Trade kind="buy" />} />
             <Route path="/investments/transactions/sell" element={<Trade kind="sell" />} />
+            <Route path="/investments/transactions" element={<Transactions />} />
+            <Route path="/investments/transactions/:id/edit" element={<TransactionEdit />} />
+            <Route path="/investments/transactions/:id/delete" element={<TransactionDelete />} />
             <Route path="/profile/change-password" element={<ChangePassword />} />
             <Route path="*" element={<UnderConstruction />} />
           </Route>

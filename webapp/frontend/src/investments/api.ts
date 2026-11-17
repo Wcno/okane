@@ -1,4 +1,5 @@
 import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
+import type { Page } from '../lib/usePagedFeed'
 
 /** An Asset of the catalog: identified by provider, market and symbol, never by symbol alone. */
 export interface Asset {
@@ -31,8 +32,16 @@ export interface Trade extends TradeInput {
   id: number
   type: TradeKind
   cashAmount: string
-  /** The cash of the Account once this operation is in. */
+  /** The cash of the Account once this change is in. */
   accountBalance: string
+}
+
+/** A recorded purchase or sale as the list and the read-one screen show it, with its Asset. */
+export interface Transaction extends TradeInput {
+  id: number
+  type: TradeKind
+  cashAmount: string
+  asset: Asset
 }
 
 export type TradeField = 'accountId' | 'assetId' | 'units' | 'unitPrice' | 'date'
@@ -61,8 +70,12 @@ export interface Position {
 
 const SEARCH_FAILED = 'Okane no pudo buscar Activos. Espera un momento e inténtalo de nuevo.'
 const POSITIONS_FAILED = 'Okane no pudo consultar tus Posiciones. Espera un momento e inténtalo de nuevo.'
+const TRANSACTIONS_FAILED = 'Okane no pudo consultar tus Transacciones de inversión. Espera un momento e inténtalo de nuevo.'
+const TRANSACTION_GONE = 'Esta Transacción de inversión ya no existe. Vuelve a la lista para verla al día.'
 const ACCOUNT_OR_ASSET_GONE =
   'La Cuenta o el Activo elegido ya no existe. Vuelve a elegirlos para registrar la operación.'
+const TRANSACTION_OR_ACCOUNT_GONE =
+  'No encontramos esta Transacción de inversión o la Cuenta elegida. Vuelve a la lista para ver los datos al día.'
 
 interface AssetBody {
   id: number
@@ -104,6 +117,10 @@ interface TradeBody {
   account_balance: string
 }
 
+interface TransactionBody extends Omit<TradeBody, 'account_balance'> {
+  asset: AssetBody
+}
+
 const FORM_FIELDS: Record<string, TradeField> = {
   account_id: 'accountId',
   asset_id: 'assetId',
@@ -112,35 +129,95 @@ const FORM_FIELDS: Record<string, TradeField> = {
   date: 'date',
 }
 
+const tradeBody = (trade: TradeInput) => ({
+  account_id: trade.accountId,
+  asset_id: trade.assetId,
+  units: trade.units,
+  unit_price: trade.unitPrice,
+  date: trade.date,
+})
+
+const readTrade = async (response: Response): Promise<Trade> => {
+  const body: TradeBody = await response.json()
+  return {
+    id: body.id,
+    type: body.type,
+    accountId: body.account_id,
+    assetId: body.asset_id,
+    units: body.units,
+    unitPrice: body.unit_price,
+    cashAmount: body.cash_amount,
+    date: body.date,
+    accountBalance: body.account_balance,
+  }
+}
+
 export function recordTrade(kind: TradeKind, trade: TradeInput, csrfToken: string): Promise<Outcome<Trade, TradeField>> {
   return write({
     method: 'POST',
     path: `/api/investments/transactions/${kind}`,
     csrfToken,
-    body: {
-      account_id: trade.accountId,
-      asset_id: trade.assetId,
-      units: trade.units,
-      unit_price: trade.unitPrice,
-      date: trade.date,
-    },
+    body: tradeBody(trade),
     fields: FORM_FIELDS,
     gone: ACCOUNT_OR_ASSET_GONE,
-    read: async (response) => {
-      const body: TradeBody = await response.json()
-      return {
-        id: body.id,
-        type: body.type,
-        accountId: body.account_id,
-        assetId: body.asset_id,
-        units: body.units,
-        unitPrice: body.unit_price,
-        cashAmount: body.cash_amount,
-        date: body.date,
-        accountBalance: body.account_balance,
-      }
-    },
+    read: readTrade,
   })
+}
+
+/** Corrects a recorded purchase or sale; its kind stays as it was recorded. */
+export function updateTrade(id: number, trade: TradeInput, csrfToken: string): Promise<Outcome<Trade, TradeField>> {
+  return write({
+    method: 'PUT',
+    path: `/api/investments/transactions/${id}`,
+    csrfToken,
+    body: tradeBody(trade),
+    fields: FORM_FIELDS,
+    gone: TRANSACTION_OR_ACCOUNT_GONE,
+    read: readTrade,
+  })
+}
+
+export function deleteTrade(id: number, csrfToken: string): Promise<Outcome<void, TradeField>> {
+  return write({
+    method: 'DELETE',
+    path: `/api/investments/transactions/${id}`,
+    csrfToken,
+    gone: TRANSACTION_GONE,
+    read: async () => undefined,
+  })
+}
+
+const toTransaction = (body: TransactionBody): Transaction => ({
+  id: body.id,
+  type: body.type,
+  accountId: body.account_id,
+  assetId: body.asset_id,
+  units: body.units,
+  unitPrice: body.unit_price,
+  cashAmount: body.cash_amount,
+  date: body.date,
+  asset: toAsset(body.asset),
+})
+
+const TRANSACTIONS_PAGE_SIZE = 50
+
+/** One page of the User's Transactions, newest first. */
+export async function listTransactions(page: number): Promise<Page<Transaction>> {
+  const body = await readJson<{ results: TransactionBody[]; total: number; next_page: number | null }>(
+    `/api/investments/transactions?page_size=${TRANSACTIONS_PAGE_SIZE}&page=${page}`,
+    { failed: TRANSACTIONS_FAILED },
+  )
+  return { items: body.results.map(toTransaction), total: body.total, nextPage: body.next_page }
+}
+
+/** One Transaction; throws NotFoundError when it is not the User's or no longer exists. */
+export async function getTransaction(id: number): Promise<Transaction> {
+  return toTransaction(
+    await readJson<TransactionBody>(`/api/investments/transactions/${id}`, {
+      failed: TRANSACTIONS_FAILED,
+      gone: TRANSACTION_GONE,
+    }),
+  )
 }
 
 interface PositionBody {

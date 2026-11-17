@@ -1,8 +1,10 @@
 import { TriangleAlert } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Account } from '../../accounts/api'
 import type { Asset, Trade, TradeField, TradeInput, TradeKind } from '../../investments/api'
 import { cashAmount, exceedsCash, type TradeDraft } from '../../investments/form'
+import { positionsBack } from '../../investments/presentation'
 import { useTradeForm } from '../../investments/useTradeForm'
 import { todayInPanama } from '../../lib/dates'
 import type { Outcome } from '../../lib/http'
@@ -32,25 +34,39 @@ const copy: Record<TradeKind, { submit: string; submitting: string; cash: string
   sell: { submit: 'Registrar venta', submitting: 'Registrando…', cash: 'Volverá a la Cuenta' },
 }
 
-/** The card with the form that records one purchase or sale; Buy and Sell differ in what they pass. */
+/**
+ * The card with the form that records or corrects one purchase or sale. Buy and
+ * Sell differ in the words they use; a correction passes its own labels, its
+ * Account note and the way out of the card.
+ */
 export function TradeEditor({
   kind,
   initial,
   accounts,
   save,
   onSaved,
+  labels,
+  cancelTo = positionsBack.to,
+  accountNote,
+  children,
 }: {
   kind: TradeKind
   initial: TradeDraft
   accounts: Account[]
   save: (trade: TradeInput) => Promise<Outcome<Trade, TradeField>>
   onSaved: (trade: Trade, asset: Asset) => void | Promise<void>
+  labels?: { submit: string; submitting: string }
+  cancelTo?: string
+  accountNote?: string
+  /** Content below the buttons, such as the way to the delete screen. */
+  children?: ReactNode
 }) {
   const { form, draft, change, errors, isSubmitting, submit } = useTradeForm({ initial, accounts, save, onSaved })
   const id = (name: string) => `${kind}-${name}`
   const account = accounts.find((candidate) => candidate.id === draft.accountId)
   const cash = cashAmount(draft.units, draft.unitPrice)
   const warnAboutCash = exceedsCash(kind, cash, account)
+  const buttons = labels ?? copy[kind]
 
   return (
     <section className={`${cardClassName} max-w-[34rem]`}>
@@ -76,6 +92,7 @@ export function TradeEditor({
             ))}
           </select>
           <FieldError id={id('account-error')} errors={errors.accountId} />
+          {accountNote && <p className="mt-1.5 text-[0.9rem] text-ink-3">{accountNote}</p>}
         </div>
 
         <AssetPicker id={id('asset')} asset={draft.asset} onChange={(asset) => change({ asset })} error={errors.assetId} />
@@ -153,14 +170,15 @@ export function TradeEditor({
 
         {/* On a phone the action row stays above the bottom bar however long the form is. */}
         <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] -mx-5 -mb-5 flex flex-col-reverse gap-3 border-t border-line bg-surface px-5 pb-4 pt-3 sm:flex-row lg:static lg:mx-0 lg:mb-0 lg:border-0 lg:p-0 lg:pt-1">
-          <Link to="/investments/positions" className={`${secondaryButtonClassName} sm:flex-1`}>
+          <Link to={cancelTo} className={`${secondaryButtonClassName} sm:flex-1`}>
             Cancelar
           </Link>
           <button type="submit" disabled={isSubmitting} className={`${primaryButtonClassName} sm:flex-[1.6]`}>
-            {isSubmitting ? copy[kind].submitting : copy[kind].submit}
+            {isSubmitting ? buttons.submitting : buttons.submit}
           </button>
         </div>
       </form>
+      {children}
     </section>
   )
 }
