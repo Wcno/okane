@@ -25,7 +25,8 @@ export const isMovementType = (text: string | null): text is MovementType =>
 
 /** What narrows the view; an empty filter is every type, Account and day. */
 export interface MovementFilter {
-  type: MovementType | null
+  /** Empty is every type. */
+  types: MovementType[]
   accountId: number | null
   from: string
   to: string
@@ -99,7 +100,7 @@ export const movementKey = (movement: Pick<Movement, 'type' | 'id'>) => `${movem
 
 function query(filter: MovementFilter, page: number) {
   const params = new URLSearchParams({ page_size: String(MOVEMENTS_PAGE_SIZE), page: String(page) })
-  if (filter.type) params.set('type', filter.type)
+  for (const type of filter.types) params.append('type', type)
   if (filter.accountId !== null) params.set('account_id', String(filter.accountId))
   if (filter.from) params.set('from', filter.from)
   if (filter.to) params.set('to', filter.to)

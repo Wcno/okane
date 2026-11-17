@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { NotFoundError, RequestError, SessionEndedError } from '../lib/http'
-import { createTransfer, deleteTransfer, getTransfer, listTransfers, updateTransfer } from './api'
+import { NotFoundError } from '../lib/http'
+import { createTransfer, deleteTransfer, getTransfer, updateTransfer } from './api'
 
 function json(status: number, body?: unknown) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -35,29 +35,6 @@ const draft = {
 
 afterEach(() => {
   vi.unstubAllGlobals()
-})
-
-describe('listTransfers', () => {
-  it('reads one page with its total and the next page', async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(json(200, { results: [received], total: 51, page: 1, page_size: 50, next_page: 2 }))
-    vi.stubGlobal('fetch', fetch)
-
-    await expect(listTransfers(1)).resolves.toEqual({ records: [transfer], total: 51, nextPage: 2 })
-    expect(fetch.mock.calls[0][0]).toBe('/api/transfers?page_size=50&page=1')
-  })
-
-  it('explains a failure and tells an ended session apart', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')))
-    await expect(listTransfers(1)).rejects.toThrow(/conectar con Okane/)
-
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(500, {})))
-    await expect(listTransfers(1)).rejects.toBeInstanceOf(RequestError)
-
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(401, {})))
-    await expect(listTransfers(1)).rejects.toBeInstanceOf(SessionEndedError)
-  })
 })
 
 describe('getTransfer', () => {

@@ -10,11 +10,9 @@ import { Dashboard } from './pages/Dashboard'
 import { ExpenseCreate } from './pages/ExpenseCreate'
 import { ExpenseDelete } from './pages/ExpenseDelete'
 import { ExpenseEdit } from './pages/ExpenseEdit'
-import { Expenses } from './pages/Expenses'
 import { IncomeCreate } from './pages/IncomeCreate'
 import { IncomeDelete } from './pages/IncomeDelete'
 import { IncomeEdit } from './pages/IncomeEdit'
-import { Incomes } from './pages/Incomes'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { Login } from './pages/Login'
 import { Logout } from './pages/Logout'
@@ -30,10 +28,8 @@ import { Trade } from './pages/Trade'
 import { TransferCreate } from './pages/TransferCreate'
 import { TransferDelete } from './pages/TransferDelete'
 import { TransferEdit } from './pages/TransferEdit'
-import { Transfers } from './pages/Transfers'
 import { TransactionDelete } from './pages/TransactionDelete'
 import { TransactionEdit } from './pages/TransactionEdit'
-import { Transactions } from './pages/Transactions'
 import { UnderConstruction } from './pages/UnderConstruction'
 
 export default function App() {
@@ -58,7 +54,7 @@ export default function App() {
             <Route path="/accounts/:id/edit" element={<AccountEdit />} />
             <Route path="/accounts/:id/delete" element={<AccountDelete />} />
             <Route path="/movements" element={<Movements />} />
-            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/expenses" element={<Movements view="expense" />} />
             <Route path="/expenses/create" element={<ExpenseCreate />} />
             <Route path="/expenses/:id/edit" element={<ExpenseEdit />} />
             <Route path="/expenses/:id/delete" element={<ExpenseDelete />} />
@@ -69,14 +65,14 @@ export default function App() {
             <Route path="/investments/transactions/buy" element={<Trade kind="buy" />} />
             <Route path="/investments/transactions/sell" element={<Trade kind="sell" />} />
             <Route path="/investments/transactions/dividend" element={<Trade kind="dividend" />} />
-            <Route path="/transfers" element={<Transfers />} />
+            <Route path="/transfers" element={<Movements view="transfer" />} />
             <Route path="/transfers/create" element={<TransferCreate />} />
             <Route path="/transfers/:id/edit" element={<TransferEdit />} />
             <Route path="/transfers/:id/delete" element={<TransferDelete />} />
-            <Route path="/investments/transactions" element={<Transactions />} />
+            <Route path="/investments/transactions" element={<Movements view="investments" />} />
             <Route path="/investments/transactions/:id/edit" element={<TransactionEdit />} />
             <Route path="/investments/transactions/:id/delete" element={<TransactionDelete />} />
-            <Route path="/incomes" element={<Incomes />} />
+            <Route path="/incomes" element={<Movements view="income" />} />
             <Route path="/incomes/create" element={<IncomeCreate />} />
             <Route path="/incomes/:id/edit" element={<IncomeEdit />} />
             <Route path="/incomes/:id/delete" element={<IncomeDelete />} />
