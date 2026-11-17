@@ -1,12 +1,14 @@
-import { ArrowLeftRight } from 'lucide-react'
-import { useCallback } from 'react'
-import { useLocation, useSearchParams } from 'react-router-dom'
+import { Coins } from 'lucide-react'
+import { useCallback, useMemo } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Account } from '../accounts/api'
+import { offeredAccounts } from '../accounts/presentation'
 import { useAccounts } from '../accounts/useAccounts'
+import { smallSecondaryButtonClassName } from '../components/buttons'
 import { CategoryChip } from '../components/expenses/CategoryChip'
 import { IncomeChip } from '../components/incomes/IncomeChip'
 import { TradeChip } from '../components/investments/TradeChip'
-import { MovementFilters, isEmptyFilter } from '../components/movements/MovementFilters'
+import { MovementFilters } from '../components/movements/MovementFilters'
 import { DayFeed, type FeedGroup } from '../components/record/DayFeed'
 import { RecordRow } from '../components/screen/RecordRow'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader } from '../components/screen/Screen'
@@ -21,10 +23,14 @@ import {
   movementKey,
   type Movement,
   type MovementFilter,
+  type MovementType,
 } from '../movements/api'
 import { describeMovement, movementTypeFilterNames } from '../movements/presentation'
+import { useMovementsRevision } from '../movements/revision'
+import { movementViews, sameTypes, type Create, type MovementViewName, type Need } from '../movements/views'
 import { INITIAL_PREFERENCES, movementFilterOf, type Preferences } from '../preferences/api'
 import { usePreferences } from '../preferences/usePreferences'
+import { transferAccounts } from '../transfers/presentation'
 
 const rowId = (movement: Movement) => `movement-${movementKey(movement)}`
 
@@ -58,11 +64,12 @@ function Row({ movement, accounts }: { movement: Movement; accounts: Map<number,
 
 const dayParam = (text: string | null) => (text !== null && isCalendarDay(text) ? text : '')
 
-function readFilter(params: URLSearchParams): MovementFilter {
-  const type = params.get('type')
+function readFilter(search: string, preset: MovementType[]): MovementFilter {
+  const params = new URLSearchParams(search)
   const account = params.get('account')
+  const named = params.getAll('type').filter(isMovementType)
   return {
-    type: isMovementType(type) ? type : null,
+    types: named.length > 0 ? named : preset,
     accountId: account !== null && /^[1-9]\d*$/.test(account) ? Number(account) : null,
     from: dayParam(params.get('from')),
     to: dayParam(params.get('to')),
@@ -71,12 +78,14 @@ function readFilter(params: URLSearchParams): MovementFilter {
 
 function writeFilter(filter: MovementFilter): URLSearchParams {
   const params = new URLSearchParams()
-  if (filter.type) params.set('type', filter.type)
+  for (const type of filter.types) params.append('type', type)
   if (filter.accountId !== null) params.set('account', String(filter.accountId))
   if (filter.from) params.set('from', filter.from)
   if (filter.to) params.set('to', filter.to)
   return params
 }
+
+const isReversed = (filter: MovementFilter) => filter.from !== '' && filter.to !== '' && filter.from > filter.to
 
 const EMPTY_PAGE = { records: [], total: 0, nextPage: null }
 
@@ -91,64 +100,111 @@ function groupByType(movements: Movement[]): FeedGroup<Movement>[] {
   })).filter((group) => group.records.length > 0)
 }
 
-/** The filter of the address when it has any; otherwise the one the User's preferences ask for today. */
-function MovementsView({ preferences }: { preferences: Preferences }) {
+/**
+ * Every record of the User, whatever its kind, newest first. `/movements` shows
+ * them all, starting from the User's preferences; the older route of each kind
+ * shows the same screen with its type chosen. The filter lives in the address.
+ */
+function MovementsView({ view, preferences }: { view: MovementViewName; preferences: Preferences | null }) {
+  const preset = movementViews[view]
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
+  const search = params.toString()
+  // An address that names a filter prevails over the preferences, which never reach the routes of one kind.
   const hasAddressFilter = FILTER_PARAMS.some((name) => params.has(name))
-  const filter = hasAddressFilter ? readFilter(params) : movementFilterOf(preferences, todayInPanama())
-  const filterKey = writeFilter(filter).toString()
-  const periodReversed = filter.from !== '' && filter.to !== '' && filter.from > filter.to
+  const today = todayInPanama()
+  const filter = useMemo(() => {
+    if (hasAddressFilter || preferences === null) return readFilter(search, preset.types)
+    return movementFilterOf(preferences, today)
+  }, [search, preset, hasAddressFilter, preferences, today])
   const load = useCallback(
-    (page: number) => (periodReversed ? Promise.resolve(EMPTY_PAGE) : listMovements(filter, page)),
-    // `filterKey` is every part of `filter` that matters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filterKey, periodReversed],
+    (page: number) => (isReversed(filter) ? Promise.resolve(EMPTY_PAGE) : listMovements(filter, page)),
+    [filter],
   )
-  const { state, retry, showMore } = useRecordFeed(load, filterKey, movementKey)
+  const revision = useMovementsRevision()
+  const { state, retry, showMore } = useRecordFeed(load, `${search}#${revision}`, movementKey)
   const accounts = useAccounts()
   const notice = noticeFrom(useLocation().state)
   const known = accounts.state.status === 'ready' ? accounts.state.value : []
   const byId = new Map(known.map((account) => [account.id, account]))
-  const asksForEverything = isEmptyFilter(filter)
+  const loading = accounts.state.status !== 'ready'
+  const can: Record<Need, boolean> = {
+    money: loading || offeredAccounts(known).length > 0,
+    transfers: loading || transferAccounts(known).length >= 2,
+  }
+  const allowed = (create: Create) => create.needs === undefined || can[create.needs]
+  const hasRecords = state.status === 'ready' && state.value.records.length > 0
+  const atRest = !hasAddressFilter
+  const startsFromPreferences = preferences !== null && atRest && preferences.period !== 'all'
   const onlyThisMonth =
-    !hasAddressFilter && preferences.period === 'current_month' && isEmptyFilter({ ...filter, from: '', to: '' })
+    preferences !== null &&
+    preferences.period === 'current_month' &&
+    preferences.accountId === null &&
+    preferences.movementType === null
+  const first = allowed(preset.first.create)
+    ? preset.first.create
+    : (preset.first.withoutAccount ?? preset.first.create)
+  const note = 'note' in first ? first.note : undefined
+  // With nothing registered, the empty state already asks for the first record.
+  const headerAction = preset.create && allowed(preset.create) && hasRecords ? preset.create : undefined
+  const others = preset.others.filter(allowed)
+
+  const change = (next: MovementFilter) => {
+    // Another type is another screen: the older routes only open their own kind.
+    if (view !== 'all' && !sameTypes(next.types, preset.types)) {
+      navigate(`/movements?${writeFilter(next)}`, { replace: true })
+    } else {
+      setParams(writeFilter({ ...next, types: view === 'all' ? next.types : [] }), { replace: true })
+    }
+  }
 
   return (
     <>
-      <ScreenHeader
-        title="Movimientos"
-        intro="Tus gastos, ingresos, transferencias y operaciones de inversión, del más reciente al más antiguo."
-      />
+      <ScreenHeader title={preset.title} intro={preset.intro} action={headerAction} />
+
+      {others.length > 0 && (hasRecords || view === 'all') && (
+        <div className="mb-5 flex flex-wrap gap-2.5 lg:mb-6">
+          {others.map((create) => (
+            <Link key={create.to} to={create.to} className={smallSecondaryButtonClassName}>
+              {create.to.endsWith('/dividend') && <Coins size={17} aria-hidden="true" />}
+              {create.label}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <NoticeBanner notice={notice} className="max-w-[44rem]" />
 
       <MovementFilters
         filter={filter}
         accounts={known}
-        onChange={(next) => setParams(writeFilter(next), { replace: true })}
-        onClear={hasAddressFilter ? () => setParams(new URLSearchParams(), { replace: true }) : undefined}
+        canClear={!atRest}
+        onChange={change}
+        onClear={() => setParams({}, { replace: true })}
       />
 
       {state.status !== 'ready' ? (
-        <Pending state={state} retry={retry} loading="Cargando tus movimientos…" />
+        <Pending state={state} retry={retry} loading={preset.loading} />
       ) : state.value.records.length === 0 ? (
         <EmptyState
-          icon={ArrowLeftRight}
+          icon={preset.icon}
           title={
-            asksForEverything
-              ? 'Aún no registras movimientos'
-              : onlyThisMonth
+            startsFromPreferences
+              ? onlyThisMonth
                 ? 'Aún no hay movimientos este mes'
+                : 'Ningún movimiento coincide con tus preferencias'
+              : atRest
+                ? preset.empty.title
                 : 'Ningún movimiento coincide con estos filtros'
           }
           text={
-            asksForEverything
-              ? 'Cuando registres un gasto, un ingreso, una transferencia o una operación de inversión, aparecerá aquí.'
-              : onlyThisMonth
-                ? 'Tu vista empieza en el mes actual. Cambia el período aquí o en tus preferencias para ver otros meses.'
+            startsFromPreferences
+              ? 'Tu vista empieza con tus preferencias. Cambia los filtros aquí o en Preferencias para ver otros movimientos.'
+              : atRest
+                ? (note ?? preset.empty.text)
                 : 'Prueba con otro tipo, otra Cuenta u otro período.'
           }
-          action={{ to: '/expenses/create', label: 'Registrar un gasto' }}
+          action={{ to: first.to, label: first.label }}
         />
       ) : (
         <DayFeed
@@ -156,18 +212,21 @@ function MovementsView({ preferences }: { preferences: Preferences }) {
           showMore={showMore}
           rowId={rowId}
           row={(movement) => <Row key={movementKey(movement)} movement={movement} accounts={byId} />}
-          countText={(shown, total) => `Mostrando ${shown} de ${total} movimientos.`}
-          groupBy={preferences.grouping === 'type' ? groupByType : undefined}
+          countText={(shown, total) => `Mostrando ${shown} de ${total} ${preset.noun}.`}
+          groupBy={preferences?.grouping === 'type' ? groupByType : undefined}
         />
       )}
     </>
   )
 }
 
-/** Every record of the User, whatever its kind, newest first; the preferences set the start, the address overrides. */
-export function Movements() {
+/** The main screen waits for the preferences it starts from, but never depends on them. */
+function MovementsWithPreferences() {
   const { state, retry } = usePreferences()
-  // Preferences shape the view but never block it: when they cannot be read, the initial ones apply.
   if (state.status === 'loading') return <Pending state={state} retry={retry} loading="Cargando tus movimientos…" />
-  return <MovementsView preferences={state.status === 'ready' ? state.value : INITIAL_PREFERENCES} />
+  return <MovementsView view="all" preferences={state.status === 'ready' ? state.value : INITIAL_PREFERENCES} />
+}
+
+export function Movements({ view = 'all' }: { view?: MovementViewName }) {
+  return view === 'all' ? <MovementsWithPreferences /> : <MovementsView view={view} preferences={null} />
 }

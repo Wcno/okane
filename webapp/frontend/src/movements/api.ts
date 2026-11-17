@@ -25,7 +25,8 @@ export const isMovementType = (text: string | null): text is MovementType =>
 
 /** What narrows the view; an empty filter is every type, Account and day. */
 export interface MovementFilter {
-  type: MovementType | null
+  /** Empty is every type. */
+  types: MovementType[]
   accountId: number | null
   from: string
   to: string
@@ -35,65 +36,88 @@ const LIST_FAILED = 'Okane no pudo consultar tus movimientos. Espera un momento 
 const FILTER_GONE = 'La Cuenta elegida ya no existe. Elige otra o quita el filtro.'
 const MOVEMENTS_PAGE_SIZE = 50
 
-interface MovementBody {
-  type: MovementType
+/** What every line carries; the rest depends on its type, and what a type does not have comes as `null`. */
+interface CommonBody {
   id: number
   date: string
   amount: string
   account_id: number
-  destination_account_id: number | null
-  category_id: number | null
   description: string
-  asset: AssetBody | null
-  units: string | null
-  unit_price: string | null
-  commission: string | null
 }
 
+type MovementBody =
+  | (CommonBody & { type: 'expense'; category_id: number })
+  | (CommonBody & { type: 'income' })
+  | (CommonBody & { type: 'transfer'; destination_account_id: number })
+  | (CommonBody & {
+      type: TradeKind
+      asset: AssetBody
+      units: string | null
+      unit_price: string | null
+      commission: string
+    })
+
 function toMovement(body: MovementBody): Movement {
-  const { id, date, type } = body
-  if (type === 'expense') {
-    const record = {
-      id,
-      date,
-      amount: body.amount,
-      accountId: body.account_id,
-      categoryId: body.category_id ?? 0,
-      description: body.description,
-      // The view does not say which reserve confirmed an Expense; the edit screen reads it.
-      recurringPaymentOccurrenceId: null,
+  const { id, date } = body
+  switch (body.type) {
+    case 'expense':
+      return {
+        type: body.type,
+        id,
+        date,
+        record: {
+          id,
+          date,
+          amount: body.amount,
+          accountId: body.account_id,
+          categoryId: body.category_id,
+          // The view does not say which reserve confirmed an Expense; the edit screen reads it.
+          recurringPaymentOccurrenceId: null,
+          description: body.description,
+        },
+      }
+    case 'income':
+      return {
+        type: body.type,
+        id,
+        date,
+        record: { id, date, amount: body.amount, accountId: body.account_id, description: body.description },
+      }
+    case 'transfer':
+      return {
+        type: body.type,
+        id,
+        date,
+        record: {
+          id,
+          date,
+          amount: body.amount,
+          sourceAccountId: body.account_id,
+          destinationAccountId: body.destination_account_id,
+          description: body.description,
+        },
+      }
+    default: {
+      const asset: Asset = toAsset(body.asset)
+      return {
+        type: body.type,
+        id,
+        date,
+        record: {
+          id,
+          date,
+          type: body.type,
+          asset,
+          assetId: asset.id,
+          accountId: body.account_id,
+          cashAmount: body.amount,
+          units: body.units,
+          unitPrice: body.unit_price,
+          commission: body.commission,
+        },
+      }
     }
-    return { type, id, date, record }
   }
-  if (type === 'income') {
-    const record = { id, date, amount: body.amount, accountId: body.account_id, description: body.description }
-    return { type, id, date, record }
-  }
-  if (type === 'transfer') {
-    const record = {
-      id,
-      date,
-      amount: body.amount,
-      sourceAccountId: body.account_id,
-      destinationAccountId: body.destination_account_id ?? 0,
-      description: body.description,
-    }
-    return { type, id, date, record }
-  }
-  const asset: Asset = toAsset(body.asset!)
-  const record: Transaction = {
-    id,
-    date,
-    type,
-    asset,
-    assetId: asset.id,
-    accountId: body.account_id,
-    cashAmount: body.amount,
-    units: body.units,
-    unitPrice: body.unit_price,
-    commission: body.commission ?? '0.00',
-  }
-  return { type, id, date, record }
 }
 
 /** The key of a Movement in a list: two kinds of record may share an id. */
@@ -101,7 +125,7 @@ export const movementKey = (movement: Pick<Movement, 'type' | 'id'>) => `${movem
 
 function query(filter: MovementFilter, page: number) {
   const params = new URLSearchParams({ page_size: String(MOVEMENTS_PAGE_SIZE), page: String(page) })
-  if (filter.type) params.set('type', filter.type)
+  for (const type of filter.types) params.append('type', type)
   if (filter.accountId !== null) params.set('account_id', String(filter.accountId))
   if (filter.from) params.set('from', filter.from)
   if (filter.to) params.set('to', filter.to)

@@ -6,7 +6,7 @@ const preferences = (patch: Partial<Preferences>): Preferences => ({ ...INITIAL_
 describe('movementFilterOf', () => {
   it('starts as the current month, relative to the day it is asked on', () => {
     expect(movementFilterOf(INITIAL_PREFERENCES, '2026-11-16')).toEqual({
-      type: null,
+      types: [],
       accountId: null,
       from: '2026-11-01',
       to: '2026-11-30',
@@ -23,7 +23,7 @@ describe('movementFilterOf', () => {
     const chosen = preferences({ period: 'custom', from: '2026-10-05', to: '', movementType: 'income', accountId: 4 })
 
     expect(movementFilterOf(chosen, '2026-11-16')).toEqual({
-      type: 'income',
+      types: ['income'],
       accountId: 4,
       from: '2026-10-05',
       to: '',

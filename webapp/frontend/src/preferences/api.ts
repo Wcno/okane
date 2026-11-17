@@ -106,5 +106,5 @@ export function movementFilterOf(preferences: Preferences, today: string): Movem
       : preferences.period === 'custom'
         ? { from: preferences.from, to: preferences.to }
         : { from: '', to: '' }
-  return { type: preferences.movementType, accountId: preferences.accountId, ...period }
+  return { types: preferences.movementType === null ? [] : [preferences.movementType], accountId: preferences.accountId, ...period }
 }

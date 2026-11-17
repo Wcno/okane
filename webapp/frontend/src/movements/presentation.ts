@@ -1,7 +1,7 @@
 import type { Account } from '../accounts/api'
 import { describeExpense } from '../expenses/presentation'
 import { describeIncome } from '../incomes/presentation'
-import { describeTransaction } from '../investments/presentation'
+import { cashMoved, describeTransaction } from '../investments/presentation'
 import { describeTransfer } from '../transfers/presentation'
 import type { Movement, MovementType } from './api'
 
@@ -57,7 +57,7 @@ function describe(movement: Movement, accounts: Map<number, Account>): MovementT
     default:
       return {
         ...describeTransaction(movement.record, name(movement.record.accountId)),
-        amount: movement.record.cashAmount,
+        amount: cashMoved(movement.record),
       }
   }
 }

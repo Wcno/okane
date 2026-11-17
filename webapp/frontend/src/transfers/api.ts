@@ -1,5 +1,4 @@
 import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
-import type { RecordPage } from '../lib/recordPage'
 
 /** A Transfer as api-service describes it. The amount stays a decimal string. */
 export interface Transfer {
@@ -22,7 +21,6 @@ const TRANSFER_GONE = 'Esta transferencia ya no existe. Vuelve a tus transferenc
 const ACCOUNT_OR_TRANSFER_GONE =
   'No encontramos esta transferencia o una de las Cuentas elegidas. Vuelve a tus transferencias para ver la lista al día.'
 
-const TRANSFERS_PAGE_SIZE = 50
 
 interface TransferBody {
   id: number
@@ -56,14 +54,6 @@ const FORM_FIELDS: Record<string, TransferField> = {
   destination_account_id: 'destinationAccountId',
   date: 'date',
   description: 'description',
-}
-
-export async function listTransfers(page: number): Promise<RecordPage<Transfer>> {
-  const body = await readJson<{ results: TransferBody[]; total: number; next_page: number | null }>(
-    `/api/transfers?page_size=${TRANSFERS_PAGE_SIZE}&page=${page}`,
-    { failed: LIST_FAILED },
-  )
-  return { records: body.results.map(toTransfer), total: body.total, nextPage: body.next_page }
 }
 
 /** One Transfer; throws NotFoundError when it is not the User's or no longer exists. */

@@ -1,6 +1,5 @@
 import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
 import type { RecordField } from '../lib/recordForm'
-import type { RecordPage } from '../lib/recordPage'
 
 /** An Income as api-service describes it. The amount stays a decimal string. */
 export interface Income {
@@ -21,7 +20,6 @@ const INCOME_GONE = 'Este ingreso ya no existe. Vuelve a tus ingresos para ver l
 const INCOME_OR_ACCOUNT_GONE =
   'No encontramos este ingreso o la Cuenta elegida. Vuelve a tus ingresos para ver la lista al día.'
 
-const INCOMES_PAGE_SIZE = 50
 
 interface IncomeBody {
   id: number
@@ -51,14 +49,6 @@ const FORM_FIELDS: Record<string, RecordField> = {
   account_id: 'accountId',
   date: 'date',
   description: 'description',
-}
-
-export async function listIncomes(page: number, pageSize = INCOMES_PAGE_SIZE): Promise<RecordPage<Income>> {
-  const body = await readJson<{ results: IncomeBody[]; total: number; next_page: number | null }>(
-    `/api/incomes?page_size=${pageSize}&page=${page}`,
-    { failed: LIST_FAILED },
-  )
-  return { records: body.results.map(toIncome), total: body.total, nextPage: body.next_page }
 }
 
 /** One Income; throws NotFoundError when it is not the User's or no longer exists. */

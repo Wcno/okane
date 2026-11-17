@@ -19,6 +19,12 @@ function forbidBrowserDialogs(page: Page) {
 }
 
 const rows = (page: Page) => page.getByRole('main').getByRole('listitem')
+/** The visible ways to register an Expense: the shell offers it everywhere, so a screen must not add another. */
+const registerExpense = (page: Page) =>
+  page
+    .getByRole('link', { name: 'Registrar gasto', exact: true })
+    .or(page.getByRole('button', { name: 'Registrar gasto', exact: true }))
+
 const row = (page: Page, title: string, action: string) =>
   page.getByRole('link', { name: new RegExp(`^${title}.*\\. ${action}$`) })
 
@@ -88,6 +94,14 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page.getByRole('link', { name: /^Supermercado/ })).toContainText('$12.50')
     await expect(page.getByRole('link', { name: /^AAPL.*Compra/ })).toContainText('$200.00')
     await expectScreenQuality(page, `movements-all-${colorScheme}`)
+
+    // One "Registrar gasto" on Movimientos and on Gastos, at any width.
+    await expect(registerExpense(page)).toHaveCount(1)
+    await page.goto('/expenses')
+    await expect(rows(page)).toHaveCount(1)
+    await expect(registerExpense(page)).toHaveCount(1)
+    await page.goto('/movements')
+    await expect(rows(page)).toHaveCount(6)
 
     // Filter by type; the address keeps the filter.
     await page.getByLabel('Tipo').selectOption('transfer')

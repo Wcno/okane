@@ -186,7 +186,7 @@ test('the list shows loading, explains a failure and recovers on retry', async (
   await createExpense(page.request, { account_id: account.id, description: 'Taxi' })
 
   let attempts = 0
-  await page.route('**/api/expenses?*', async (route) => {
+  await page.route('**/api/movements?*', async (route) => {
     attempts += 1
     if (attempts === 1) {
       await new Promise((resolve) => setTimeout(resolve, 400))
@@ -299,7 +299,7 @@ test('the list shows the next page on request and keeps day headings', async ({ 
   await page.keyboard.press('Enter')
   await expect(page.getByText('Mostrando 51 de 51 gastos.')).toBeVisible()
   // The button is gone: the keyboard moves to the first row that arrived instead of falling to the page.
-  await expect(page.locator('a[id^=expense-]').nth(50)).toBeFocused()
+  await expect(page.locator('a[id^=movement-expense-]').nth(50)).toBeFocused()
   await expect(page.getByRole('button', { name: 'Mostrar más' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'mar 10 nov' })).toBeVisible()
