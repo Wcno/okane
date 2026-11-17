@@ -47,6 +47,20 @@ export async function createExpense(request: APIRequestContext, fields: ExpenseF
   return (await response.json()) as { id: number }
 }
 
+interface TransferFields {
+  source_account_id: number
+  destination_account_id: number
+  amount?: string
+  date?: string
+  description?: string
+}
+
+export async function createTransfer(request: APIRequestContext, fields: TransferFields) {
+  const response = await send(request, 'POST', '/api/transfers', { amount: '100.00', ...fields })
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number }
+}
+
 /** Archives an Account that has records, as deleting it in the screen does. */
 export async function archiveAccount(request: APIRequestContext, accountId: number) {
   const response = await send(request, 'DELETE', `/api/accounts/${accountId}`)
