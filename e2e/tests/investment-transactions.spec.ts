@@ -177,7 +177,7 @@ test('the list shows the next page on request and keeps the day headings', async
 
   await expect(page.getByText('Mostrando 51 de 51 transacciones de inversión.')).toBeVisible()
   // The button is gone: the keyboard moves to the first row that arrived instead of falling to the page.
-  await expect(page.locator('a[id^=transaction-]').nth(50)).toBeFocused()
+  await expect(page.locator('a[id^=movement-]').nth(50)).toBeFocused()
   await expect(page.getByRole('button', { name: 'Mostrar más' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'mar 10 nov' })).toBeVisible()
   await expectScreenQuality(page, 'investment-transactions-all-pages')

@@ -11,7 +11,7 @@ import { chooseDefaultAccount } from '../expenses/form'
 import { typedAmount } from '../lib/amount'
 import { balanceSentence } from '../accounts/presentation'
 import { NEEDS_AN_ACCOUNT_FOR_EXPENSE } from '../expenses/presentation'
-import { announceExpenseRevision } from '../expenses/revision'
+import { announceMovementsRevision } from '../movements/revision'
 import { useExpenseAccounts } from '../expenses/useExpenseAccounts'
 import { useExpenseForm } from '../expenses/useExpenseForm'
 import { todayInPanama } from '../lib/dates'
@@ -94,7 +94,7 @@ function QuickForm({ accounts, lastUsed }: { accounts: Account[]; lastUsed: numb
           .filter(Boolean)
           .join(' '),
       )
-      announceExpenseRevision()
+      announceMovementsRevision()
       closeForm()
     },
   })

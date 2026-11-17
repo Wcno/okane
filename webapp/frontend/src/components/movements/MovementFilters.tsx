@@ -1,6 +1,7 @@
 import type { Account } from '../../accounts/api'
-import { MOVEMENT_TYPES, isMovementType, type MovementFilter } from '../../movements/api'
+import { MOVEMENT_TYPES, isMovementType, type MovementFilter, type MovementType } from '../../movements/api'
 import { movementTypeFilterNames } from '../../movements/presentation'
+import { INVESTMENT_TYPES, sameTypes } from '../../movements/views'
 import { smallSecondaryButtonClassName } from '../buttons'
 import { TextField } from '../TextField'
 import { borderClassName, fieldClassName } from '../record/fieldStyles'
@@ -8,8 +9,15 @@ import { cardClassName } from '../screen/Screen'
 
 export const PERIOD_REVERSED = 'El período no puede terminar antes de empezar.'
 
-export const isEmptyFilter = (filter: MovementFilter) =>
-  filter.type === null && filter.accountId === null && filter.from === '' && filter.to === ''
+/** The choice that stands for all the investment types together. */
+const INVESTMENTS = 'investments'
+
+/** What the type select shows for the types chosen: one type, the investments or all. */
+const typeChoice = (types: MovementType[]) =>
+  types.length === 1 ? types[0] : sameTypes(types, INVESTMENT_TYPES) ? INVESTMENTS : ''
+
+const typesOfChoice = (choice: string): MovementType[] =>
+  choice === INVESTMENTS ? INVESTMENT_TYPES : isMovementType(choice) ? [choice] : []
 
 function SelectField({
   id,
@@ -45,11 +53,16 @@ function SelectField({
 export function MovementFilters({
   filter,
   accounts,
+  canClear,
   onChange,
+  onClear,
 }: {
   filter: MovementFilter
   accounts: Account[]
+  /** Whether the filter differs from what the address starts with. */
+  canClear: boolean
   onChange: (filter: MovementFilter) => void
+  onClear: () => void
 }) {
   const reversed = filter.from !== '' && filter.to !== '' && filter.from > filter.to
 
@@ -59,8 +72,8 @@ export function MovementFilters({
         <SelectField
           id="movement-type"
           label="Tipo"
-          value={filter.type ?? ''}
-          onChange={(value) => onChange({ ...filter, type: isMovementType(value) ? value : null })}
+          value={typeChoice(filter.types)}
+          onChange={(value) => onChange({ ...filter, types: typesOfChoice(value) })}
         >
           <option value="">Todos los tipos</option>
           {MOVEMENT_TYPES.map((type) => (
@@ -68,6 +81,7 @@ export function MovementFilters({
               {movementTypeFilterNames[type]}
             </option>
           ))}
+          <option value={INVESTMENTS}>Compras, ventas y dividendos</option>
         </SelectField>
         <SelectField
           id="movement-account"
@@ -99,11 +113,11 @@ export function MovementFilters({
           onChange={(event) => onChange({ ...filter, to: event.target.value })}
         />
       </div>
-      {!isEmptyFilter(filter) && (
+      {canClear && (
         <button
           type="button"
           className={`${smallSecondaryButtonClassName} mt-4`}
-          onClick={() => onChange({ type: null, accountId: null, from: '', to: '' })}
+          onClick={onClear}
         >
           Quitar filtros
         </button>

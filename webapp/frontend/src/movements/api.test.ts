@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { NotFoundError } from '../lib/http'
 import { listMovements, movementKey } from './api'
 
-const none = { type: null, accountId: null, from: '', to: '' }
+const none = { types: [], accountId: null, from: '', to: '' }
 
 const base = {
   destination_account_id: null,
@@ -58,11 +58,11 @@ describe('listMovements', () => {
   it('sends only the filters that are set', async () => {
     const fetchMock = answer(200, { results: [], total: 0, next_page: null })
 
-    await listMovements({ type: 'income', accountId: 3, from: '2026-11-01', to: '2026-11-30' }, 2)
+    await listMovements({ types: ['income', 'sell'], accountId: 3, from: '2026-11-01', to: '2026-11-30' }, 2)
     await listMovements(none, 1)
 
     expect(fetchMock.mock.calls[0][0]).toBe(
-      '/api/movements?page_size=50&page=2&type=income&account_id=3&from=2026-11-01&to=2026-11-30',
+      '/api/movements?page_size=50&page=2&type=income&type=sell&account_id=3&from=2026-11-01&to=2026-11-30',
     )
     expect(fetchMock.mock.calls[1][0]).toBe('/api/movements?page_size=50&page=1')
   })
