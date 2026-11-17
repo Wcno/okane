@@ -20,7 +20,7 @@ export function ScreenHeader({
   title: string
   intro?: ReactNode
   back?: { to: string; label: string }
-  action?: { to: string; label: string }
+  action?: { to: string; label: string; shortLabel?: string }
 }) {
   return (
     <header className="mb-5 lg:mb-7 lg:pr-48">
@@ -39,9 +39,10 @@ export function ScreenHeader({
           {intro && <p className="mt-1 max-w-[60ch] text-ink-2">{intro}</p>}
         </div>
         {action && (
-          <Link to={action.to} className={primaryActionClassName}>
+          <Link to={action.to} aria-label={action.label} className={primaryActionClassName}>
             <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
-            {action.label}
+            <span className="sm:hidden">{action.shortLabel ?? action.label}</span>
+            <span className="hidden sm:inline">{action.label}</span>
           </Link>
         )}
       </div>
