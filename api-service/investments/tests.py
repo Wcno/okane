@@ -542,7 +542,7 @@ class PositionTests(InvestmentApiTestCase):
 
         self.assertEqual(
             position["price"],
-            {"value": "150.00000000", "source": "last_transaction", "date": "2026-11-10"},
+            {"value": "150.00000000", "source": "last_transaction", "date": "2026-11-10", "estimated": True},
         )
         self.assertEqual(position["value"], "150.00")
 
@@ -652,3 +652,279 @@ class SampleProviderTests(InvestmentApiTestCase):
         body = response.json()
         self.assertTrue(body["provider_available"])
         self.assertEqual(sorted(item["market"] for item in body["results"]), ["XNYS", "XTSE"])
+
+
+class PerformanceTestCase(InvestmentApiTestCase):
+    def transfer(self, source, destination, amount, user=1, **fields):
+        body = {
+            "amount": amount,
+            "source_account_id": source["id"],
+            "destination_account_id": destination["id"],
+            **fields,
+        }
+        response = self.call("POST", "/api/transfers", body, user=user)
+        self.assertEqual(response.status_code, 201, response.content)
+
+    def read(self, name, user=1, query=""):
+        response = self.call("GET", f"/api/investments/{name}{query}", user=user)
+        self.assertEqual(response.status_code, 200, response.content)
+        return response.json()
+
+    def set_price(self, asset, value, user=1, **fields):
+        return self.call(
+            "PUT", f"/api/investments/assets/{asset.id}/price", {"value": value, **fields}, user=user
+        )
+
+
+class ReturnTests(PerformanceTestCase):
+    def test_a_gain_is_value_minus_net_contribution_with_the_opening_balance_as_first_contribution(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "10", "50", date="2026-11-02")
+        self.set_price(asset, "62.50")
+
+        body = self.read("dashboard")
+
+        # Cash 500.00 plus 10 units at 62.50, against 1,000.00 put in.
+        self.assertEqual(body["cash"], "500.00")
+        self.assertEqual(body["positions_value"], "625.00")
+        self.assertEqual(body["value"], "1125.00")
+        self.assertEqual(body["net_contribution"], "1000.00")
+        self.assertEqual(body["return"], {"amount": "125.00", "percent": "12.50"})
+        [account] = body["accounts"]
+        self.assertEqual(account["return"], {"amount": "125.00", "percent": "12.50"})
+
+    def test_a_loss_is_negative_in_money_and_in_percent(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "10", "100", date="2026-11-02")
+        self.set_price(asset, "70")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["value"], "700.00")
+        self.assertEqual(body["return"], {"amount": "-300.00", "percent": "-30.00"})
+
+    def test_a_sale_below_cost_that_is_cashed_out_still_counts_as_a_loss(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "10", "100", date="2026-11-02")
+        self.sold(broker, asset, "10", "80", date="2026-11-03")
+
+        body = self.read("performance")
+
+        self.assertEqual(body["positions_value"], "0.00")
+        self.assertEqual(body["return"], {"amount": "-200.00", "percent": "-20.00"})
+        self.assertEqual(body["positions"], [])
+
+    def test_a_withdrawal_lowers_the_net_contribution_and_not_the_return(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        savings = self.account(name="Ahorro", type="savings", opening_balance="0.00")
+        self.transfer(broker, savings, "400.00")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["net_contribution"], "600.00")
+        self.assertEqual(body["cash"], "600.00")
+        self.assertEqual(body["return"], {"amount": "0.00", "percent": "0.00"})
+
+    def test_a_contribution_by_transfer_raises_the_net_contribution(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        spending = self.account(name="Corriente", opening_balance="800.00")
+        self.transfer(spending, broker, "300.00")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["net_contribution"], "1300.00")
+        self.assertEqual(body["return"]["amount"], "0.00")
+
+    def test_a_transfer_between_two_investment_accounts_cancels_in_the_portfolio(self):
+        first = self.investment_account(name="Una", opening_balance="1000.00")
+        second = self.investment_account(name="Otra", opening_balance="500.00")
+        self.transfer(first, second, "250.00")
+
+        body = self.read("dashboard")
+
+        by_name = {item["name"]: item for item in body["accounts"]}
+        self.assertEqual(by_name["Una"]["net_contribution"], "750.00")
+        self.assertEqual(by_name["Otra"]["net_contribution"], "750.00")
+        self.assertEqual(body["net_contribution"], "1500.00")
+        self.assertEqual(body["value"], "1500.00")
+        self.assertEqual(body["return"]["amount"], "0.00")
+
+    def test_the_percent_does_not_apply_without_a_positive_net_contribution(self):
+        broker = self.investment_account(opening_balance="0.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "1", "100", date="2026-11-02")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["net_contribution"], "0.00")
+        self.assertEqual(body["return"]["percent"], None)
+
+    def test_an_archived_account_still_counts_in_the_portfolio(self):
+        broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        self.bought(broker, self.asset(), "1", "100", date="2026-11-02")
+        self.archive(broker)
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["value"], "1000.00")
+        self.assertTrue(body["accounts"][0]["archived"])
+
+    def test_other_account_types_stay_out_of_the_portfolio(self):
+        self.account(name="Corriente", opening_balance="5000.00")
+        self.account(name="Ahorro", type="savings", opening_balance="2000.00")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["accounts"], [])
+        self.assertEqual(body["value"], "0.00")
+        self.assertEqual(body["return"], {"amount": "0.00", "percent": None})
+
+    def test_exact_cents_survive_large_values(self):
+        broker = self.investment_account(opening_balance="900000000000.01", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "3", "0.01", date="2026-11-02")
+        self.set_price(asset, "0.01")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(body["value"], "900000000000.01")
+        self.assertEqual(body["return"]["amount"], "0.00")
+
+    def test_the_distribution_lists_each_asset_by_value_with_its_share(self):
+        broker = self.investment_account(opening_balance="2000.00", opening_date="2026-11-01")
+        self.bought(broker, self.asset("AAPL"), "1", "300", date="2026-11-02")
+        self.bought(broker, self.asset("MSFT", name="Microsoft"), "1", "100", date="2026-11-02")
+
+        body = self.read("dashboard")
+
+        self.assertEqual(
+            [(item["asset"]["symbol"], item["value"], item["portfolio_percent"]) for item in body["distribution"]],
+            [("AAPL", "300.00", "75.00"), ("MSFT", "100.00", "25.00")],
+        )
+        self.assertIsNone(body["others_value"])
+
+    def test_the_performance_lists_what_each_position_gained_against_its_cost(self):
+        broker = self.investment_account(opening_balance="2000.00", opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(broker, asset, "4", "100", date="2026-11-02")
+        self.set_price(asset, "90")
+
+        [position] = self.read("performance")["positions"]
+
+        self.assertEqual((position["cost"], position["value"]), ("400.00", "360.00"))
+        self.assertEqual((position["gain"], position["gain_percent"]), ("-40.00", "-10.00"))
+
+    def test_the_figures_are_each_users_own(self):
+        broker = self.investment_account(opening_balance="1000.00")
+        self.bought(broker, self.asset(), "1", "100", date="2026-11-02")
+
+        body = self.read("dashboard", user=2)
+
+        self.assertEqual(body["accounts"], [])
+        self.assertEqual(body["distribution"], [])
+
+    def test_a_future_closing_is_refused(self):
+        response = self.call("GET", "/api/investments/dashboard?as_of=2026-11-17")
+
+        self.assertEqual(response.status_code, 400)
+
+
+class ReferencePriceTests(PerformanceTestCase):
+    def setUp(self):
+        super().setUp()
+        self.broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        self.asset_held = self.asset()
+        self.bought(self.broker, self.asset_held, "2", "100", date="2026-11-02")
+
+    def test_without_a_manual_price_the_last_transaction_is_an_estimate_with_its_date(self):
+        body = self.read("dashboard")
+
+        [item] = body["distribution"]
+        self.assertEqual(
+            item["price"],
+            {"value": "100.00000000", "source": "last_transaction", "date": "2026-11-02", "estimated": True},
+        )
+        self.assertTrue(body["estimated"])
+
+    def test_a_manual_price_is_saved_with_its_date_and_valued_as_not_estimated(self):
+        response = self.set_price(self.asset_held, "125.5", date="2026-11-10")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            response.json()["price"],
+            {"value": "125.50000000", "source": "manual", "date": "2026-11-10", "estimated": False},
+        )
+        body = self.read("dashboard")
+        self.assertEqual(body["positions_value"], "251.00")
+        self.assertFalse(body["estimated"])
+
+    def test_the_price_date_defaults_to_today(self):
+        self.assertEqual(self.set_price(self.asset_held, "110").json()["price"]["date"], "2026-11-16")
+
+    def test_a_correction_the_same_day_replaces_the_price(self):
+        self.set_price(self.asset_held, "110")
+        self.set_price(self.asset_held, "130")
+
+        self.assertEqual(self.read("positions")["results"][0]["price"]["value"], "130.00000000")
+
+    def test_a_manual_price_older_than_the_last_transaction_does_not_win(self):
+        self.set_price(self.asset_held, "999", date="2026-11-01")
+
+        [position] = self.read("positions")["results"]
+
+        self.assertEqual(position["price"]["source"], "last_transaction")
+
+    def test_a_manual_price_never_applies_to_a_closing_before_its_date(self):
+        self.set_price(self.asset_held, "150", date="2026-11-10")
+
+        [position] = self.read("positions", query="?as_of=2026-11-05")["results"]
+
+        self.assertEqual(position["price"]["value"], "100.00000000")
+
+    def test_a_future_price_is_refused(self):
+        response = self.set_price(self.asset_held, "150", date="2026-11-17")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("date", response.json()["errors"])
+
+    def test_a_price_must_be_positive_with_up_to_eight_decimals(self):
+        for value in ("0", "-5", "abc", "1.123456789", 5):
+            with self.subTest(value=value):
+                self.assertEqual(self.set_price(self.asset_held, value).status_code, 400)
+
+    def test_an_unknown_asset_is_not_found(self):
+        response = self.call("PUT", "/api/investments/assets/9999/price", {"value": "5"})
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_a_price_of_one_user_never_changes_the_valuation_of_another(self):
+        other = self.investment_account(user=2, opening_balance="1000.00", opening_date="2026-11-01")
+        self.bought(other, self.asset_held, "2", "100", user=2, date="2026-11-02")
+
+        self.set_price(self.asset_held, "500", user=1)
+
+        mine = self.read("dashboard", user=1)
+        theirs = self.read("dashboard", user=2)
+        self.assertEqual(mine["positions_value"], "1000.00")
+        self.assertEqual(theirs["positions_value"], "200.00")
+        self.assertEqual(theirs["distribution"][0]["price"]["source"], "last_transaction")
+
+    def test_reading_the_price_of_an_asset_answers_each_user_with_their_own(self):
+        self.set_price(self.asset_held, "180")
+
+        mine = self.call("GET", f"/api/investments/assets/{self.asset_held.id}/price").json()
+        theirs = self.call("GET", f"/api/investments/assets/{self.asset_held.id}/price", user=2).json()
+
+        self.assertEqual(mine["price"]["value"], "180.00000000")
+        self.assertEqual(mine["asset"]["symbol"], "AAPL")
+        # A User with nothing to base a price on gets none, never zero.
+        self.assertIsNone(theirs["price"])
+
+    def test_a_price_cannot_be_set_without_a_value(self):
+        response = self.call("PUT", f"/api/investments/assets/{self.asset_held.id}/price", {})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("value", response.json()["errors"])

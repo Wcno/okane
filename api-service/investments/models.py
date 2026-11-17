@@ -64,3 +64,26 @@ class InvestmentTransaction(models.Model):
             models.CheckConstraint(condition=Q(cash_amount__gt=0), name="invtx_cash_positive"),
             models.CheckConstraint(condition=Q(type__in=["buy", "sell"]), name="invtx_type_known"),
         ]
+
+
+class ReferencePrice(models.Model):
+    """The price a User set by hand for an Asset on a day (GLOSSARY.md, Precio de referencia).
+
+    It belongs to the User: it never changes another User's valuations.
+    """
+
+    # Users live in webapp-db, so this is the identifier webapp sends, not a foreign key.
+    user_id = models.PositiveBigIntegerField()
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="reference_prices")
+    value = models.DecimalField(max_digits=20, decimal_places=8)
+    date = models.DateField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "asset_prices"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user_id", "asset", "date"], name="reference_price_one_per_day"
+            ),
+            models.CheckConstraint(condition=Q(value__gt=0), name="reference_price_positive"),
+        ]

@@ -46,13 +46,21 @@ export interface PositionAccount {
   averageCost: string
 }
 
+/** The price a valuation uses, with the day it is from; one taken from the last transaction is an estimate. */
+export interface ReferencePrice {
+  value: string
+  source: 'manual' | 'last_transaction'
+  date: string
+  estimated: boolean
+}
+
 /** What the User holds of one Asset, with the Accounts that add up to it. */
 export interface Position {
   asset: Asset
   units: string
   cost: string
   averageCost: string
-  price: { value: string; source: 'last_transaction'; date: string }
+  price: ReferencePrice
   value: string
   /** A percentage with two decimals; null when the portfolio has no value to share. */
   portfolioPercent: string | null
@@ -67,7 +75,7 @@ const POSITIONS_FAILED = 'Okane no pudo consultar tus Posiciones. Espera un mome
 const ACCOUNT_OR_ASSET_GONE =
   'La Cuenta o el Activo elegido ya no existe. Vuelve a elegirlos para registrar la operación.'
 
-interface AssetBody {
+export interface AssetBody {
   id: number
   provider: string
   market: string
@@ -77,7 +85,7 @@ interface AssetBody {
   currency: string
 }
 
-const toAsset = (body: AssetBody): Asset => ({
+export const toAsset = (body: AssetBody): Asset => ({
   id: body.id,
   provider: body.provider,
   market: body.market,
@@ -151,7 +159,7 @@ interface PositionBody {
   units: string
   cost: string
   average_cost: string
-  price: { value: string; source: 'last_transaction'; date: string }
+  price: ReferencePrice
   value: string
   portfolio_percent: string | null
   accounts: { account_id: number; account_name: string; units: string; cost: string; average_cost: string }[]

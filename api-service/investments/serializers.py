@@ -13,7 +13,7 @@ from accounts.serializers import (
     messages,
 )
 from investments.holdings import exact, sellable_units
-from investments.models import Asset, InvestmentTransaction
+from investments.models import Asset, InvestmentTransaction, ReferencePrice
 
 SMALLEST_QUANTITY = Decimal("0.00000001")
 CENT = Decimal("0.01")
@@ -37,6 +37,12 @@ CASH_ROUNDS_TO_ZERO = (
     "Sube las unidades o el precio."
 )
 CASH_TOO_LARGE = "El importe de la operación es demasiado grande. Revisa las unidades y el precio."
+PRICE_INVALID = (
+    "Escribe el precio mayor que cero, con ocho decimales como máximo. Ejemplo: 187.35"
+)
+PRICE_TOO_LARGE = "El precio es demasiado grande. El máximo es $999,999,999,999."
+PRICE_DATE_INVALID = "Escribe la fecha del precio, por ejemplo 2026-11-16."
+PRICE_DATE_IN_FUTURE = "La fecha del precio no puede ser futura. Elige hoy o un día anterior."
 UNKNOWN_FIELD = "Este dato no se admite en una compra ni en una venta."
 SALE_EXCEEDS_UNITS = "No puedes vender {requested} unidades: la Posición tiene {available}."
 SALE_EXCEEDS_UNITS_LATER = (
@@ -163,3 +169,35 @@ class InvestmentTransactionSerializer(serializers.Serializer):
         return InvestmentTransaction.objects.create(
             user_id=self.context["user_id"], type=self.context["type"], **validated_data
         )
+
+
+class ReferencePriceSerializer(serializers.Serializer):
+    """Validates a manual Reference Price; the context holds `user_id` and the `asset`.
+
+    A price is one per User, Asset and day: setting it again that day corrects it.
+    """
+
+    value = quantity_field(PRICE_INVALID, PRICE_TOO_LARGE)
+    date = serializers.DateField(
+        required=False,
+        error_messages=messages(PRICE_DATE_INVALID, "null", "invalid", "datetime"),
+    )
+
+    def validate(self, data):
+        sent = self.initial_data if isinstance(self.initial_data, dict) else {}
+        unknown = {name: [UNKNOWN_FIELD] for name in sent if name not in self.fields}
+        if unknown:
+            raise serializers.ValidationError(unknown)
+        data.setdefault("date", clock.today())
+        if data["date"] > clock.today():
+            raise serializers.ValidationError({"date": [PRICE_DATE_IN_FUTURE]})
+        return data
+
+    def save(self):
+        price, _ = ReferencePrice.objects.update_or_create(
+            user_id=self.context["user_id"],
+            asset=self.context["asset"],
+            date=self.validated_data["date"],
+            defaults={"value": self.validated_data["value"]},
+        )
+        return price

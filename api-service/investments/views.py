@@ -3,15 +3,23 @@ import datetime
 from django.db import transaction
 from django.db.models import Q
 from rest_framework import exceptions
+from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from accounts import clock, ledger
 from config.rest import paginate
 from investments import quotes
-from investments.models import Asset, InvestmentTransaction
-from investments.positions import positions_of, represent_asset
-from investments.serializers import InvestmentTransactionSerializer
+from investments.models import Asset, InvestmentTransaction, ReferencePrice
+from investments.performance import dashboard_of, performance_of
+from investments.positions import (
+    MANUAL,
+    positions_of,
+    reference_price,
+    represent_asset,
+    represent_price,
+)
+from investments.serializers import InvestmentTransactionSerializer, ReferencePriceSerializer
 
 SEARCH_RESULT_LIMIT = 20
 # Keep equal to ASSET_QUERY_MAX_LENGTH in webapp/frontend/src/investments/api.ts.
@@ -88,8 +96,8 @@ def sell(request):
     return record(request, InvestmentTransaction.Type.SELL)
 
 
-@api_view(["GET"])
-def positions(request):
+def requested_day(request):
+    """The closing a read asks for: today, or the `as_of` day, never a future one."""
     as_of = clock.today()
     if "as_of" in request.query_params:
         try:
@@ -98,5 +106,63 @@ def positions(request):
             raise exceptions.ValidationError({"as_of": [AS_OF_INVALID]}) from None
         if as_of > clock.today():
             raise exceptions.ValidationError({"as_of": [AS_OF_IN_FUTURE]})
+    return as_of
+
+
+@api_view(["GET"])
+def positions(request):
+    as_of = requested_day(request)
     items, page = paginate(request, positions_of(request.okane_user_id, as_of))
     return Response({"results": items, "as_of": as_of.isoformat(), **page})
+
+
+@api_view(["GET"])
+def dashboard(request):
+    return Response(dashboard_of(request.okane_user_id, requested_day(request)))
+
+
+@api_view(["GET"])
+def performance(request):
+    return Response(performance_of(request.okane_user_id, requested_day(request)))
+
+
+def current_price(user_id, asset):
+    """The price the User's valuations use today, or None when there is nothing to base one on."""
+    manual = (
+        ReferencePrice.objects.filter(user_id=user_id, asset=asset, date__lte=clock.today())
+        .order_by("-date")
+        .first()
+    )
+    last = (
+        InvestmentTransaction.objects.filter(user_id=user_id, asset=asset, date__lte=clock.today())
+        .order_by("-date", "-id")
+        .first()
+    )
+    if last is not None:
+        return reference_price(last, manual)
+    if manual is None:
+        return None
+    return {"value": manual.value, "source": MANUAL, "date": manual.date}
+
+
+def represent_asset_price(user_id, asset):
+    price = current_price(user_id, asset)
+    return {
+        "asset": represent_asset(asset),
+        "price": None if price is None else represent_price(price),
+    }
+
+
+@api_view(["GET", "PUT"])
+def asset_price(request, asset_id):
+    """Read or correct the User's Reference Price of an Asset; it never touches another User's."""
+    asset = Asset.objects.filter(pk=asset_id).first()
+    if asset is None:
+        raise NotFound
+    if request.method == "PUT":
+        serializer = ReferencePriceSerializer(
+            data=request.data, context={"user_id": request.okane_user_id, "asset": asset}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+    return Response(represent_asset_price(request.okane_user_id, asset))

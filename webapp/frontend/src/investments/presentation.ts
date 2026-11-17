@@ -1,8 +1,39 @@
 import type { Account } from '../accounts/api'
+import { formatDay } from '../lib/dates'
 import { formatMoney } from '../lib/money'
-import type { Asset, Trade, TradeKind } from './api'
+import type { Asset, ReferencePrice, Trade, TradeKind } from './api'
 
 export const positionsBack = { to: '/investments/positions', label: 'Posiciones' }
+export const performancePath = '/investments/performance'
+export const dashboardBack = { to: '/investments/dashboard', label: 'Inversiones' }
+
+const MINUS = '−'
+
+/** "12.50" as "+12.50 %" and "-30.00" as "−30.00 %"; "No aplica" when there is no positive base. */
+export function formatPercent(percent: string | null): string {
+  if (percent === null) return 'No aplica'
+  if (percent.startsWith('-')) return `${MINUS}${percent.slice(1)} %`
+  return Number(percent) > 0 ? `+${percent} %` : `${percent} %`
+}
+
+/** Where a price comes from and its day: what every price shown on screen says. */
+export function priceOrigin(price: ReferencePrice): string {
+  const origin = price.source === 'manual' ? 'fijado por ti' : 'de tu última operación'
+  return `Precio ${formatPrice(price.value)} ${origin}, ${formatDay(price.date)}${price.estimated ? ' (estimado)' : ''}`
+}
+
+/** The hue of the Asset at `position` of the distribution: the seven validated hues in their fixed order, then neutral. */
+export function distributionTone(position: number): string {
+  return `var(--cat-${position < 7 ? position + 1 : 0})`
+}
+
+export type Trend = 'gain' | 'loss' | 'flat'
+
+/** Whether an amount is a gain, a loss or nothing; a negative zero is nothing. */
+export function trendOf(amount: string): Trend {
+  const value = Number(amount)
+  return value > 0 ? 'gain' : value < 0 ? 'loss' : 'flat'
+}
 
 /** "2.50000000" as "2.5": units as a person reads them, without trailing zeros. */
 export function formatUnits(units: string): string {
