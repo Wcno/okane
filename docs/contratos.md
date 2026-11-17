@@ -204,6 +204,18 @@ los Saldos iniciales y el Rendimiento mensual está en el
 
 - La unicidad del Presupuesto es por Usuario, Categoría y mes. Las Categorías
   ajenas o archivadas no se admiten en un Presupuesto nuevo.
+- `GET /api/budgets?month=YYYY-MM` (por omisión, el mes actual) devuelve
+  `{month, results}` con una fila por Categoría del catálogo, tenga o no
+  Presupuesto, sin paginar: `id` (`null` sin Presupuesto), `category_id`, `month`,
+  `amount` (`null` sin Presupuesto), `spent` (Gastos del mes), `committed`
+  (reservas al corte del mes), `carried_over` (la parte de `committed` que viene
+  de meses anteriores), `remaining` (`null` sin Presupuesto, nunca `"0.00"`) y
+  `exceeded` (Restante negativo). `GET /api/budgets/{id}` devuelve la misma fila
+  de un Presupuesto del Usuario. `POST /api/budgets` y `PUT /api/budgets/{id}`
+  reciben `amount` (mayor que cero), `category_id` y `month`; `PUT` reemplaza
+  el Presupuesto completo. Un segundo Presupuesto para la misma Categoría y mes
+  devuelve `409`. El registro rápido de Gastos lee el Restante de la Categoría
+  en la fila del mes actual y calcula la consecuencia (`remaining` menos el monto).
 - La copia mensual se ejecuta una vez por Usuario y mes actual, en una
   transacción, y solo copia desde el mes calendario inmediatamente anterior
   si el mes actual aún no tiene Presupuestos. Un mes ya personalizado se marca
