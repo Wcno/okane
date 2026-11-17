@@ -40,8 +40,7 @@ export function ExpenseFields({
 
       <fieldset aria-describedby={errors.categoryId ? id('category-error') : undefined}>
         <legend className="text-[0.9rem] font-medium text-ink-2">Categoría</legend>
-        {/* As many columns as keep the longest name whole (Entretenimiento needs about 165px); a narrow screen gets one. */}
-        <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-1.5">
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
           {categories.map((option) => {
             const selected = draft.categoryId === option.id
             return (
