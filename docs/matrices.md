@@ -218,7 +218,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar presupuestos | Sí | `GET /api/budgets` | `budgets` | api-service, api-db | A5 |
+| Consultar presupuestos | Sí | `GET /api/budgets`, `GET /api/budgets/{id}` | `budgets` | api-service, api-db | A5 |
 | Crear presupuesto | Sí | `POST /api/budgets` | `budgets` | api-service, api-db | A5 |
 | Editar presupuesto | Sí | `PUT /api/budgets/{id}` | `budgets` | api-service, api-db | A5 |
 | Eliminar presupuesto | Sí | `DELETE /api/budgets/{id}` | `budgets` | api-service, api-db | A5 |
