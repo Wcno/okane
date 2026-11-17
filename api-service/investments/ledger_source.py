@@ -27,3 +27,23 @@ class InvestmentLedgerSource:
             .values_list("account_id", flat=True)
             .distinct()
         )
+
+    def statement_entries(self, account_id):
+        trades = InvestmentTransaction.objects.filter(account_id=account_id).select_related("asset")
+        return [
+            {
+                "kind": trade.type,
+                "record_id": trade.id,
+                "date": trade.date,
+                "created_at": trade.created_at,
+                "description": "",
+                "amount": (
+                    -trade.cash_amount
+                    if trade.type == InvestmentTransaction.Type.BUY
+                    else trade.cash_amount
+                ),
+                "asset": {"symbol": trade.asset.symbol, "name": trade.asset.name},
+                "units": trade.units,
+            }
+            for trade in trades
+        ]

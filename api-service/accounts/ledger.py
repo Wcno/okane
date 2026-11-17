@@ -64,3 +64,38 @@ def accounts_with_records(accounts):
     for source in _sources:
         found |= set(source.accounts_with_records(ids))
     return found & ids
+
+
+def statement(account):
+    """Return the Statement of an Account: every movement in order, each with its Balance.
+
+    It starts with the opening balance on the Account's opening date. The order is
+    the date, then the order of registration, then the source and the record id,
+    so two movements of one day always keep the same place. Each line's Balance
+    is computed over the whole history, so it never depends on the page asked for.
+    A source that moves money in an Account offers `statement_entries(account_id)`:
+    dicts with `kind`, `record_id`, `date`, `created_at`, `description` and the
+    signed `amount`, plus the fields that describe the record.
+    """
+    entries = []
+    for source in _sources:
+        entries_of = getattr(source, "statement_entries", None)
+        if entries_of is not None:
+            entries.extend(entries_of(account.id))
+    entries.sort(
+        key=lambda entry: (entry["date"], entry["created_at"], entry["kind"], entry["record_id"])
+    )
+
+    opening = {
+        "kind": "opening",
+        "record_id": account.id,
+        "date": account.opening_date,
+        "description": "",
+        "amount": account.opening_balance,
+    }
+    lines = []
+    balance = Decimal(0)
+    for position, entry in enumerate([opening, *entries], start=1):
+        balance += Decimal(entry["amount"])
+        lines.append({**entry, "id": position, "balance": balance})
+    return lines

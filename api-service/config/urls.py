@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/health", health),
     path("api/accounts", accounts.account_collection),
     path("api/accounts/<int:account_id>", accounts.account_detail),
+    path("api/accounts/<int:account_id>/statement", accounts.account_statement),
     path("api/expenses", expenses.expense_collection),
     path("api/expenses/<int:expense_id>", expenses.expense_detail),
     path("api/investments/assets/search", investments.asset_search),

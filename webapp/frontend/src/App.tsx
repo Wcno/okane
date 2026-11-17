@@ -4,6 +4,7 @@ import { AppShell } from './components/AppShell'
 import { AccountCreate } from './pages/AccountCreate'
 import { AccountDelete } from './pages/AccountDelete'
 import { AccountEdit } from './pages/AccountEdit'
+import { AccountStatement } from './pages/AccountStatement'
 import { Accounts } from './pages/Accounts'
 import { ChangePassword } from './pages/ChangePassword'
 import { Dashboard } from './pages/Dashboard'
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/accounts/create" element={<AccountCreate />} />
             <Route path="/accounts/:id/edit" element={<AccountEdit />} />
             <Route path="/accounts/:id/delete" element={<AccountDelete />} />
+            <Route path="/accounts/:id/statement" element={<AccountStatement />} />
             <Route path="/expenses" element={<Expenses />} />
             <Route path="/expenses/create" element={<ExpenseCreate />} />
             <Route path="/expenses/:id/edit" element={<ExpenseEdit />} />

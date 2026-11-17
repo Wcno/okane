@@ -17,6 +17,7 @@ export function RecordRow({
   title,
   details,
   amount,
+  signed = false,
 }: {
   to: string
   /** The DOM id of the link, so a screen can move the keyboard to a row. */
@@ -27,6 +28,8 @@ export function RecordRow({
   title: string
   details: string
   amount: string
+  /** Also prefix a positive amount with "+", for a list that mixes what came in and what went out. */
+  signed?: boolean
 }) {
   return (
     <li>
@@ -40,7 +43,7 @@ export function RecordRow({
           <span className="line-clamp-2 break-words text-[1rem] font-medium">{title}</span>
           <span className="mt-0.5 block break-words text-[0.87rem] leading-snug text-ink-3">{details}</span>
         </span>
-        <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatMoney(amount)}</span>
+        <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatMoney(amount, { sign: signed })}</span>
         <span className="sr-only">. {action}</span>
       </Link>
     </li>
