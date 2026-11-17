@@ -34,6 +34,8 @@ async function registerExpenseFromPanel(page: Page, amount: string) {
 }
 
 test('a User walks the whole product and stays alone in it', async ({ page, browser, isMobile }) => {
+  // The whole product in one test: it needs more than the default budget.
+  test.setTimeout(120_000)
   forbidBrowserDialogs(page)
 
   // Sign up in the browser, as a visitor does.

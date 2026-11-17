@@ -15,6 +15,7 @@ import { CategoryArchive } from './pages/CategoryArchive'
 import { CategoryCreate } from './pages/CategoryCreate'
 import { CategoryEdit } from './pages/CategoryEdit'
 import { ChangePassword } from './pages/ChangePassword'
+import { UserDelete } from './pages/UserDelete'
 import { Dashboard } from './pages/Dashboard'
 import { ExpenseCreate } from './pages/ExpenseCreate'
 import { ExpenseDelete } from './pages/ExpenseDelete'
@@ -114,6 +115,7 @@ export default function App() {
             <Route path="/incomes/:id/delete" element={<IncomeDelete />} />
             <Route path="/settings/integrations" element={<Integrations />} />
             <Route path="/profile/change-password" element={<ChangePassword />} />
+            <Route path="/profile/delete" element={<UserDelete />} />
             <Route path="*" element={<UnderConstruction />} />
           </Route>
         </Route>
