@@ -9,7 +9,7 @@ import { primaryButtonClassName, secondaryButtonClassName } from '../components/
 import { FormAlert } from '../components/FormAlert'
 import { TextField } from '../components/TextField'
 import { todayInPanama } from '../lib/dates'
-import { useFieldErrors } from '../lib/fieldErrors'
+import { useFieldErrors } from '../lib/useFieldErrors'
 import { formatMoney } from '../lib/money'
 import type { ScreenNotice } from '../lib/notice'
 import { useSubmission } from '../lib/useSubmission'

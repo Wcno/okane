@@ -10,6 +10,7 @@ export const todayInPanama = (now = new Date()) => panamaDay.format(now)
 
 const spanishDay = new Intl.DateTimeFormat('es', {
   timeZone: 'UTC',
+  weekday: 'short',
   day: 'numeric',
   month: 'short',
   year: 'numeric',
@@ -20,9 +21,20 @@ const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/
 /** Whether a date field holds a day written as 2026-11-01. */
 export const isCalendarDay = (text: string) => CALENDAR_DAY.test(text)
 
+/** The fields of a calendar day in Spanish ("weekday", "day", "month", "year"), without Intl's dots. */
+export function spanishDayFields(day: string) {
+  const parts = spanishDay.formatToParts(new Date(`${day}T00:00:00Z`))
+  return (type: Intl.DateTimeFormatPartTypes) =>
+    (parts.find((item) => item.type === type)?.value ?? '').replace('.', '')
+}
+
 /** 2026-11-01 as "1 nov 2026". */
 export function formatDay(day: string): string {
-  const parts = spanishDay.formatToParts(new Date(`${day}T00:00:00Z`))
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? ''
-  return `${part('day')} ${part('month').replace('.', '')} ${part('year')}`
+  const field = spanishDayFields(day)
+  return `${field('day')} ${field('month')} ${field('year')}`
+}
+
+/** The calendar day before `day`. */
+export function dayBefore(day: string): string {
+  return new Date(Date.parse(`${day}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10)
 }
