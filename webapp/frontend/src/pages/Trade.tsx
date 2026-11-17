@@ -1,10 +1,9 @@
 import { Wallet } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { listAccounts } from '../accounts/api'
 import { useSignedInUser } from '../auth/context'
-import { primaryButtonClassName } from '../components/buttons'
 import { TradeEditor } from '../components/investments/TradeEditor'
-import { Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
+import { EmptyState, Pending, ScreenHeader } from '../components/screen/Screen'
 import { recordTrade, type TradeKind } from '../investments/api'
 import { tradingAccounts } from '../investments/form'
 import { positionsBack, tradeNotice } from '../investments/presentation'
@@ -35,18 +34,12 @@ export function Trade({ kind }: { kind: TradeKind }) {
       {state.status !== 'ready' ? (
         <Pending state={state} retry={retry} loading="Cargando tus Cuentas…" />
       ) : state.value.length === 0 ? (
-        <section className={`${cardClassName} max-w-[34rem]`}>
-          <span className="grid size-11 place-items-center rounded-xl bg-surface-2 text-ink-2">
-            <Wallet size={20} aria-hidden="true" />
-          </span>
-          <h2 className="mt-4 mb-2 text-[1.2rem] font-semibold tracking-[-0.01em]">Primero necesitas una Cuenta de inversión</h2>
-          <p className="text-ink-2">
-            Una compra o una venta se registra en el efectivo de tu bróker. Crea esa Cuenta y vuelve aquí.
-          </p>
-          <Link to="/accounts/create" className={`${primaryButtonClassName} mt-4`}>
-            Crear cuenta
-          </Link>
-        </section>
+        <EmptyState
+          icon={Wallet}
+          title="Primero necesitas una Cuenta de inversión"
+          text="Una compra o una venta se registra en el efectivo de tu bróker. Crea esa Cuenta y vuelve aquí."
+          action={{ to: '/accounts/create', label: 'Crear cuenta' }}
+        />
       ) : (
         <TradeEditor
           kind={kind}

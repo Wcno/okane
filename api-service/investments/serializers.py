@@ -37,6 +37,7 @@ CASH_ROUNDS_TO_ZERO = (
     "Sube las unidades o el precio."
 )
 CASH_TOO_LARGE = "El importe de la operación es demasiado grande. Revisa las unidades y el precio."
+UNKNOWN_FIELD = "Este dato no se admite en una compra ni en una venta."
 SALE_EXCEEDS_UNITS = "No puedes vender {requested} unidades: la Posición tiene {available}."
 SALE_EXCEEDS_UNITS_LATER = (
     "No puedes vender {requested} unidades en esa fecha: dejaría ventas posteriores sin "
@@ -107,6 +108,14 @@ class InvestmentTransactionSerializer(serializers.Serializer):
         return asset
 
     def validate(self, data):
+        # A field api-service does not know is refused, never ignored: a client that sends
+        # a commission must not believe it was recorded (commissions arrive with another ticket).
+        sent = self.initial_data if isinstance(self.initial_data, dict) else {}
+        known = {name for name, field in self.fields.items() if not field.read_only}
+        unknown = {name: [UNKNOWN_FIELD] for name in sent if name not in known}
+        if unknown:
+            raise serializers.ValidationError(unknown)
+
         account = data.pop("account_id")
         asset = data.pop("asset_id")
         if account.type != Account.Type.INVESTMENT:

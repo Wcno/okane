@@ -59,6 +59,9 @@ export interface Position {
   accounts: PositionAccount[]
 }
 
+/** Keep equal to QUERY_MAX_LENGTH in api-service/investments/views.py. */
+export const ASSET_QUERY_MAX_LENGTH = 60
+
 const SEARCH_FAILED = 'Okane no pudo buscar Activos. Espera un momento e inténtalo de nuevo.'
 const POSITIONS_FAILED = 'Okane no pudo consultar tus Posiciones. Espera un momento e inténtalo de nuevo.'
 const ACCOUNT_OR_ASSET_GONE =

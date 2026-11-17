@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Account } from '../accounts/api'
-import { chooseDefaultAccount, parseExpenseAmount, validateExpense, type ExpenseDraft } from './form'
+import { chooseDefaultAccount, validateExpense, type ExpenseDraft } from './form'
 
 const account = (fields: Partial<Account> = {}): Account => ({
   id: 1,
@@ -38,25 +38,6 @@ afterEach(() => {
 
 const check = (fields: Partial<ExpenseDraft> = {}, accounts = [account()]) =>
   validateExpense(draft(fields), { accounts })
-
-describe('parseExpenseAmount', () => {
-  it('reads a positive amount, with a comma or a point', () => {
-    expect(parseExpenseAmount('12.5')).toEqual({ amount: '12.50' })
-    expect(parseExpenseAmount(' 12,50 ')).toEqual({ amount: '12.50' })
-    expect(parseExpenseAmount('0.01')).toEqual({ amount: '0.01' })
-    expect(parseExpenseAmount('999999999999.99')).toEqual({ amount: '999999999999.99' })
-  })
-
-  it('refuses zero, a negative amount and what is not an amount', () => {
-    for (const text of ['', '0', '0.00', '-5', '12.505', 'abc', '1,250.00']) {
-      expect(parseExpenseAmount(text), text).toEqual({ error: 'invalid' })
-    }
-  })
-
-  it('says an amount past twelve integer digits is too large', () => {
-    expect(parseExpenseAmount('9999999999999')).toEqual({ error: 'too-large' })
-  })
-})
 
 describe('validateExpense', () => {
   it('turns a complete draft into the Expense to send', () => {

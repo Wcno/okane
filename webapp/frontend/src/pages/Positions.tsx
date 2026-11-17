@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { smallSecondaryButtonClassName } from '../components/buttons'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { listPositions, type Position } from '../investments/api'
-import { formatPrice, formatUnits, unitsPhrase } from '../investments/presentation'
+import { describeAsset, formatPrice, formatUnits, unitsPhrase } from '../investments/presentation'
 import { formatDay } from '../lib/dates'
 import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
@@ -12,20 +12,16 @@ import { useLoaded } from '../lib/useLoaded'
 function Row({ position }: { position: Position }) {
   const { asset, accounts } = position
   const share = position.portfolioPercent === null ? 'No aplica' : `${position.portfolioPercent} %`
-  const detail = [
-    unitsPhrase(position.units),
-    `costo promedio ${formatPrice(position.averageCost)}`,
-    `precio ${formatPrice(position.price.value)} de tu última operación, ${formatDay(position.price.date)}`,
-  ].join(' · ')
+  const holding = `${unitsPhrase(position.units)} · costo promedio ${formatPrice(position.averageCost)}`
+  const price = `Precio ${formatPrice(position.price.value)} de tu última operación, ${formatDay(position.price.date)}`
 
   return (
     <li className="py-3.5">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="break-words text-[1rem] font-medium">
-            {asset.symbol} <span className="font-normal text-ink-3">· {asset.name} · {asset.market}</span>
-          </h3>
-          <p className="mt-0.5 break-words text-[0.87rem] leading-snug text-ink-3">{detail}</p>
+          <h3 className="break-words text-[1rem] font-medium">{describeAsset(asset)}</h3>
+          <p className="mt-0.5 break-words text-[0.87rem] leading-snug text-ink-3">{holding}</p>
+          <p className="break-words text-[0.87rem] leading-snug text-ink-3">{price}</p>
           {accounts.length > 1 && (
             <p className="mt-0.5 break-words text-[0.87rem] leading-snug text-ink-3">
               En {accounts.length} Cuentas:{' '}

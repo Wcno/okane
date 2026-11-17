@@ -1,7 +1,11 @@
 """Average-cost holdings of one Asset in one Account, replayed from its transactions.
 
 Costs keep full decimal precision: the average is never rounded to cents
-between operations (docs/contratos.md, "Fechas y cantidades").
+between operations (docs/contratos.md, "Fechas y cantidades"). Rounding happens
+only where a figure leaves the calculation, always half away from zero
+(ROUND_HALF_UP on positive numbers): cash to cents when an operation is recorded
+(serializers.cash_for) and costs, values and averages for display, to cents or to
+eight places (positions.fixed).
 """
 
 import functools
@@ -44,7 +48,7 @@ class Holding:
             # A Position that reaches zero starts its cost over.
             return Holding()
         # A sale takes out cost at the average held before it; the sale price never enters.
-        return Holding(remaining, self.cost - self.average_cost * units)
+        return Holding(remaining, self.cost * remaining / self.units)
 
 
 @exact

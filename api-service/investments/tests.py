@@ -1,13 +1,15 @@
-import datetime
+import json
 import threading
+import time
 from unittest import mock
 
 from django.db import connection
-from django.test import TransactionTestCase, override_settings, tag
+from django.test import Client, TransactionTestCase, override_settings, tag
 
 from expenses.tests import FOOD, TODAY, ExpenseApiTestCase
 from investments import quotes
 from investments.models import Asset
+from investments.serializers import InvestmentTransactionSerializer
 
 
 class FakeQuotes:
@@ -277,6 +279,16 @@ class BuyTests(InvestmentApiTestCase):
 
         self.assertEqual(self.balance(account), "990.00")
 
+    def test_a_field_api_service_does_not_know_is_refused_not_ignored(self):
+        account = self.investment_account()
+        asset = self.asset()
+
+        for kind in ("buy", "sell"):
+            with self.subTest(kind=kind):
+                response = self.trade(kind, account, asset, "1", "10", commission="1.00")
+                self.assert_rejected(response, "commission")
+        self.assertEqual(self.balance(account), "1000.00")
+
     def test_a_missing_field_names_the_field(self):
         account = self.investment_account()
 
@@ -365,6 +377,20 @@ class SellTests(InvestmentApiTestCase):
 
         self.assert_rejected(self.trade("sell", account, asset, "0.00000001", "1"), "units")
 
+    def test_a_sale_dated_in_the_future_is_rejected(self):
+        account = self.investment_account()
+        asset = self.asset()
+        self.bought(account, asset, "1", "10")
+
+        self.assert_rejected(self.trade("sell", account, asset, "1", "10", date="2026-11-17"), "date")
+
+    def test_a_sale_dated_before_the_account_started_is_rejected(self):
+        account = self.investment_account(opening_date="2026-11-01")
+        asset = self.asset()
+        self.bought(account, asset, "1", "10")
+
+        self.assert_rejected(self.trade("sell", account, asset, "1", "10", date="2026-10-31"), "date")
+
     def test_only_an_investment_account_takes_sales(self):
         account = self.account(type="spending")
 
@@ -374,17 +400,13 @@ class SellTests(InvestmentApiTestCase):
 @tag("database")
 @override_settings(INTERNAL_SERVICE_KEY="expected-key")
 class ConcurrentSalesTests(TransactionTestCase):
-    """Real commits on separate connections: the Account lock must queue the second sale."""
+    """Real commits on separate connections, with the first sale held inside its transaction."""
 
-    def test_two_simultaneous_sales_cannot_sell_the_same_units(self):
-        import json
-
-        from django.test import Client
-
+    def test_a_sale_waits_for_the_one_in_progress_and_cannot_sell_the_same_units(self):
         headers = {"X-Okane-Service-Key": "expected-key", "X-Okane-User-Id": "1"}
-        patcher = mock.patch("accounts.clock.today", return_value=TODAY)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        clock = mock.patch("accounts.clock.today", return_value=TODAY)
+        clock.start()
+        self.addCleanup(clock.stop)
 
         def post(path, body):
             return Client().post(
@@ -401,31 +423,41 @@ class ConcurrentSalesTests(TransactionTestCase):
             },
         ).json()
         asset = Asset.objects.create(provider="fake", market="XNAS", symbol="AAPL", name="Apple")
-        sale = {
-            "account_id": account["id"],
-            "asset_id": asset.id,
-            "units": "1",
-            "unit_price": "10",
-        }
-        post("/api/investments/transactions/buy", {**sale, "units": "1"})
+        trade = {"account_id": account["id"], "asset_id": asset.id, "units": "1", "unit_price": "10"}
+        post("/api/investments/transactions/buy", trade)
 
-        statuses = []
-        barrier = threading.Barrier(2)
+        first_checked = threading.Event()
+        second_started = threading.Event()
+        first_taken = threading.Lock()
+        real_check = InvestmentTransactionSerializer.check_units_to_sell
 
-        def sell():
+        def check_then_hold(serializer, *args):
+            real_check(serializer, *args)
+            if first_taken.acquire(blocking=False):
+                # The first sale has passed its check and holds the Account lock, uncommitted.
+                first_checked.set()
+                second_started.wait(timeout=5)
+                time.sleep(0.5)  # long enough for a second sale without the lock to finish
+
+        statuses = {}
+
+        def sell(name):
             try:
-                barrier.wait()
-                statuses.append(post("/api/investments/transactions/sell", sale).status_code)
+                statuses[name] = post("/api/investments/transactions/sell", trade).status_code
             finally:
                 connection.close()
 
-        threads = [threading.Thread(target=sell) for _ in range(2)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        with mock.patch.object(InvestmentTransactionSerializer, "check_units_to_sell", check_then_hold):
+            first = threading.Thread(target=sell, args=("first",))
+            first.start()
+            self.assertTrue(first_checked.wait(timeout=5))
+            second = threading.Thread(target=sell, args=("second",))
+            second.start()
+            second_started.set()
+            first.join()
+            second.join()
 
-        self.assertEqual(sorted(statuses), [201, 400])
+        self.assertEqual(statuses, {"first": 201, "second": 400})
 
 
 class PositionTests(InvestmentApiTestCase):

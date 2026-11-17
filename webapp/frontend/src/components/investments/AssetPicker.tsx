@@ -1,16 +1,15 @@
 import { Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { searchAssets, type Asset, type AssetSearch } from '../../investments/api'
+import { ASSET_QUERY_MAX_LENGTH, searchAssets, type Asset, type AssetSearch } from '../../investments/api'
 import { useSessionEnd } from '../../lib/useSessionEnd'
+import { smallSecondaryButtonClassName } from '../buttons'
+import { TextField } from '../TextField'
 
 type Lookup =
   | { status: 'idle' }
   | { status: 'searching' }
   | { status: 'failed'; message: string }
   | ({ status: 'found' } & AssetSearch)
-
-const fieldClassName =
-  'h-[44px] w-full min-w-0 rounded-xl border bg-surface px-3.5 text-[1rem] text-ink transition-colors duration-150 placeholder:text-ink-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/15'
 
 const NOT_FOUND = 'No encontramos Activos con esa búsqueda. Prueba con el símbolo, por ejemplo AAPL, o con parte del nombre.'
 const PROVIDER_DOWN =
@@ -25,12 +24,12 @@ export function AssetPicker({
   id,
   asset,
   onChange,
-  error,
+  errors,
 }: {
   id: string
   asset: Asset | null
   onChange: (asset: Asset | null) => void
-  error?: string[]
+  errors?: string[]
 }) {
   const [query, setQuery] = useState('')
   const [lookup, setLookup] = useState<Lookup>({ status: 'idle' })
@@ -69,63 +68,55 @@ export function AssetPicker({
     setLookup({ status: 'idle' })
   }
 
-  const errorId = `${id}-error`
-
   return (
     <div>
-      <label htmlFor={asset ? undefined : `${id}-query`} id={`${id}-label`} className="text-[0.9rem] font-medium text-ink-2">
-        Activo
-      </label>
-
       {asset ? (
-        <div className="mt-1.5 flex items-center gap-3 rounded-2xl border border-line-strong bg-surface-2 p-3">
-          <div className="min-w-0 flex-1" aria-labelledby={`${id}-label`}>
-            <p className="break-words text-[1rem] font-semibold">{asset.symbol}</p>
-            <p className="break-words text-[0.87rem] text-ink-3">
-              {asset.name} · {asset.market}
-            </p>
+        <div>
+          <p id={`${id}-label`} className="text-[0.9rem] font-medium text-ink-2">
+            Activo
+          </p>
+          <div className="mt-1.5 flex items-center gap-3 rounded-2xl border border-line-strong bg-surface-2 p-3">
+            <div className="min-w-0 flex-1" role="group" aria-labelledby={`${id}-label`}>
+              <p className="break-words text-[1rem] font-semibold">{asset.symbol}</p>
+              <p className="break-words text-[0.87rem] text-ink-3">
+                {asset.name} · {asset.market}
+              </p>
+            </div>
+            <button
+              ref={changeButton}
+              type="button"
+              onClick={() => choose(null)}
+              aria-label={`Cambiar el Activo ${asset.symbol}`}
+              className={`${smallSecondaryButtonClassName} shrink-0`}
+            >
+              Cambiar
+            </button>
           </div>
-          <button
-            ref={changeButton}
-            type="button"
-            onClick={() => choose(null)}
-            aria-label={`Cambiar el Activo ${asset.symbol}`}
-            className="inline-flex h-[44px] shrink-0 items-center rounded-full border border-line-strong px-4 text-[0.95rem] font-semibold transition-colors duration-150 hover:bg-surface"
-          >
-            Cambiar
-          </button>
         </div>
       ) : (
         <>
-          <div className="mt-1.5 flex gap-2">
-            <input
-              ref={input}
-              id={`${id}-query`}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                // Enter searches; it must not submit the operation that is being filled in.
-                if (event.key === 'Enter') {
-                  event.preventDefault()
-                  void search()
-                }
-              }}
-              autoComplete="off"
-              maxLength={60}
-              placeholder="Símbolo o nombre, por ejemplo AAPL"
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? errorId : undefined}
-              className={`${fieldClassName} ${error ? 'border-critical' : 'border-line-strong hover:border-ink-3 focus-visible:border-ink'}`}
-            />
-            <button
-              type="button"
-              onClick={() => void search()}
-              className="inline-flex h-[44px] shrink-0 items-center gap-2 rounded-full border border-line-strong px-4 text-[0.95rem] font-semibold transition-colors duration-150 hover:bg-surface-2"
-            >
-              <Search size={17} aria-hidden="true" />
-              Buscar
-            </button>
-          </div>
+          <TextField
+            ref={input}
+            id={`${id}-query`}
+            label="Activo"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              // Enter searches; it must not submit the operation that is being filled in.
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                void search()
+              }
+            }}
+            autoComplete="off"
+            maxLength={ASSET_QUERY_MAX_LENGTH}
+            placeholder="Símbolo o nombre, por ejemplo AAPL"
+            errors={errors}
+          />
+          <button type="button" onClick={() => void search()} className={`${smallSecondaryButtonClassName} mt-2`}>
+            <Search size={17} aria-hidden="true" />
+            Buscar
+          </button>
 
           <div role="status" aria-live="polite" className="empty:hidden">
             {lookup.status === 'searching' && <p className="mt-2 text-[0.9rem] text-ink-3">Buscando…</p>}
@@ -158,11 +149,6 @@ export function AssetPicker({
             </ul>
           )}
         </>
-      )}
-      {error && (
-        <p id={errorId} className="mt-1.5 text-[0.9rem] text-critical">
-          {error.join(' ')}
-        </p>
       )}
     </div>
   )
