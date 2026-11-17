@@ -1,4 +1,5 @@
 import { Ban } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Account } from '../accounts/api'
 import { useSignedInUser } from '../auth/context'
@@ -13,8 +14,8 @@ import { categoryById } from '../data/categories'
 import { offeredAccounts } from '../accounts/presentation'
 import { todayInPanama } from '../lib/dates'
 import { formatMoney } from '../lib/money'
-import { confirmOccurrence, type RecurringPaymentOccurrence } from '../recurringPayments/api'
-import { typedAmount } from '../expenses/form'
+import { confirmOccurrence, getOccurrence, type RecurringPaymentOccurrence } from '../recurringPayments/api'
+import { typedAmount } from '../lib/amount'
 import { useRecordForm } from '../lib/useRecordForm'
 import { dueText, occurrenceTitle, recurringPaymentsBack, STATUS_LABELS } from '../recurringPayments/presentation'
 import { useAfterRecurringPaymentChange } from '../recurringPayments/useAfterRecurringPaymentChange'
@@ -29,7 +30,7 @@ function AlreadyResolved({ occurrence, name }: { occurrence: RecurringPaymentOcc
           <RecordSummary
             icon={<CategoryChip categoryId={occurrence.categoryId} />}
             title={name}
-            details={`${STATUS_LABELS[occurrence.status]} · ${dueText({ dueDate: occurrence.dueDate, status: 'pending' })}`}
+            details={`${STATUS_LABELS[occurrence.status]} · ${dueText(occurrence)}`}
             amount={occurrence.amount}
           />
         }
@@ -61,6 +62,16 @@ function ConfirmForm({ occurrence, accounts }: { occurrence: RecurringPaymentOcc
     },
     onSaved: ({ confirmation }) => afterConfirmation(name, confirmation),
   })
+  const formError = errors.form?.join(' ')
+  // A refusal may mean another tab answered the reservation: then it cannot be confirmed any more.
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    if (!formError) return
+    getOccurrence(occurrence.id).then(
+      (current) => setSettled(current.status === 'confirmed' || current.status === 'cancelled'),
+      () => undefined,
+    )
+  }, [formError, occurrence.id])
   const chosen = offered.find((account) => account.id === draft.accountId)
   const amount = typedAmount(draft.amount)
   const category = categoryById(occurrence.categoryId).name
@@ -92,14 +103,17 @@ function ConfirmForm({ occurrence, accounts }: { occurrence: RecurringPaymentOcc
 
           <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row">
             <Link to={recurringPaymentsBack.to} className={`${secondaryButtonClassName} sm:flex-1`}>
-              Volver
+              {settled ? 'Volver a pagos recurrentes' : 'Volver'}
             </Link>
-            <button type="submit" disabled={isSubmitting} className={`${primaryButtonClassName} sm:flex-[1.6]`}>
-              {isSubmitting ? 'Confirmando…' : 'Confirmar pago'}
-            </button>
+            {!settled && (
+              <button type="submit" disabled={isSubmitting} className={`${primaryButtonClassName} sm:flex-[1.6]`}>
+                {isSubmitting ? 'Confirmando…' : 'Confirmar pago'}
+              </button>
+            )}
           </div>
         </form>
 
+        {!settled && (
         <div className="mt-5 border-t border-line pt-4">
           <Link
             to={`/recurring-payments/occurrences/${occurrence.id}/cancel`}
@@ -109,6 +123,7 @@ function ConfirmForm({ occurrence, accounts }: { occurrence: RecurringPaymentOcc
             No lo voy a pagar: cancelar esta reserva
           </Link>
         </div>
+        )}
       </section>
     </>
   )

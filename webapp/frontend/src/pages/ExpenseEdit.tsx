@@ -1,6 +1,7 @@
 import type { Account } from '../accounts/api'
 import { useSignedInUser } from '../auth/context'
 import { ExpenseEditor } from '../components/expenses/ExpenseEditor'
+import { RecurringOriginNote } from '../components/expenses/RecurringOriginNote'
 import { OneExpenseScreen } from '../components/expenses/OneExpenseScreen'
 import { DeleteLink } from '../components/screen/DeleteLink'
 import { ScreenHeader } from '../components/screen/Screen'
@@ -18,6 +19,7 @@ function EditForm({ expense, accounts }: { expense: Expense; accounts: Account[]
   return (
     <>
       <ScreenHeader title="Editar gasto" back={expensesBack} />
+      {expense.recurringPaymentOccurrenceId !== null && <RecurringOriginNote change="edit" />}
       <ExpenseEditor
         idPrefix="expense"
         initial={{

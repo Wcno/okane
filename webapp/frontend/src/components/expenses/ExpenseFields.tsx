@@ -2,8 +2,8 @@ import type { ReactNode, Ref } from 'react'
 import type { Account } from '../../accounts/api'
 import type { ExpenseErrors } from '../../expenses/api'
 import type { ExpenseDraft } from '../../expenses/form'
+import { CategoryField } from '../record/CategoryField'
 import { AccountAndDateFields, AmountField, DescriptionField } from '../record/RecordFields'
-import { CategoryField } from './CategoryField'
 
 /**
  * The fields of an Expense, shared by the quick sheet and the full screens:

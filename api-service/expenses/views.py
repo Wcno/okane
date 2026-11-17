@@ -18,6 +18,20 @@ def last_used_account_id(user_id):
     )
 
 
+def represent(expenses, user_id, many=False):
+    """Expenses as JSON, each with the occurrence that confirmed it (null for the rest)."""
+    # Imported here: recurring_payments builds on expenses, so a module import would be circular.
+    from recurring_payments.models import RecurringPaymentOccurrence
+
+    ids = [expense.id for expense in expenses] if many else [expenses.id]
+    occurrence_ids = dict(
+        RecurringPaymentOccurrence.objects.filter(user_id=user_id, expense_id__in=ids).values_list(
+            "expense_id", "id"
+        )
+    )
+    return ExpenseSerializer(expenses, many=many, context={"occurrence_ids": occurrence_ids}).data
+
+
 def owned_expense(request, expense_id, lock=False):
     """The User's Expense; another User's id is as absent as an unknown one."""
     expenses = Expense.objects.filter(user_id=request.okane_user_id, pk=expense_id)
@@ -34,11 +48,11 @@ def expense_collection(request):
     if request.method == "POST":
         serializer = ExpenseSerializer(data=request.data, context={"user_id": user_id})
         serializer.is_valid(raise_exception=True)
-        return Response(ExpenseSerializer(serializer.save()).data, status=201)
+        return Response(represent(serializer.save(), user_id), status=201)
     expenses, page = paginate(request, Expense.objects.filter(user_id=user_id))
     return Response(
         {
-            "results": ExpenseSerializer(expenses, many=True).data,
+            "results": represent(expenses, user_id, many=True),
             **page,
             "last_used_account_id": last_used_account_id(user_id),
         }
@@ -54,8 +68,8 @@ def expense_detail(request, expense_id):
             expense, data=request.data, context={"user_id": request.okane_user_id}
         )
         serializer.is_valid(raise_exception=True)
-        return Response(ExpenseSerializer(serializer.save()).data)
+        return Response(represent(serializer.save(), request.okane_user_id))
     if request.method == "DELETE":
         expense.delete()
         return Response(status=204)
-    return Response(ExpenseSerializer(expense).data)
+    return Response(represent(expense, request.okane_user_id))

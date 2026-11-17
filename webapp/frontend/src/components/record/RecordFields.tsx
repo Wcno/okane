@@ -2,13 +2,8 @@ import type { Ref } from 'react'
 import type { Account } from '../../accounts/api'
 import { todayInPanama } from '../../lib/dates'
 import type { FieldErrors } from '../../lib/http'
+import { borderClassName, fieldClassName } from './fieldStyles'
 import { DESCRIPTION_MAX_LENGTH, type RecordDraft, type RecordField } from '../../lib/recordForm'
-
-const fieldClassName =
-  'h-[44px] w-full rounded-xl border bg-surface px-3.5 text-[1rem] text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/15'
-
-const borderClassName = (invalid: boolean) =>
-  invalid ? 'border-critical' : 'border-line-strong hover:border-ink-3 focus-visible:border-ink'
 
 export function FieldError({ id, errors }: { id: string; errors?: string[] }) {
   if (!errors) return null
