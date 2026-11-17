@@ -9,7 +9,6 @@ from expenses.models import Expense
 from recurring_payments import reservations
 from recurring_payments.models import RecurringPayment, RecurringPaymentOccurrence
 
-FOOD, UTILITIES = 2, 4
 RULES = "/api/recurring-payments"
 
 
@@ -31,7 +30,7 @@ class RecurringPaymentApiTestCase(expense_tests.ExpenseApiTestCase):
     def create_rule(self, account, user=1, **fields):
         body = {
             "amount": "100.00",
-            "category_id": UTILITIES,
+            "category_id": self.initial_category("utilities", user=user),
             "account_id": account["id"],
             "day_of_month": 20,
             "start_date": "2026-11-01",
@@ -81,7 +80,7 @@ class CreateRuleTests(RecurringPaymentApiTestCase):
                 "description": "Internet",
                 "amount": "100.00",
                 "account_id": account["id"],
-                "category_id": UTILITIES,
+                "category_id": self.UTILITIES,
                 "day_of_month": 20,
                 "start_date": "2026-11-01",
                 "status": "active",
@@ -293,7 +292,7 @@ class ConfirmTests(RecurringPaymentApiTestCase):
         self.assertEqual(Expense.objects.count(), 1)
         expense = Expense.objects.get()
         self.assertEqual(confirmed["expense_id"], expense.id)
-        self.assertEqual((expense.amount, expense.category_id), (Decimal("120.00"), UTILITIES))
+        self.assertEqual((expense.amount, expense.category_id), (Decimal("120.00"), self.UTILITIES))
         self.assertEqual(self.balance(account), "880.00")
         self.assertEqual(self.committed("2026-11-01"), Decimal("0"))
 
@@ -303,7 +302,7 @@ class ConfirmTests(RecurringPaymentApiTestCase):
         plain = self.call(
             "POST",
             "/api/expenses",
-            {"amount": "5.00", "category_id": FOOD, "account_id": account["id"]},
+            {"amount": "5.00", "category_id": self.FOOD, "account_id": account["id"]},
         ).json()
         self.assertIsNone(plain["recurring_payment_occurrence_id"])
         self.confirm(occurrence, {"amount": "120.00", "account_id": account["id"]})
@@ -318,7 +317,7 @@ class ConfirmTests(RecurringPaymentApiTestCase):
             f"/api/expenses/{expense_id}",
             {
                 "amount": "130.00",
-                "category_id": UTILITIES,
+                "category_id": self.UTILITIES,
                 "account_id": account["id"],
                 "date": detail["date"],
             },
@@ -340,7 +339,7 @@ class ConfirmTests(RecurringPaymentApiTestCase):
             f"/api/expenses/{expense_id}",
             {
                 "amount": "90.00",
-                "category_id": FOOD,
+                "category_id": self.FOOD,
                 "account_id": account["id"],
                 "date": "2026-11-16",
                 "recurring_payment_occurrence_id": None,
@@ -434,7 +433,7 @@ class ConfirmTests(RecurringPaymentApiTestCase):
             expense_url,
             {
                 "amount": "90.00",
-                "category_id": FOOD,
+                "category_id": self.FOOD,
                 "account_id": account["id"],
                 "date": "2026-11-16",
             },
@@ -545,7 +544,7 @@ class CommittedAtACutoffTests(RecurringPaymentApiTestCase):
             f"{RULES}/{rule['id']}",
             {
                 "amount": "999.00",
-                "category_id": FOOD,
+                "category_id": self.FOOD,
                 "account_id": account["id"],
                 "day_of_month": 28,
                 "start_date": "2026-10-01",
@@ -568,7 +567,7 @@ class EditAndDeleteRuleTests(RecurringPaymentApiTestCase):
     def body(self, account, **fields):
         return {
             "amount": "250.00",
-            "category_id": FOOD,
+            "category_id": self.FOOD,
             "account_id": account["id"],
             "day_of_month": 10,
             "start_date": "2026-10-01",

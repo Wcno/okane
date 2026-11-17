@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest'
 import { categoryById, categoryByName, findCategory, isOffered, setCatalog } from './catalog'
 import { initialCatalog } from '../test/initialCatalog'
 
-const mascotas = { id: 9, name: 'Mascotas', isCustom: true, archivedAt: null }
+const mascotas = { id: 9, name: 'Mascotas', key: null, hasRecords: false, archivedAt: null }
 
 describe('catalog', () => {
-  it('names a Category by id with the icon and hue of its identity', () => {
+  it('names a Category by id with the icon and hue of its key', () => {
     expect(categoryById(3)).toMatchObject({ name: 'Transporte', icon: CarFront, tone: 'var(--cat-3)' })
   })
 

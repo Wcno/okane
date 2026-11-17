@@ -9,7 +9,7 @@ const credentialsFile = fileURLToPath(new URL('../../.qa-user.json', import.meta
 const DAYS = 10
 const EXPENSES_PER_DAY = 6
 const DESCRIPTIONS = ['Supermercado', 'Taxi', 'Farmacia', 'Cine', 'Luz', 'Almuerzo', 'Libros', 'Alquiler', 'Gasolina', 'Café']
-const CATEGORY_IDS = [1, 2, 3, 4, 5, 6, 7, 8]
+const CATEGORIES = ['housing', 'food', 'transport', 'utilities', 'health', 'entertainment', 'education', 'other'] as const
 
 /** A calendar day in America/Panama, `daysAgo` days before today, as YYYY-MM-DD. */
 function panamaDay(daysAgo: number) {
@@ -38,7 +38,7 @@ for (let day = 0; day < DAYS; day++) {
     await createExpense(context, {
       account_id: index % 5 === 0 ? savings.id : spending.id,
       amount: amountFor(index),
-      category_id: CATEGORY_IDS[index % CATEGORY_IDS.length],
+      category: CATEGORIES[index % CATEGORIES.length],
       date: panamaDay(day),
       description: DESCRIPTIONS[index % DESCRIPTIONS.length],
     })

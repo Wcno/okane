@@ -25,13 +25,15 @@ function EditForm({ category }: { category: Category }) {
         submitLabel="Guardar cambios"
         submittingLabel="Guardando…"
       >
-        <DeleteLink to={`/categories/${category.id}/archive`}>Archivar esta Categoría</DeleteLink>
+        <DeleteLink to={`/categories/${category.id}/archive`} icon={category.hasRecords ? 'archive' : 'delete'}>
+          {category.hasRecords ? 'Archivar esta Categoría' : 'Eliminar esta Categoría'}
+        </DeleteLink>
       </CategoryEditor>
     </>
   )
 }
 
-/** Renames one of the User's own Categories. */
+/** Renames one of the User's Categories, initial ones included. */
 export function CategoryEdit() {
   return (
     <OneCategoryScreen title="Editar Categoría">

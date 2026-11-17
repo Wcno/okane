@@ -35,11 +35,11 @@ export const useCatalog = (): Category[] =>
 
 const view = (category: Category): CategoryView => ({
   ...category,
-  icon: iconOf(category.id),
-  tone: toneOf(category.id),
+  icon: iconOf(category.key),
+  tone: toneOf(category.key),
 })
 
-const UNKNOWN: Category = { id: 0, name: 'Sin Categoría', isCustom: false, archivedAt: null }
+const UNKNOWN: Category = { id: 0, name: 'Sin Categoría', key: null, hasRecords: false, archivedAt: null }
 
 export const findCategory = (id: number | null): Category | undefined =>
   catalog.find((category) => category.id === id)

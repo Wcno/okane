@@ -88,14 +88,14 @@ for (const colorScheme of ['light', 'dark'] as const) {
       account_id: account.id,
       start_date: firstOfThisMonth(),
       amount: '100.00',
-      category_id: 4,
+      category: 'utilities',
       description: 'Luz',
     })
     await createRecurringPayment(page.request, {
       account_id: account.id,
       start_date: firstOfThisMonth(),
       amount: '30.00',
-      category_id: 6,
+      category: 'entertainment',
       description: 'Streaming',
     })
 
@@ -189,7 +189,7 @@ test('confirming rejects a bad date and keeps what was typed; a resolved reserva
     account_id: account.id,
     start_date: firstOfThisMonth(),
     description: 'Seguro',
-    category_id: 5,
+    category: 'health',
   })
   await page.goto('/recurring-payments')
   const [occurrenceId] = await listOccurrenceIds(page.request, rule.id)

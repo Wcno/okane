@@ -24,10 +24,21 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     await page.goto('/categories')
     await expect(page.getByRole('heading', { name: 'Categorías', level: 1 })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Categorías iniciales' })).toBeVisible()
-    await expect(page.getByText('Vivienda', { exact: true })).toBeVisible()
-    await expect(page.getByText('Aún no creaste ninguna.')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Tus Categorías' })).toBeVisible()
+    await expect(categoryRow(page, 'Vivienda')).toBeVisible()
+    await expect(categoryRow(page, 'Otros')).toBeVisible()
     await expectScreenQuality(page, `categories-initial-${colorScheme}`)
+
+    // An initial Category is the User's own: one that was never used is deleted for good.
+    await categoryRow(page, 'Entretenimiento').click()
+    await expect(page.getByLabel('Nombre')).toHaveValue('Entretenimiento')
+    await page.getByRole('link', { name: 'Eliminar esta Categoría' }).click()
+    await expect(page).toHaveURL(/\/categories\/\d+\/archive$/)
+    await expect(page.getByText('Se borrará por completo')).toBeVisible()
+    await expectScreenQuality(page, `categories-delete-${colorScheme}`)
+    await page.getByRole('button', { name: 'Eliminar Categoría' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Eliminaste' })).toHaveText('Eliminaste la Categoría Entretenimiento.')
+    await expect(categoryRow(page, 'Entretenimiento')).toBeHidden()
 
     await page.getByRole('link', { name: 'Nueva Categoría' }).click()
     await expect(page).toHaveURL(/\/categories\/create$/)
@@ -69,19 +80,21 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await categoryRow(page, 'Mis mascotas').click()
     await page.getByRole('link', { name: 'Archivar esta Categoría' }).click()
     await expect(page).toHaveURL(/\/categories\/\d+\/archive$/)
-    await expect(page.getByText('se siguen viendo')).toBeVisible()
+    await expect(page.getByText('Esta Categoría tiene movimientos; se archivará y conservará su historial.')).toBeVisible()
     await expectScreenQuality(page, `categories-archive-${colorScheme}`)
     await page.getByRole('button', { name: 'Archivar Categoría' }).click()
 
     await expect(page.getByRole('status').filter({ hasText: 'Archivaste' })).toContainText('Mis mascotas')
     await expect(page.getByRole('heading', { name: 'Archivadas' })).toBeVisible()
     await expect(page.getByRole('link', { name: /Mis mascotas/ })).toBeHidden()
+    await expect(page.getByRole('listitem').filter({ hasText: 'Mis mascotas' })).toBeVisible()
     await expectScreenQuality(page, `categories-archived-${colorScheme}`)
 
     // Archived: not offered for new records, but the past ones stay visible.
     await page.goto('/budgets/create')
     await expect(page.getByText('Alimentación', { exact: true })).toBeVisible()
     await expect(page.getByText('Mis mascotas', { exact: true })).toBeHidden()
+    await expect(page.getByText('Entretenimiento', { exact: true })).toBeHidden()
     await page.goto('/expenses')
     await expect(page.getByRole('link', { name: /^Croquetas.*Mis mascotas/ })).toBeVisible()
     await page.goto('/budgets')
@@ -111,14 +124,18 @@ test('archiving is refused while the Category has recurring payments', async ({ 
   await expectScreenQuality(page, 'categories-archive-refused')
 })
 
-test('the initial Categories and another User\'s Category cannot be edited', async ({ page, expectedProblems }) => {
+test('an initial Category can be renamed, and another User\'s Category is not here', async ({ page, expectedProblems }) => {
   // The 404 for a Category that is not the User's is what the test provokes on purpose.
   expectedProblems.push('404')
   forbidBrowserDialogs(page)
   await signUp(page.request)
-  await page.goto('/categories/1/edit')
-  await expect(page.getByRole('heading', { name: 'Esta Categoría no se puede cambiar' })).toBeVisible()
-  await expectScreenQuality(page, 'categories-initial-not-editable')
+
+  await page.goto('/categories')
+  await categoryRow(page, 'Otros').click()
+  await page.getByLabel('Nombre').fill('Varios')
+  await page.getByRole('button', { name: 'Guardar cambios' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Guardaste' })).toContainText('Varios')
+  await expect(categoryRow(page, 'Varios')).toBeVisible()
 
   const other = await page.context().browser()!.newContext()
   const otherPage = await other.newPage()
@@ -128,4 +145,5 @@ test('the initial Categories and another User\'s Category cannot be edited', asy
 
   await page.goto(`/categories/${theirs.id}/edit`)
   await expect(page.getByRole('heading', { name: 'No encontramos esta Categoría' })).toBeVisible()
+  await expectScreenQuality(page, 'categories-not-here')
 })

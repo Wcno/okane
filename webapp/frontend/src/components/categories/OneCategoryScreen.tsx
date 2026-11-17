@@ -9,12 +9,12 @@ const CATEGORY_ID = /^[1-9]\d{0,17}$/
 
 const notHere = {
   title: 'No encontramos esta Categoría',
-  text: 'Puede que la dirección esté incompleta. Vuelve a tus Categorías para elegirla de la lista.',
+  text: 'Puede que la hayas eliminado o que la dirección esté incompleta. Vuelve a tus Categorías para elegirla de la lista.',
 }
 
-const fixed = {
-  title: 'Esta Categoría no se puede cambiar',
-  text: 'Las Categorías iniciales, y las que ya archivaste, se conservan tal como están para no alterar tu historial.',
+const archived = {
+  title: 'Esta Categoría ya está archivada',
+  text: 'Ya no se ofrece para registrar nada nuevo. Sus Gastos y Presupuestos pasados se conservan y se siguen viendo.',
 }
 
 function LoadedCategory({
@@ -38,11 +38,11 @@ function LoadedCategory({
     )
   }
   const category = state.value
-  if (!category.isCustom || category.archivedAt !== null) return <NotHere {...fixed} back={categoriesBack} />
+  if (category.archivedAt !== null) return <NotHere {...archived} back={categoriesBack} />
   return <>{children(category)}</>
 }
 
-/** Frame of the screens that act on one of the User's own active Categories, named by the `:id` of the route. */
+/** Frame of the screens that act on one active Category of the User, named by the `:id` of the route. */
 export function OneCategoryScreen({ title, children }: { title: string; children: (category: Category) => ReactNode }) {
   const { id } = useParams()
   if (!CATEGORY_ID.test(id ?? '')) return <NotHere {...notHere} back={categoriesBack} />

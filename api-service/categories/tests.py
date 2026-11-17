@@ -1,9 +1,9 @@
-from budgets.tests import BudgetApiTestCase, BUDGETS
+from budgets.models import Budget
+from budgets.tests import BUDGETS, BudgetApiTestCase
 from categories.models import Category
 from recurring_payments.models import RecurringPaymentOccurrence
 
 CATEGORIES = "/api/categories"
-HOUSING, OTHER = 1, 8
 INITIAL_NAMES = [
     "Vivienda",
     "Alimentación",
@@ -14,6 +14,7 @@ INITIAL_NAMES = [
     "Educación",
     "Otros",
 ]
+INITIAL_KEYS = ["housing", "food", "transport", "utilities", "health", "entertainment", "education", "other"]
 
 
 class CategoryApiTestCase(BudgetApiTestCase):
@@ -28,37 +29,61 @@ class CategoryApiTestCase(BudgetApiTestCase):
     def archive_category(self, category, user=1):
         return self.call("POST", f"{CATEGORIES}/{category['id']}/archive", user=user)
 
+    def remove_category(self, category, user=1):
+        return self.call("DELETE", f"{CATEGORIES}/{category['id']}", user=user)
+
     def listed(self, user=1):
         response = self.call("GET", CATEGORIES, user=user)
         self.assertEqual(response.status_code, 200, response.content)
         return response.json()["results"]
 
+    def initial(self, key, user=1):
+        return next(item for item in self.listed(user) if item["key"] == key)
+
 
 class InitialCatalogTests(CategoryApiTestCase):
-    def test_a_new_user_gets_the_initial_catalog_with_stable_ids(self):
+    def test_a_new_user_gets_their_own_copy_of_the_initial_catalog(self):
         listed = self.listed(user=77)
 
-        self.assertEqual([item["id"] for item in listed], list(range(1, 9)))
         self.assertEqual([item["name"] for item in listed], INITIAL_NAMES)
-        self.assertTrue(all(not item["is_custom"] for item in listed))
+        self.assertEqual([item["key"] for item in listed], INITIAL_KEYS)
         self.assertTrue(all(item["archived_at"] is None for item in listed))
+        self.assertTrue(all(not item["has_records"] for item in listed))
+
+    def test_the_copy_is_made_once_and_is_not_shared_between_users(self):
+        first = self.listed(user=1)
+        again = self.listed(user=1)
+        other = self.listed(user=2)
+
+        self.assertEqual(first, again)
+        self.assertEqual(Category.objects.filter(user_id=1).count(), 8)
+        self.assertFalse({item["id"] for item in first} & {item["id"] for item in other})
+
+    def test_a_user_who_removed_every_category_does_not_get_the_catalog_back(self):
+        for item in self.listed():
+            self.assertEqual(self.remove_category(item).status_code, 204)
+
+        self.assertEqual(self.listed(), [])
 
     def test_existing_expenses_and_budgets_keep_their_category(self):
         account = self.account()
-        expense = self.registered(account, category_id=HOUSING)
-        budget = self.budget(category_id=HOUSING)
+        expense = self.registered(account, category_id=self.HOUSING)
+        budget = self.budget(category_id=self.HOUSING)
 
-        self.assertEqual(expense["category_id"], HOUSING)
-        self.assertEqual(budget["category_id"], HOUSING)
-        self.assertEqual(Category.objects.get(pk=HOUSING).name, "Vivienda")
+        self.assertEqual(expense["category_id"], self.HOUSING)
+        self.assertEqual(budget["category_id"], self.HOUSING)
+        self.assertEqual(Category.objects.get(pk=self.HOUSING).name, "Vivienda")
 
-    def test_the_initial_catalog_cannot_be_renamed_or_archived(self):
-        renamed = self.call("PUT", f"{CATEGORIES}/{HOUSING}", {"name": "Casa"})
-        archived = self.call("POST", f"{CATEGORIES}/{HOUSING}/archive")
+    def test_an_initial_category_can_be_renamed_and_archived(self):
+        housing = self.initial("housing")
 
-        self.assertEqual(renamed.status_code, 409)
-        self.assertEqual(archived.status_code, 409)
-        self.assertEqual(self.listed()[0]["name"], "Vivienda")
+        renamed = self.call("PUT", f"{CATEGORIES}/{housing['id']}", {"name": "Casa"})
+        archived = self.archive_category(housing)
+
+        self.assertEqual(renamed.status_code, 200, renamed.content)
+        self.assertEqual(renamed.json()["key"], "housing")
+        self.assertEqual(archived.status_code, 200, archived.content)
+        self.assertIsNotNone(archived.json()["archived_at"])
 
 
 class OwnCategoryTests(CategoryApiTestCase):
@@ -66,9 +91,14 @@ class OwnCategoryTests(CategoryApiTestCase):
         created = self.category()
         self.assertEqual(
             created,
-            {"id": created["id"], "name": "Mascotas", "is_custom": True, "archived_at": None},
+            {
+                "id": created["id"],
+                "name": "Mascotas",
+                "key": None,
+                "has_records": False,
+                "archived_at": None,
+            },
         )
-        self.assertGreater(created["id"], OTHER)
 
         renamed = self.call("PUT", f"{CATEGORIES}/{created['id']}", {"name": "  Mis   mascotas "})
         read = self.call("GET", f"{CATEGORIES}/{created['id']}")
@@ -98,6 +128,7 @@ class OwnCategoryTests(CategoryApiTestCase):
             self.call("PUT", f"{CATEGORIES}/{mine['id']}", {"name": "X"}, user=2).status_code, 404
         )
         self.assertEqual(self.archive_category(mine, user=2).status_code, 404)
+        self.assertEqual(self.remove_category(mine, user=2).status_code, 404)
         self.assertNotIn(mine["id"], [item["id"] for item in self.listed(user=2)])
 
     def test_archiving_keeps_the_category_in_the_list_marked_as_archived(self):
@@ -111,6 +142,50 @@ class OwnCategoryTests(CategoryApiTestCase):
             next(item for item in self.listed() if item["id"] == mine["id"])["archived_at"]
         )
         self.assertEqual(self.archive_category(mine).status_code, 200)
+
+
+class DeleteCategoryTests(CategoryApiTestCase):
+    def test_a_category_without_records_is_deleted_for_good(self):
+        unused = self.initial("entertainment")
+
+        response = self.remove_category(unused)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertNotIn(unused["id"], [item["id"] for item in self.listed()])
+        self.assertFalse(Category.objects.filter(pk=unused["id"]).exists())
+
+    def test_a_category_with_an_expense_is_archived_instead(self):
+        account = self.account()
+        used = self.category()
+        self.registered(account, category_id=used["id"], amount="25.00")
+        self.assertTrue(next(i for i in self.listed() if i["id"] == used["id"])["has_records"])
+
+        response = self.remove_category(used)
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertIsNotNone(response.json()["archived_at"])
+        self.assertTrue(Category.objects.filter(pk=used["id"]).exists())
+
+    def test_a_category_with_a_budget_is_archived_instead(self):
+        used = self.initial("food")
+        self.budget(category_id=used["id"])
+
+        response = self.remove_category(used)
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertIsNotNone(response.json()["archived_at"])
+        self.assertEqual(Budget.objects.filter(category_id=used["id"]).count(), 1)
+
+    def test_a_category_with_a_recurring_rule_must_be_cleared_first(self):
+        account = self.account()
+        used = self.category()
+        self.rule(account, category_id=used["id"])
+
+        response = self.remove_category(used)
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("pagos recurrentes", response.json()["errors"]["form"][0])
+        self.assertTrue(Category.objects.filter(pk=used["id"], archived_at__isnull=True).exists())
 
 
 class ArchivedCategoryTests(CategoryApiTestCase):
@@ -163,7 +238,7 @@ class ArchivedCategoryTests(CategoryApiTestCase):
         account = self.account()
         mine = self.category()
         self.archive_category(mine)
-        expense = self.registered(account, category_id=HOUSING)
+        expense = self.registered(account, category_id=self.HOUSING)
 
         moved = self.call(
             "PUT",
@@ -207,8 +282,7 @@ class ArchiveBlockersTests(CategoryApiTestCase):
         account = self.account()
         mine = self.category()
         occurrence = self.pending_occurrence(account, category_id=mine["id"])
-        rule_id = occurrence["recurring_payment_id"]
-        self.call("DELETE", f"/api/recurring-payments/{rule_id}")
+        self.call("DELETE", f"/api/recurring-payments/{occurrence['recurring_payment_id']}")
 
         blocked = self.archive_category(mine)
 
@@ -225,3 +299,5 @@ class ArchiveBlockersTests(CategoryApiTestCase):
         self.assertEqual(self.archive_category(mine).status_code, 200)
         kept = RecurringPaymentOccurrence.objects.get(pk=occurrence["id"])
         self.assertEqual(kept.category_id, mine["id"])
+        # With a reservation on record the Category is archived, never deleted.
+        self.assertEqual(self.remove_category(mine).status_code, 200)

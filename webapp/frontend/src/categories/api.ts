@@ -1,14 +1,16 @@
 import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
 
 /**
- * A Category of the User: one of the initial catalog (ids 1 to 8, which never
- * change and cannot be edited) or one of their own. Archived ones stay in the
- * list so past Expenses and Budgets can still name them.
+ * A Category of the User, theirs to rename, archive or delete. `key` says which of the
+ * initial eight a copy is (it fixes its icon and hue) and is null for the ones they
+ * created. Archived ones stay in the list so past Expenses and Budgets can still name them.
  */
 export interface Category {
   id: number
   name: string
-  isCustom: boolean
+  key: string | null
+  /** An Expense, Budget or recurring payment refers to it: deleting it archives it instead. */
+  hasRecords: boolean
   archivedAt: string | null
 }
 
@@ -25,14 +27,16 @@ const CATEGORY_GONE = 'Esta Categoría ya no existe. Vuelve a tus Categorías pa
 interface CategoryBody {
   id: number
   name: string
-  is_custom: boolean
+  key: string | null
+  has_records: boolean
   archived_at: string | null
 }
 
 const toCategory = (body: CategoryBody): Category => ({
   id: body.id,
   name: body.name,
-  isCustom: body.is_custom,
+  key: body.key,
+  hasRecords: body.has_records,
   archivedAt: body.archived_at,
 })
 
@@ -79,13 +83,19 @@ export function renameCategory(
   })
 }
 
-/** Archives a Category; api-service refuses while it still has recurring payments or pending reservations. */
-export function archiveCategory(id: number, csrfToken: string): Promise<Outcome<Category, CategoryField>> {
+/** What deleting a Category did: removed it, or archived it because records refer to it. */
+export type Removal = { result: 'deleted' } | { result: 'archived'; category: Category }
+
+/** Deletes a Category without records; api-service archives one that has them, once its rules are resolved. */
+export function deleteCategory(id: number, csrfToken: string): Promise<Outcome<Removal, CategoryField>> {
   return write({
-    method: 'POST',
-    path: `/api/categories/${id}/archive`,
+    method: 'DELETE',
+    path: `/api/categories/${id}`,
     csrfToken,
     gone: CATEGORY_GONE,
-    read: readCategory,
+    read: async (response): Promise<Removal> => {
+      if (response.status === 204) return { result: 'deleted' }
+      return { result: 'archived', category: await readCategory(response) }
+    },
   })
 }
