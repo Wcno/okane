@@ -170,8 +170,9 @@ class RegisterIncomeTests(IncomeApiTestCase):
     def test_incomes_and_expenses_share_one_balance(self):
         account = self.account()
         self.registered(account, amount="100.00")
+        food = self.call("GET", "/api/categories").json()["results"][1]["id"]
         expense = self.call(
-            "POST", "/api/expenses", {"amount": "30.00", "category_id": 2, "account_id": account["id"]}
+            "POST", "/api/expenses", {"amount": "30.00", "category_id": food, "account_id": account["id"]}
         )
         self.assertEqual(expense.status_code, 201, expense.content)
 

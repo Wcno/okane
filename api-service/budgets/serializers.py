@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from accounts.serializers import AMOUNT_LIMIT, DecimalStringField, amount_messages, messages
 from budgets.models import Budget
-from expenses.categories import CATEGORY_IDS
+from categories import rules as category_rules
 from expenses.serializers import StrictIntegerField
 
 AMOUNT_INVALID = (
@@ -14,6 +14,7 @@ AMOUNT_INVALID = (
 )
 AMOUNT_TOO_LARGE = f"El presupuesto es demasiado grande. El máximo es ${AMOUNT_LIMIT}."
 CATEGORY_INVALID = "Elige la Categoría del presupuesto."
+CATEGORY_IS_ARCHIVED = "Esta Categoría está archivada y no admite registros nuevos. Elige otra."
 MONTH_INVALID = "Elige el mes del presupuesto, por ejemplo 2026-11."
 BUDGET_EXISTS = "Esta Categoría ya tiene un presupuesto en ese mes. Edita el existente."
 
@@ -48,10 +49,9 @@ class MonthField(serializers.Field):
 class BudgetSerializer(serializers.Serializer):
     """Validates a Budget; `context["user_id"]` is the User webapp authenticated.
 
-    Only the catalog Categories exist, so an unknown id also covers another
-    User's or an archived Category once Users own them. A second Budget for the
-    same Category and month is refused by the database, which holds under
-    concurrency.
+    Another User's Category is as absent as an unknown one, and an archived one
+    is refused for a new Budget. A second Budget for the same Category and
+    month is refused by the database, which holds under concurrency.
     """
 
     amount = DecimalStringField(
@@ -66,9 +66,12 @@ class BudgetSerializer(serializers.Serializer):
     month = MonthField(error_messages=messages(MONTH_INVALID, "required", "null"))
 
     def validate_category_id(self, value):
-        if value not in CATEGORY_IDS:
-            raise serializers.ValidationError(CATEGORY_INVALID)
-        return value
+        return category_rules.assignable(
+            self.context["user_id"],
+            value,
+            unchanged_from=self.instance.category_id if self.instance else None,
+            archived=CATEGORY_IS_ARCHIVED,
+        )
 
     def create(self, validated_data):
         return Budget.objects.create(user_id=self.context["user_id"], **validated_data)

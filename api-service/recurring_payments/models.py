@@ -2,7 +2,6 @@ from django.db import models
 from django.db.models import Q
 
 from accounts.models import Account
-from expenses.categories import CATEGORY_IDS
 from expenses.models import DESCRIPTION_MAX_LENGTH
 
 
@@ -16,7 +15,7 @@ class RecurringPayment(models.Model):
     # Users live in webapp-db, so this is the identifier webapp sends, not a foreign key.
     user_id = models.PositiveBigIntegerField(db_index=True)
     account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="recurring_payments")
-    category_id = models.PositiveSmallIntegerField()
+    category = models.ForeignKey("categories.Category", on_delete=models.PROTECT, related_name="+")
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     description = models.CharField(max_length=DESCRIPTION_MAX_LENGTH, blank=True)
     day_of_month = models.PositiveSmallIntegerField()
@@ -35,10 +34,6 @@ class RecurringPayment(models.Model):
             models.CheckConstraint(
                 condition=Q(day_of_month__gte=1, day_of_month__lte=31),
                 name="recurring_payment_day_in_month",
-            ),
-            models.CheckConstraint(
-                condition=Q(category_id__in=CATEGORY_IDS),
-                name="recurring_payment_category_in_catalog",
             ),
         ]
 
@@ -60,7 +55,7 @@ class RecurringPaymentOccurrence(models.Model):
     month = models.DateField()
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="occurrences")
-    category_id = models.PositiveSmallIntegerField()
+    category = models.ForeignKey("categories.Category", on_delete=models.PROTECT, related_name="+")
     description = models.CharField(max_length=DESCRIPTION_MAX_LENGTH, blank=True)
     due_date = models.DateField()
     # The day the reservation starts to count: its month's first day, or the rule's start.

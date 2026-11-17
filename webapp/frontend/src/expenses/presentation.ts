@@ -1,4 +1,4 @@
-import { categoryById } from '../data/categories'
+import { categoryById } from '../categories/catalog'
 import { formatDay } from '../lib/dates'
 import type { Expense } from './api'
 

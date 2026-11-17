@@ -40,7 +40,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page).toHaveURL(/\/incomes\/create$/)
     await expect(page.getByLabel('Fecha')).toHaveValue(panamaToday())
     // An Income has no Category.
-    await expect(page.getByText('Categoría')).toHaveCount(0)
+    await expect(page.getByText('Categoría', { exact: true })).toHaveCount(0)
     await page.getByLabel('Monto').fill('250')
     await page.getByLabel('Descripción').fill('Salario')
     await expectScreenQuality(page, `incomes-create-filled-${colorScheme}`)

@@ -2,6 +2,7 @@ from django.urls import path
 
 from accounts import views as accounts
 from budgets import views as budgets
+from categories import views as categories
 from dashboard import views as dashboard
 from erasure import views as erasure
 from expenses import views as expenses
@@ -21,6 +22,9 @@ urlpatterns = [
     path("api/dashboard", dashboard.dashboard),
     path("api/budgets", budgets.budget_collection),
     path("api/budgets/<int:budget_id>", budgets.budget_detail),
+    path("api/categories", categories.category_collection),
+    path("api/categories/<int:category_id>", categories.category_detail),
+    path("api/categories/<int:category_id>/archive", categories.category_archive),
     path("api/expenses", expenses.expense_collection),
     path("api/expenses/<int:expense_id>", expenses.expense_detail),
     path("api/recurring-payments", recurring_payments.rule_collection),

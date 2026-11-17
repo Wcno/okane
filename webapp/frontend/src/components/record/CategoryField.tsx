@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
-import { categories } from '../../data/categories'
+import { isOffered, useCatalog } from '../../categories/catalog'
 import { CategoryChip } from '../expenses/CategoryChip'
 import { FieldError } from './RecordFields'
 
 /**
- * The two-column picker of the fixed Categories, for every form that names one
+ * The two-column picker of the User's Categories, for every form that names one
  * (an Expense, a RecurringPayment). `hint` sits right under it, where the
  * consequence of the choice is shown.
  */
@@ -22,12 +22,14 @@ export function CategoryField({
   hint?: ReactNode
 }) {
   const id = (name: string) => `${idPrefix}-${name}`
+  // An archived Category stays in the picker only while a record being corrected still holds it.
+  const options = useCatalog().filter((option) => isOffered(option) || option.id === draft.categoryId)
 
   return (
     <fieldset aria-describedby={errors.categoryId ? id('category-error') : undefined}>
       <legend className="text-[0.9rem] font-medium text-ink-2">Categoría</legend>
       <div className="mt-2 grid grid-cols-2 gap-1.5">
-        {categories.map((option) => {
+        {options.map((option) => {
           const selected = draft.categoryId === option.id
           return (
             <label

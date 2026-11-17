@@ -1,4 +1,4 @@
-import { categoryById } from '../data/categories'
+import { categoryById } from '../categories/catalog'
 import { formatDay, todayInPanama } from '../lib/dates'
 import type { RecurringPayment, RecurringPaymentOccurrence } from './api'
 

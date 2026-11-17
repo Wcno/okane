@@ -1,4 +1,4 @@
-import { categoryById } from '../data/categories'
+import { categoryById } from '../categories/catalog'
 import { formatMoney } from '../lib/money'
 import { monthName } from '../lib/months'
 import type { Budget } from './api'

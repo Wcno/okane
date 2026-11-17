@@ -16,7 +16,7 @@ export function RecordSummary({
 }: {
   icon: ReactNode
   title: string
-  details: string
+  details?: string
   amount?: string
 }) {
   return (
@@ -24,9 +24,11 @@ export function RecordSummary({
       {icon}
       <div className="min-w-0 flex-1">
         <h2 className="line-clamp-2 break-words text-[1rem] font-medium">{title}</h2>
-        <p className="mt-0.5 break-words text-[0.87rem] text-ink-3">{details}</p>
+        {details && <p className="mt-0.5 break-words text-[0.87rem] text-ink-3">{details}</p>}
       </div>
-      {amount !== undefined && <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatMoney(amount)}</span>}
+      {amount !== undefined && (
+        <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatMoney(amount)}</span>
+      )}
     </div>
   )
 }

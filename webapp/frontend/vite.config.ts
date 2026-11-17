@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig, type ProxyOptions } from 'vite'
+import type { ProxyOptions } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 // The dev server sends backend paths to a running stack, so sessions work as in
 // production. The Origin header is dropped because webapp compares it with its
@@ -14,6 +15,7 @@ const backend: ProxyOptions = {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  test: { setupFiles: ['./src/test/setup.ts'] },
   server: {
     proxy: { '/auth': backend, '/api': backend, '/health': backend },
   },

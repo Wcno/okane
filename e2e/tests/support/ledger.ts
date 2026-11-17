@@ -78,18 +78,6 @@ export async function createBudget(request: APIRequestContext, { category = 'foo
   return (await response.json()) as { id: number }
 }
 
-interface BudgetFields {
-  category_id?: number
-  month: string
-  amount?: string
-}
-
-export async function createBudget(request: APIRequestContext, fields: BudgetFields) {
-  const response = await send(request, 'POST', '/api/budgets', { category_id: 2, amount: '300.00', ...fields })
-  expect(response.status()).toBe(201)
-  return (await response.json()) as { id: number }
-}
-
 interface IncomeFields {
   account_id: number
   amount?: string
