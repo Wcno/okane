@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, expectScreenQuality, knownAxeRules, test } from './support/qa.js'
 import { archiveAccount, createAccount, createTransfer } from './support/ledger.js'
 import { signUp } from './support/session.js'
 
@@ -28,66 +29,63 @@ const fitsInViewport = (locator: ReturnType<Page['locator']>, height: number) =>
     return box.top >= 0 && box.bottom <= limit
   }, height)
 
-for (const width of [390, 1440]) {
-  for (const colorScheme of ['light', 'dark'] as const) {
-    test(`transfers lifecycle at ${width}px in ${colorScheme}`, async ({ page }) => {
-      forbidBrowserDialogs(page)
-      await page.setViewportSize({ width, height: 900 })
-      await page.emulateMedia({ colorScheme })
-      await signUp(page.request)
-      await createAccount(page.request, { name: 'Cuenta corriente', opening_balance: '1000.00' })
-      await createAccount(page.request, { name: 'Ahorro', type: 'savings', opening_balance: '300.00' })
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`transfers lifecycle in ${colorScheme}`, async ({ page }) => {
+    forbidBrowserDialogs(page)
+    await page.emulateMedia({ colorScheme })
+    await signUp(page.request)
+    await createAccount(page.request, { name: 'Cuenta corriente', opening_balance: '1000.00' })
+    await createAccount(page.request, { name: 'Ahorro', type: 'savings', opening_balance: '300.00' })
 
-      await page.goto('/transfers')
-      await expect(page.getByRole('heading', { name: 'Aún no registras transferencias' })).toBeVisible()
-      expect(await noOverflow(page)).toBe(true)
-      await page.getByRole('link', { name: 'Registrar tu primera transferencia' }).click()
+    await page.goto('/transfers')
+    await expect(page.getByRole('heading', { name: 'Aún no registras transferencias' })).toBeVisible()
+    await expectScreenQuality(page, `transfers-empty-${colorScheme}`)
+    await page.getByRole('link', { name: 'Registrar tu primera transferencia' }).click()
 
-      await expect(page).toHaveURL(/\/transfers\/create$/)
-      await expect(page.getByLabel('Fecha')).toHaveValue(panamaToday())
-      await expect(page.getByLabel('Sale de')).toHaveValue(/\d+/)
-      await page.getByLabel('Monto').fill('250')
-      await page.getByLabel('Descripción').fill('Ahorro de noviembre')
-      expect(await noOverflow(page)).toBe(true)
-      await submitButton(page).click()
+    await expect(page).toHaveURL(/\/transfers\/create$/)
+    await expect(page.getByLabel('Fecha')).toHaveValue(panamaToday())
+    await expect(page.getByLabel('Sale de')).toHaveValue(/\d+/)
+    await page.getByLabel('Monto').fill('250')
+    await page.getByLabel('Descripción').fill('Ahorro de noviembre')
+    await expectScreenQuality(page, `transfers-create-filled-${colorScheme}`)
+    await submitButton(page).click()
 
-      await expect(page).toHaveURL(/\/transfers$/)
-      await expect(page.getByRole('status').filter({ hasText: 'Registraste' })).toHaveText(
-        'Registraste una transferencia de $250.00 de Cuenta corriente a Ahorro. Saldo de Cuenta corriente: $750.00. Saldo de Ahorro: $550.00.',
-      )
-      await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
-      await expect(transferRow(page, 'Ahorro de noviembre')).toBeVisible()
-      expect(await noOverflow(page)).toBe(true)
+    await expect(page).toHaveURL(/\/transfers$/)
+    await expect(page.getByRole('status').filter({ hasText: 'Registraste' })).toHaveText(
+      'Registraste una transferencia de $250.00 de Cuenta corriente a Ahorro. Saldo de Cuenta corriente: $750.00. Saldo de Ahorro: $550.00.',
+    )
+    await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
+    await expect(transferRow(page, 'Ahorro de noviembre')).toBeVisible()
+    await expectScreenQuality(page, `transfers-list-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
 
-      // Correcting the amount moves both Balances; the total of the Balances never changes.
-      await transferRow(page, 'Ahorro de noviembre').click()
-      await expect(page.getByLabel('Monto')).toHaveValue('250.00')
-      await page.getByLabel('Monto').fill('100')
-      expect(await noOverflow(page)).toBe(true)
-      await page.getByRole('button', { name: 'Guardar cambios' }).click()
-      await expect(page.getByRole('status').filter({ hasText: 'Guardaste' })).toHaveText(
-        'Guardaste una transferencia de $100.00 de Cuenta corriente a Ahorro. Saldo de Cuenta corriente: $900.00. Saldo de Ahorro: $400.00.',
-      )
-      await page.goto('/accounts')
-      await expect(accountRow(page, 'Cuenta corriente')).toContainText('$900.00')
-      await expect(accountRow(page, 'Ahorro')).toContainText('$400.00')
+    // Correcting the amount moves both Balances; the total of the Balances never changes.
+    await transferRow(page, 'Ahorro de noviembre').click()
+    await expect(page.getByLabel('Monto')).toHaveValue('250.00')
+    await page.getByLabel('Monto').fill('100')
+    await expectScreenQuality(page, `transfers-edit-${colorScheme}`)
+    await page.getByRole('button', { name: 'Guardar cambios' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Guardaste' })).toHaveText(
+      'Guardaste una transferencia de $100.00 de Cuenta corriente a Ahorro. Saldo de Cuenta corriente: $900.00. Saldo de Ahorro: $400.00.',
+    )
+    await page.goto('/accounts')
+    await expect(accountRow(page, 'Cuenta corriente')).toContainText('$900.00')
+    await expect(accountRow(page, 'Ahorro')).toContainText('$400.00')
 
-      await page.goto('/transfers')
-      await transferRow(page, 'Ahorro de noviembre').click()
-      await page.getByRole('link', { name: 'Eliminar esta transferencia' }).click()
-      await expect(page).toHaveURL(/\/transfers\/\d+\/delete$/)
-      await expect(
-        page.getByText('El Saldo de Cuenta corriente subirá $100.00 y el de Ahorro bajará $100.00.'),
-      ).toBeVisible()
-      expect(await noOverflow(page)).toBe(true)
-      await page.getByRole('button', { name: 'Eliminar transferencia' }).click()
+    await page.goto('/transfers')
+    await transferRow(page, 'Ahorro de noviembre').click()
+    await page.getByRole('link', { name: 'Eliminar esta transferencia' }).click()
+    await expect(page).toHaveURL(/\/transfers\/\d+\/delete$/)
+    await expect(
+      page.getByText('El Saldo de Cuenta corriente subirá $100.00 y el de Ahorro bajará $100.00.'),
+    ).toBeVisible()
+    await expectScreenQuality(page, `transfers-delete-${colorScheme}`)
+    await page.getByRole('button', { name: 'Eliminar transferencia' }).click()
 
-      await expect(page.getByRole('status').filter({ hasText: 'Eliminaste' })).toContainText(
-        'Saldo de Cuenta corriente: $1,000.00. Saldo de Ahorro: $300.00.',
-      )
-      await expect(page.getByRole('heading', { name: 'Aún no registras transferencias' })).toBeVisible()
-    })
-  }
+    await expect(page.getByRole('status').filter({ hasText: 'Eliminaste' })).toContainText(
+      'Saldo de Cuenta corriente: $1,000.00. Saldo de Ahorro: $300.00.',
+    )
+    await expect(page.getByRole('heading', { name: 'Aún no registras transferencias' })).toBeVisible()
+  })
 }
 
 test('a Transfer into an investment Account is an Aporte', async ({ page }) => {
@@ -100,12 +98,14 @@ test('a Transfer into an investment Account is an Aporte', async ({ page }) => {
   await page.getByLabel('Llega a').selectOption({ label: 'Bróker · Inversión' })
   await expect(page.getByText('Una transferencia a una Cuenta de inversión es un Aporte.')).toBeVisible()
   await page.getByLabel('Monto').fill('400')
+  await expectScreenQuality(page, 'transfers-create-contribution')
   await submitButton(page).click()
 
   await expect(page.getByRole('status').filter({ hasText: 'Registraste' })).toContainText(
     'Registraste un aporte de $400.00 de Cuenta corriente a Bróker.',
   )
   await expect(transferRow(page, 'de Cuenta corriente a Bróker')).toContainText('Aporte')
+  await expectScreenQuality(page, 'transfers-list-contribution', { skipAxeRules: knownAxeRules.recordRowLabel })
 })
 
 test('registering shows what is wrong, keeps the typed values and clears each error on change', async ({
@@ -120,6 +120,7 @@ test('registering shows what is wrong, keeps the typed values and clears each er
   await submitButton(page).click()
   await expect(page.getByText('Escribe un monto mayor que cero')).toBeVisible()
   await expect(page.getByLabel('Monto')).toBeFocused()
+  await expectScreenQuality(page, 'transfers-create-errors')
   await page.getByLabel('Monto').fill('8')
   await expect(page.getByLabel('Monto')).toHaveAttribute('aria-invalid', 'false')
   await expect(page.getByText('Escribe un monto mayor que cero')).toHaveCount(0)
@@ -145,7 +146,12 @@ test('registering shows what is wrong, keeps the typed values and clears each er
   await expect(page).toHaveURL(/\/transfers$/)
 })
 
-test('an Account archived while the form is open is refused by api-service and the draft stays', async ({ page }) => {
+test('an Account archived while the form is open is refused by api-service and the draft stays', async ({
+  page,
+  expectedProblems,
+}) => {
+  // The 400 api-service answers on purpose.
+  expectedProblems.push('status of 400')
   forbidBrowserDialogs(page)
   await signUp(page.request)
   const old = await createAccount(page.request, { name: 'Cuenta vieja' })
@@ -162,6 +168,7 @@ test('an Account archived while the form is open is refused by api-service and t
   await expect(page.getByText('Esta Cuenta está archivada y no admite registros nuevos')).toBeVisible()
   await expect(page.getByLabel('Monto')).toHaveValue('7.25')
   await expect(page.getByLabel('Sale de')).toBeFocused()
+  await expectScreenQuality(page, 'transfers-create-refused')
 })
 
 test('a Transfer touching an Account archived since can still be corrected and deleted', async ({ page }) => {
@@ -181,6 +188,7 @@ test('a Transfer touching an Account archived since can still be corrected and d
   await transferRow(page, 'Mudanza').click()
   await expect(page.getByLabel('Sale de')).toHaveValue(String(old.id))
   await expect(page.getByText('Una de estas Cuentas está archivada.')).toBeVisible()
+  await expectScreenQuality(page, 'transfers-edit-archived')
   await page.getByLabel('Monto').fill('60')
   await page.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Guardaste' })).toContainText(
@@ -201,12 +209,16 @@ test('with fewer than two Accounts the screens say what to do first', async ({ p
 
   await page.goto('/transfers')
   await expect(page.getByRole('link', { name: 'Crear una cuenta' })).toBeVisible()
+  await expectScreenQuality(page, 'transfers-empty-needs-accounts')
   await page.goto('/transfers/create')
   await expect(page.getByRole('heading', { name: 'Primero necesitas dos Cuentas' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Crear cuenta' })).toBeVisible()
+  await expectScreenQuality(page, 'transfers-create-needs-accounts')
 })
 
-test('the list shows loading, explains a failure and recovers on retry', async ({ page }) => {
+test('the list shows loading, explains a failure and recovers on retry', async ({ page, expectedProblems }) => {
+  // The request the test aborts on purpose.
+  expectedProblems.push('request failed: GET', 'net::ERR_FAILED')
   await signUp(page.request)
   const source = await createAccount(page.request, { name: 'Origen' })
   const destination = await createAccount(page.request, { name: 'Destino' })
@@ -230,11 +242,15 @@ test('the list shows loading, explains a failure and recovers on retry', async (
 
   await expect(page.getByText('Cargando tus transferencias…')).toBeVisible()
   await expect(page.getByRole('alert')).toContainText('No pudimos conectar con Okane')
+  await expectScreenQuality(page, 'transfers-list-failed')
   await page.getByRole('button', { name: 'Reintentar' }).click()
   await expect(transferRow(page, 'Renta')).toBeVisible()
+  await expectScreenQuality(page, 'transfers-list-recovered', { skipAxeRules: knownAxeRules.recordRowLabel })
 })
 
-test('a save that fails offline is explained and can be repeated', async ({ page }) => {
+test('a save that fails offline is explained and can be repeated', async ({ page, expectedProblems }) => {
+  // The request the test aborts on purpose.
+  expectedProblems.push('request failed: POST', 'net::ERR_FAILED')
   await signUp(page.request)
   await createAccount(page.request, { name: 'Origen' })
   await createAccount(page.request, { name: 'Destino' })
@@ -245,13 +261,16 @@ test('a save that fails offline is explained and can be repeated', async ({ page
   await submitButton(page).click()
   await expect(page.getByRole('alert')).toContainText('No pudimos conectar con Okane')
   await expect(page.getByLabel('Monto')).toHaveValue('9.99')
+  await expectScreenQuality(page, 'transfers-create-offline')
 
   await page.unroute('**/api/transfers')
   await submitButton(page).click()
   await expect(page).toHaveURL(/\/transfers$/)
 })
 
-test("a Transfer that is not the User's, or does not exist, is not found", async ({ page, browser }) => {
+test("a Transfer that is not the User's, or does not exist, is not found", async ({ page, browser, expectedProblems }) => {
+  // The 404 of an id that is not the User's or does not exist.
+  expectedProblems.push('status of 404')
   await signUp(page.request)
   const other = await browser.newContext()
   await signUp(other.request)
@@ -265,6 +284,7 @@ test("a Transfer that is not the User's, or does not exist, is not found", async
     for (const action of ['edit', 'delete']) {
       await page.goto(`/transfers/${id}/${action}`)
       await expect(page.getByRole('heading', { name: 'No encontramos esta transferencia' })).toBeVisible()
+      if (id === '999999' && action === 'edit') await expectScreenQuality(page, 'transfers-not-found')
     }
   }
 })
@@ -293,7 +313,7 @@ test('the list shows the next page on request and keeps day headings', async ({ 
   await expect(page.locator('a[id^=transfer-]').nth(50)).toBeFocused()
   await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'mar 10 nov' })).toBeVisible()
-  expect(await noOverflow(page)).toBe(true)
+  await expectScreenQuality(page, 'transfers-list-all-pages', { skipAxeRules: knownAxeRules.recordRowLabel })
 })
 
 test.describe('on a phone', () => {
