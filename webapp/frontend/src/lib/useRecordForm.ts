@@ -12,7 +12,7 @@ export type Validated<Input, Field extends string> =
  * what is wrong with it and the submit. `validate` runs in the browser first;
  * api-service has the last word, and its errors land on the same fields.
  */
-export function useRecordForm<Draft extends { date: string }, Field extends string, Input, Saved>({
+export function useRecordForm<Draft extends object, Field extends string, Input, Saved>({
   initial,
   validate,
   dateDependsOn,

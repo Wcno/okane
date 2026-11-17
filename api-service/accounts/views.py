@@ -60,6 +60,9 @@ def account_detail(request, account_id):
         account.delete()
         return Response(status=204)
     if account.archived_at is None:
+        blockers = ledger.archive_blockers(account)
+        if blockers:
+            return Response({"errors": {"form": blockers}}, status=409)
         account.archived_at = timezone.now()
         account.save(update_fields=["archived_at"])
     return Response(represent(account))

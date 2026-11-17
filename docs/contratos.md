@@ -211,6 +211,26 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Editar o borrar el Gasto confirmado aplica las reglas de Gastos sin reabrir la
   reserva ni borrar su resolución original. La interfaz advierte este efecto y
   conserva el vínculo de auditoría incluso tras el borrado del Gasto.
+- Cada Gasto del API de Gastos (lista, lectura y respuestas de escritura) lleva
+  `recurring_payment_occurrence_id`: la ocurrencia confirmada de la que nació,
+  o `null` si se registró a mano. Es de solo lectura y se ignora al enviarlo.
+  Las pantallas de editar y eliminar ese Gasto muestran el aviso: "Este gasto
+  viene de un pago recurrente confirmado. Cambiarlo (o Eliminarlo) no reabre la
+  reserva ni cambia su resolución."
+- `GET /api/recurring-payments` pagina las reglas y las devuelve con
+  `id`, `description`, `amount`, `account_id`, `category_id`, `day_of_month`,
+  `start_date`, `status` (`active`, o `deleted` si una regla eliminada aún tiene
+  pendientes) y `occurrences`: las ocurrencias pendientes o vencidas de la regla
+  y las de este mes, la más reciente primero. Una ocurrencia lleva `id`,
+  `recurring_payment_id`, `due_date`, `status` (`pending`, `overdue` si es una
+  pendiente vencida, `confirmed`, `cancelled`), `amount`, `account_id`,
+  `category_id`, `description`, `reserved_from`, `entered_on` (fecha del Gasto;
+  `null` hasta confirmar), `resolved_on`, `resolved_at` y `expense_id`.
+  `GET /api/recurring-payments/{id}` y
+  `GET /api/recurring-payments/occurrences/{id}` devuelven una regla o una
+  ocurrencia del Usuario para abrir sus pantallas desde un enlace. Confirmar
+  acepta `amount`, `account_id` y `date`, todos opcionales; cancelar no lleva cuerpo.
+  Ambas responden con la ocurrencia.
 - Saldo o Disponible negativos se informan, sin bloquear un Gasto válido. No
   existe una opción de Configuración para activar cobros automáticos o bloqueos.
 
@@ -218,6 +238,19 @@ los Saldos iniciales y el Rendimiento mensual está en el
 
 - La unicidad del Presupuesto es por Usuario, Categoría y mes. Las Categorías
   ajenas o archivadas no se admiten en un Presupuesto nuevo.
+- `GET /api/budgets?month=YYYY-MM` (por omisión, el mes actual) devuelve
+  `{month, results}` con una fila por Categoría del catálogo, tenga o no
+  Presupuesto, sin paginar: `id` (`null` sin Presupuesto), `category_id`, `month`,
+  `amount` (`null` sin Presupuesto), `spent` (Gastos del mes), `committed`
+  (reservas al corte del mes), `carried_over` (la parte de `committed` que viene
+  de meses anteriores), `remaining` (`null` sin Presupuesto, nunca `"0.00"`) y
+  `exceeded` (Restante negativo). `GET /api/budgets/{id}` devuelve la misma fila
+  de un Presupuesto del Usuario. `POST /api/budgets` y `PUT /api/budgets/{id}`
+  reciben `amount` (mayor que cero), `category_id` y `month`; `PUT` reemplaza
+  el Presupuesto completo. Un segundo Presupuesto para la misma Categoría y mes
+  devuelve `409`. El registro rápido de Gastos lee el Restante de la Categoría
+  en la fila del mes de la fecha del Gasto y calcula la consecuencia
+  (`remaining` menos el monto); sin Presupuesto en esa fila, no hay Restante.
 - La copia mensual se ejecuta una vez por Usuario y mes actual, en una
   transacción, y solo copia desde el mes calendario inmediatamente anterior
   si el mes actual aún no tiene Presupuestos. Un mes ya personalizado se marca

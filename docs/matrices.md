@@ -218,7 +218,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar presupuestos | Sí | `GET /api/budgets` | `budgets` | api-service, api-db | A5 |
+| Consultar presupuestos | Sí | `GET /api/budgets`, `GET /api/budgets/{id}` | `budgets` | api-service, api-db | A5 |
 | Crear presupuesto | Sí | `POST /api/budgets` | `budgets` | api-service, api-db | A5 |
 | Editar presupuesto | Sí | `PUT /api/budgets/{id}` | `budgets` | api-service, api-db | A5 |
 | Eliminar presupuesto | Sí | `DELETE /api/budgets/{id}` | `budgets` | api-service, api-db | A5 |
@@ -254,7 +254,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar pagos recurrentes | Sí | `GET /api/recurring-payments` | `recurring_payments` | api-service, api-db | N2 |
+| Consultar pagos recurrentes | Sí | `GET /api/recurring-payments`, `GET /api/recurring-payments/{id}`, `GET /api/recurring-payments/occurrences/{id}` | `recurring_payments` | api-service, api-db | N2 |
 | Crear pago recurrente | Sí | `POST /api/recurring-payments` | `recurring_payments` | api-service, api-db | N2 |
 | Editar pago recurrente | Sí | `PUT /api/recurring-payments/{id}` | `recurring_payments` | api-service, api-db | N2 |
 | Eliminar pago recurrente | Sí | `DELETE /api/recurring-payments/{id}` | `recurring_payments` | api-service, api-db | N2 |
@@ -358,8 +358,8 @@ Estos casos conservan su nombre, ruta y endpoint, pero las decisiones de diseño
 | Editar cuenta | No permite cambiar el Saldo; este se corrige registrando o corrigiendo movimientos. |
 | Eliminar cuenta | Solo borra una Cuenta sin movimientos. Si los tiene, la archiva y conserva su historial. |
 | Registrar gasto | Exige monto, Categoría y Cuenta. La fecha empieza en hoy y la descripción es opcional, de hasta 140 caracteres. Se acepta aunque exceda el Presupuesto o deje el Saldo en negativo. No se permite sobre una Cuenta de inversión ni archivada. |
-| Editar gasto | Exige la fecha además de los campos de registrar. Se permite sobre una Cuenta archivada mientras el Gasto siga en ella; moverlo a una Cuenta archivada o de inversión se rechaza. Ambos Saldos se recalculan. |
-| Eliminar gasto | Se permite aunque su Cuenta esté archivada. El Saldo de la Cuenta se recalcula. |
+| Editar gasto | Exige la fecha además de los campos de registrar. Se permite sobre una Cuenta archivada mientras el Gasto siga en ella; moverlo a una Cuenta archivada o de inversión se rechaza. Ambos Saldos se recalculan. Si el Gasto nació de un pago recurrente confirmado, la pantalla lo advierte: la reserva no se reabre. |
+| Eliminar gasto | Se permite aunque su Cuenta esté archivada. El Saldo de la Cuenta se recalcula. Si el Gasto nació de un pago recurrente confirmado, la pantalla lo advierte y el vínculo de la reserva se conserva. |
 | Crear presupuesto | Solo puede existir un Presupuesto por Categoría y mes. |
 | Registrar compra de activos | Descuenta efectivo de una Cuenta de inversión. Se acepta sin efectivo suficiente, con un aviso. |
 | Registrar venta de activos | No puede superar las unidades que hay en la Posición. |

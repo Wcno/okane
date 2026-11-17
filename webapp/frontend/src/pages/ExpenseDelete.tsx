@@ -1,6 +1,7 @@
 import type { Account } from '../accounts/api'
 import { useSignedInUser } from '../auth/context'
 import { CategoryChip } from '../components/expenses/CategoryChip'
+import { RecurringOriginNote } from '../components/expenses/RecurringOriginNote'
 import { OneExpenseScreen } from '../components/expenses/OneExpenseScreen'
 import { ConfirmCard, RecordSummary } from '../components/screen/ConfirmCard'
 import { ScreenHeader } from '../components/screen/Screen'
@@ -18,6 +19,7 @@ function Confirmation({ expense, accounts }: { expense: Expense; accounts: Accou
   return (
     <>
       <ScreenHeader title="Eliminar gasto" back={expensesBack} />
+      {expense.recurringPaymentOccurrenceId !== null && <RecurringOriginNote change="delete" />}
       <ConfirmCard
         summary={
           <RecordSummary
