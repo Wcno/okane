@@ -6,8 +6,13 @@ from rest_framework.exceptions import NotFound
 from accounts import clock
 from accounts.dates import spanish_day
 from accounts.models import Account
-from accounts.serializers import AMOUNT_LIMIT, DecimalStringField, amount_messages, messages
-from expenses.serializers import StrictIntegerField
+from accounts.serializers import (
+    AMOUNT_LIMIT,
+    DecimalStringField,
+    StrictIntegerField,
+    amount_messages,
+    messages,
+)
 from transfers.models import DESCRIPTION_MAX_LENGTH, Transfer
 
 AMOUNT_INVALID = "Escribe un monto mayor que cero, con dos decimales como máximo. Ejemplo: 250.00"

@@ -6,7 +6,6 @@ import { DayFeed } from '../components/record/DayFeed'
 import { RecordRow } from '../components/screen/RecordRow'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader } from '../components/screen/Screen'
 import { TransferChip } from '../components/transfers/TransferChip'
-import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
 import type { Transfer } from '../transfers/api'
 import { NEEDS_TWO_ACCOUNTS, describeTransfer, transferAccounts } from '../transfers/presentation'
@@ -15,13 +14,13 @@ import { useTransferFeed } from '../transfers/useTransferFeed'
 const rowId = (transfer: Transfer) => `transfer-${transfer.id}`
 
 function Row({ transfer, accounts }: { transfer: Transfer; accounts: Map<number, Account> }) {
-  const { title, details, label } = describeTransfer(transfer, accounts)
+  const { title, details } = describeTransfer(transfer, accounts)
 
   return (
     <RecordRow
       id={rowId(transfer)}
       to={`/transfers/${transfer.id}/edit`}
-      action={`Editar transferencia ${label}, ${formatMoney(transfer.amount)}${transfer.description && `, ${transfer.description}`}`}
+      action="Editar transferencia"
       icon={<TransferChip />}
       title={title}
       details={details}
@@ -39,7 +38,7 @@ export function Transfers() {
   const known = accounts.state.status === 'ready' ? accounts.state.value : []
   const byId = new Map(known.map((account) => [account.id, account]))
   const canRegister = accounts.state.status !== 'ready' || transferAccounts(known).length >= 2
-  const create = { to: '/transfers/create', label: 'Registrar transferencia' }
+  const create = { to: '/transfers/create', label: 'Registrar transferencia', shortLabel: 'Nueva' }
 
   return (
     <>

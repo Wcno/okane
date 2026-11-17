@@ -25,7 +25,7 @@ export function describeTransfer(
   transfer: Transfer,
   accounts: Map<number, Account>,
   options: { withDate?: boolean } = {},
-): { title: string; details: string; label: string } {
+): { title: string; details: string } {
   const source = accounts.get(transfer.sourceAccountId)
   const destination = accounts.get(transfer.destinationAccountId)
   const route = routeText(source?.name ?? 'Cuenta', destination?.name ?? 'Cuenta')
@@ -38,8 +38,16 @@ export function describeTransfer(
   return {
     title: transfer.description || route,
     details: details.filter(Boolean).join(' · '),
-    label: `de ${source?.name ?? 'una Cuenta'} a ${destination?.name ?? 'otra Cuenta'}`,
   }
+}
+
+/** The first day a Transfer between these Accounts may take: the later opening day of them. */
+export function startOfRecords(accounts: Account[], accountIds: Array<number | null>): string | undefined {
+  return accountIds
+    .map((accountId) => accounts.find((account) => account.id === accountId)?.openingDate)
+    .filter((day): day is string => day !== undefined)
+    .sort()
+    .at(-1)
 }
 
 /** Why the screens that register a Transfer ask for a second Account first. */
