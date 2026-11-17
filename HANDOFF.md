@@ -34,7 +34,7 @@ Partners are not on any of these tickets (confirmed by the user 2026-11-16).
 
 | Ticket | Base | Branch / PR | Status |
 |---|---|---|---|
-| #8 Gastos | `main` | `feat/8-expenses-fixed-categories`, PR #47 (draft) | round 1: CI pass, review requested changes, browser QA blocked (no Chrome) |
+| #8 Gastos | `main` | `feat/8-expenses-fixed-categories`, PR #47 (draft) | round 2 at `22dc77b`: all round-1 items verified landed, CI pass; ui-qa and review running |
 | #15 Ingresos | #8 | - | waits for #8 sign-off |
 | #17 Pagos recurrentes | #15 | - | waits |
 | #9 Presupuestos | #17 | - | waits |
@@ -54,10 +54,9 @@ No other PR is open.
 
 ## Next step
 
-1. PR #47 round 1 is fully applied (commits `933eabe`, `ed1f5f1`, `22dc77b`, PR body updated). Worker's local gates: api-service 101 tests, frontend 124, e2e 102, smoke test, all green.
-   Rerun CI on the new head and read the delta yourself; no new worker is needed unless a gate goes red.
-2. The user restarted the session to connect Claude in Chrome. Run `ui-qa` (gate b) on PR #47 against a running stack of the branch.
-   The worker stack was on http://localhost:8001 (project `okane-feat-8-expenses`, worktree `.claude/worktrees/feat-8-expenses`); if it is gone, run `bash scripts/worktree-stack.sh` and `docker compose up --build --detach --wait` in that worktree.
-   Ask `ui-qa` whether the populated list needs its own "Nuevo gasto" button (the worker removed it because the shell has "Registrar gasto").
-3. Rerun CI and read the delta yourself, comment gate results, `gh pr ready 47`.
+1. Round 2 of PR #47, head `22dc77b`. Orchestrator verified every round-1 item in the code; no new worker was spawned.
+   Gate a (CI) pass. Worktree stack rebuilt at the head on http://localhost:8001, smoke test green.
+2. Gate b: `ui-qa` (Sonnet) is walking PR #47 on :8001, also asked whether the populated list needs its own "Nuevo gasto" button.
+   Gate c: orchestrator's two-axis review of `origin/main...22dc77b` in progress.
+3. When b, c and d are green: comment "Gate results, round 2" on #47, `gh pr ready 47`.
 4. Rebuild port 8000 from the PR branch (`docker compose up --build --detach --wait`, `scripts/smoke-test.sh`) and stop for the user's UI sign-off before #15.
