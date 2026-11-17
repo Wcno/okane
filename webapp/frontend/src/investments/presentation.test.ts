@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset, Trade, Transaction } from './api'
-import { describeTransaction, formatPrice, formatUnits, tradeNotice, unitsPhrase } from './presentation'
+import { cashMoved, describeTransaction, formatPrice, formatUnits, tradeNotice, unitsPhrase } from './presentation'
 
 const asset: Asset = {
   id: 7,
@@ -135,6 +135,14 @@ describe('commissions and dividends', () => {
       balance: '812.40',
     })
     expect(notice).toBe('Registraste el dividendo de AAPL por $12.40. Saldo de Bróker: $812.40.')
+  })
+})
+
+describe('cashMoved', () => {
+  it('adds a purchase commission, subtracts a sale one and leaves a dividend alone', () => {
+    expect(cashMoved({ type: 'buy', cashAmount: '200.00', commission: '1.50' })).toBe('201.50')
+    expect(cashMoved({ type: 'sell', cashAmount: '150.00', commission: '2.25' })).toBe('147.75')
+    expect(cashMoved({ type: 'dividend', cashAmount: '12.40', commission: '0.00' })).toBe('12.40')
   })
 })
 

@@ -7,7 +7,7 @@ import { DayFeed } from '../components/record/DayFeed'
 import { RecordRow } from '../components/screen/RecordRow'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader } from '../components/screen/Screen'
 import { listTransactions, type Transaction } from '../investments/api'
-import { describeTransaction } from '../investments/presentation'
+import { cashMoved, describeTransaction } from '../investments/presentation'
 import { useTransactionRevision } from '../investments/transactionRevision'
 import { noticeFrom } from '../lib/notice'
 import { editActions } from '../movements/presentation'
@@ -26,7 +26,7 @@ function Row({ transaction, accountName }: { transaction: Transaction; accountNa
       icon={<TradeChip kind={transaction.type} />}
       title={title}
       details={details}
-      amount={transaction.cashAmount}
+      amount={cashMoved(transaction)}
     />
   )
 }
