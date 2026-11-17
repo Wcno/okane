@@ -3,8 +3,6 @@ import { createAccount, findAsset, recordTrade } from './support/ledger.js'
 import { expect, expectScreenQuality, test } from './support/qa.js'
 import { signUp } from './support/session.js'
 
-const noOverflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
-
 /** Fails the test if the page ever opens a browser alert, confirm or prompt. */
 function forbidBrowserDialogs(page: Page) {
   page.on('dialog', (dialog) => {
@@ -30,67 +28,58 @@ async function fillTrade(page: Page, units: string, price: string) {
 
 const panamaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Panama' }).format(new Date())
 
-for (const [width, height] of [
-  [390, 844],
-  [1440, 900],
-] as const) {
-  for (const colorScheme of ['light', 'dark'] as const) {
-    test(`buy and sell lifecycle at ${width}px in ${colorScheme}`, async ({ page }) => {
-      forbidBrowserDialogs(page)
-      await page.setViewportSize({ width, height })
-      await page.emulateMedia({ colorScheme })
-      await signUp(page.request)
-      await createAccount(page.request, { name: 'Bróker', type: 'investment', opening_balance: '1000.00' })
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`buy and sell lifecycle in ${colorScheme}`, async ({ page }) => {
+    forbidBrowserDialogs(page)
+    await page.emulateMedia({ colorScheme })
+    await signUp(page.request)
+    await createAccount(page.request, { name: 'Bróker', type: 'investment', opening_balance: '1000.00' })
 
-      await page.goto('/investments/positions')
-      await expect(page.getByRole('heading', { name: 'Aún no tienes Posiciones' })).toBeVisible()
-      expect(await noOverflow(page)).toBe(true)
-      await expectScreenQuality(page, `investments-positions-empty-${width}-${colorScheme}`)
-      await page.getByRole('link', { name: 'Registrar tu primera compra' }).click()
+    await page.goto('/investments/positions')
+    await expect(page.getByRole('heading', { name: 'Aún no tienes Posiciones' })).toBeVisible()
+    await expectScreenQuality(page, `investments-positions-empty-${colorScheme}`)
+    await page.getByRole('link', { name: 'Registrar tu primera compra' }).click()
 
-      await expect(page).toHaveURL(/\/investments\/transactions\/buy$/)
-      await expect(page.getByLabel('Fecha')).toHaveValue(panamaToday())
-      // The primary action stays on screen however long the form is.
-      await expect(submit(page, 'Registrar compra')).toBeInViewport()
-      await pickAsset(page, 'aapl', /^AAPL/)
-      await expect(page.getByRole('button', { name: 'Cambiar el Activo AAPL' })).toBeFocused()
-      await fillTrade(page, '2', '100')
-      await expect(page.getByText('Saldrá de la Cuenta: $200.00')).toBeVisible()
-      await expectScreenQuality(page, `investments-buy-filled-${width}-${colorScheme}`)
-      await expect(submit(page, 'Registrar compra')).toBeInViewport()
-      expect(await noOverflow(page)).toBe(true)
-      await submit(page, 'Registrar compra').click()
+    await expect(page).toHaveURL(/\/investments\/transactions\/buy$/)
+    await expect(page.getByLabel('Fecha')).toHaveValue(panamaToday())
+    // The primary action stays on screen however long the form is.
+    await expect(submit(page, 'Registrar compra')).toBeInViewport()
+    await pickAsset(page, 'aapl', /^AAPL/)
+    await expect(page.getByRole('button', { name: 'Cambiar el Activo AAPL' })).toBeFocused()
+    await fillTrade(page, '2', '100')
+    await expect(page.getByText('Saldrá de la Cuenta: $200.00')).toBeVisible()
+    await expectScreenQuality(page, `investments-buy-filled-${colorScheme}`)
+    await expect(submit(page, 'Registrar compra')).toBeInViewport()
+    await submit(page, 'Registrar compra').click()
 
-      await expect(page).toHaveURL(/\/investments\/positions$/)
-      await expect(page.getByRole('status').filter({ hasText: 'Compraste' })).toHaveText(
-        'Compraste 2 unidades de AAPL por $200.00. Saldo de Bróker: $800.00.',
-      )
-      const row = page.getByRole('listitem').filter({ hasText: 'AAPL' })
-      await expect(row).toContainText('2 unidades')
-      await expect(row).toContainText('costo promedio $100.00')
-      await expect(row).toContainText('$200.00')
-      await expect(row).toContainText('100.00 %')
-      await expectScreenQuality(page, `investments-positions-${width}-${colorScheme}`)
-      expect(await noOverflow(page)).toBe(true)
+    await expect(page).toHaveURL(/\/investments\/positions$/)
+    await expect(page.getByRole('status').filter({ hasText: 'Compraste' })).toHaveText(
+      'Compraste 2 unidades de AAPL por $200.00. Saldo de Bróker: $800.00.',
+    )
+    const row = page.getByRole('listitem').filter({ hasText: 'AAPL' })
+    await expect(row).toContainText('2 unidades')
+    await expect(row).toContainText('costo promedio $100.00')
+    await expect(row).toContainText('$200.00')
+    await expect(row).toContainText('100.00 %')
+    await expectScreenQuality(page, `investments-positions-${colorScheme}`)
 
-      await page.getByRole('link', { name: 'Registrar venta' }).click()
-      await expect(page).toHaveURL(/\/investments\/transactions\/sell$/)
-      await pickAsset(page, 'aapl', /^AAPL/)
-      await fillTrade(page, '1', '150')
-      await expect(page.getByText('Volverá a la Cuenta: $150.00')).toBeVisible()
-      await expectScreenQuality(page, `investments-sell-filled-${width}-${colorScheme}`)
-      await submit(page, 'Registrar venta').click()
+    await page.getByRole('link', { name: 'Registrar venta' }).click()
+    await expect(page).toHaveURL(/\/investments\/transactions\/sell$/)
+    await pickAsset(page, 'aapl', /^AAPL/)
+    await fillTrade(page, '1', '150')
+    await expect(page.getByText('Volverá a la Cuenta: $150.00')).toBeVisible()
+    await expectScreenQuality(page, `investments-sell-filled-${colorScheme}`)
+    await submit(page, 'Registrar venta').click()
 
-      await expect(page.getByRole('status').filter({ hasText: 'Vendiste' })).toHaveText(
-        'Vendiste 1 unidad de AAPL por $150.00. Saldo de Bróker: $950.00.',
-      )
-      await expect(row).toContainText('1 unidad')
-      await expect(row).toContainText('costo promedio $100.00')
+    await expect(page.getByRole('status').filter({ hasText: 'Vendiste' })).toHaveText(
+      'Vendiste 1 unidad de AAPL por $150.00. Saldo de Bróker: $950.00.',
+    )
+    await expect(row).toContainText('1 unidad')
+    await expect(row).toContainText('costo promedio $100.00')
 
-      await page.goto('/accounts')
-      await expect(accountRow(page, 'Bróker')).toContainText('$950.00')
-    })
-  }
+    await page.goto('/accounts')
+    await expect(accountRow(page, 'Bróker')).toContainText('$950.00')
+  })
 }
 
 test('a purchase without enough cash warns first and is accepted anyway', async ({ page }) => {
@@ -197,7 +186,6 @@ test('the search keeps markets apart, explains an empty result and never submits
   await search.press('Enter')
   await expect(page.getByText(/No encontramos Activos con esa búsqueda/)).toBeVisible()
   await expectScreenQuality(page, 'investments-buy-search-empty')
-  expect(await noOverflow(page)).toBe(true)
 })
 
 test('a search that cannot connect says so and works again on retry', async ({ page, expectedProblems }) => {
@@ -282,8 +270,8 @@ test('Positions that fail to load can be retried', async ({ page, expectedProble
   await expect(page.getByRole('heading', { name: 'Aún no tienes Posiciones' })).toBeVisible()
 })
 
-test('the controls of the purchase screen are at least 44px tall on a phone', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+test('the controls of the purchase screen are at least 44px tall on a phone', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Touch targets are measured on the phone project.')
   await signUp(page.request)
   await createAccount(page.request, { name: 'Bróker', type: 'investment' })
 

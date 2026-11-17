@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { Account } from '../accounts/api'
-import { useFieldErrors } from '../lib/fieldErrors'
+import { useFieldErrors } from '../lib/useFieldErrors'
 import type { Outcome } from '../lib/http'
 import { useSubmission } from '../lib/useSubmission'
 import type { Asset, Trade, TradeErrors, TradeField, TradeInput } from './api'
