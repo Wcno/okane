@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Account } from '../accounts/api'
 import type { Asset } from './api'
-import { cashAmount, exceedsCash, tradingAccounts, validateTrade, type TradeDraft } from './form'
+import { cashAmount, commissionAmount, exceedsCash, netCash, tradingAccounts, validateTrade, type TradeDraft } from './form'
 
 const asset: Asset = {
   id: 7,
@@ -31,6 +31,8 @@ const draft = (fields: Partial<TradeDraft> = {}): TradeDraft => ({
   asset,
   units: '2',
   unitPrice: '100',
+  commission: '',
+  amount: '',
   date: '2026-01-02',
   ...fields,
 })
@@ -112,5 +114,47 @@ describe('tradingAccounts', () => {
     ])
 
     expect(offered.map((item) => item.id)).toEqual([1])
+  })
+
+  it('keeps the Account of a recorded purchase or sale even when it is archived', () => {
+    const offered = tradingAccounts([account({ id: 1 }), account({ id: 3, archivedAt: '2026-02-01T00:00:00Z' })], 3)
+
+    expect(offered.map((item) => item.id)).toEqual([1, 3])
+  })
+})
+
+
+describe('commission and dividend', () => {
+  const accounts = [account()]
+
+  it('sends a typed commission with the trade and leaves it out when empty', () => {
+    const typed = validateTrade(draft({ commission: '1,5' }), { accounts, kind: 'buy' })
+    const empty = validateTrade(draft(), { accounts, kind: 'buy' })
+
+    expect(typed.ok && typed.trade.commission).toBe('1.50')
+    expect(empty.ok && 'commission' in empty.trade).toBe(false)
+  })
+
+  it('accepts a commission of zero and refuses a negative or malformed one', () => {
+    expect(validateTrade(draft({ commission: '0' }), { accounts, kind: 'sell' }).ok).toBe(true)
+    for (const commission of ['-1', '1.005', 'x']) {
+      const outcome = validateTrade(draft({ commission }), { accounts, kind: 'buy' })
+      expect(outcome.ok || Object.keys(outcome.errors)).toEqual(['commission'])
+    }
+  })
+
+  it('validates a dividend by its amount alone', () => {
+    const ok = validateTrade(draft({ units: '', unitPrice: '', amount: '12,40' }), { accounts, kind: 'dividend' })
+    const zero = validateTrade(draft({ units: '', unitPrice: '', amount: '0' }), { accounts, kind: 'dividend' })
+
+    expect(ok.ok && ok.trade).toEqual({ accountId: 3, assetId: 7, date: '2026-01-02', amount: '12.40' })
+    expect(zero.ok || Object.keys(zero.errors)).toEqual(['amount'])
+  })
+
+  it('moves the cash by the commission without rounding drift', () => {
+    expect(netCash('buy', '200.00', '1.10')).toBe('201.10')
+    expect(netCash('sell', '150.00', '0.30')).toBe('149.70')
+    expect(commissionAmount('')).toBe('0.00')
+    expect(commissionAmount('2,5')).toBe('2.50')
   })
 })

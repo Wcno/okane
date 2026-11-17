@@ -14,7 +14,7 @@ from django.test import Client, TransactionTestCase, override_settings, tag
 
 from expenses.tests import FOOD, TODAY, ExpenseApiTestCase
 from investments import quotes
-from investments.models import Asset, QuotedPrice
+from investments.models import Asset, InvestmentTransaction, QuotedPrice
 from investments.prices import refresh_prices
 from investments.serializers import InvestmentTransactionSerializer
 
@@ -173,6 +173,7 @@ class BuyTests(InvestmentApiTestCase):
                 "units": "2.00000000",
                 "unit_price": "100.00000000",
                 "cash_amount": "200.00",
+                "commission": "0.00",
                 "date": "2026-11-16",
                 "account_balance": "800.00",
             },
@@ -292,8 +293,8 @@ class BuyTests(InvestmentApiTestCase):
 
         for kind in ("buy", "sell"):
             with self.subTest(kind=kind):
-                response = self.trade(kind, account, asset, "1", "10", commission="1.00")
-                self.assert_rejected(response, "commission")
+                response = self.trade(kind, account, asset, "1", "10", surcharge="1.00")
+                self.assert_rejected(response, "surcharge")
         self.assertEqual(self.balance(account), "1000.00")
 
     def test_a_missing_field_names_the_field(self):
@@ -649,6 +650,388 @@ class PositionTests(InvestmentApiTestCase):
 
     def test_positions_need_the_service_credentials(self):
         self.assertEqual(self.client.get("/api/investments/positions").status_code, 403)
+
+
+class TransactionsApiTestCase(InvestmentApiTestCase):
+    def listed(self, query="", user=1):
+        response = self.call("GET", f"/api/investments/transactions{query}", user=user)
+        self.assertEqual(response.status_code, 200, response.content)
+        return response.json()
+
+    def read(self, recorded, user=1):
+        return self.call("GET", f"/api/investments/transactions/{recorded['id']}", user=user)
+
+    def edited(self, recorded, user=1, **changes):
+        """A PUT that sends every field of the recorded operation, with `changes` applied."""
+        body = {
+            "account_id": recorded["account_id"],
+            "asset_id": recorded["asset_id"],
+            "units": recorded["units"],
+            "unit_price": recorded["unit_price"],
+            "date": recorded["date"],
+            **changes,
+        }
+        return self.call("PUT", f"/api/investments/transactions/{recorded['id']}", body, user=user)
+
+    def removed(self, recorded, user=1):
+        return self.call("DELETE", f"/api/investments/transactions/{recorded['id']}", user=user)
+
+    def bourse(self, name="Bróker", **fields):
+        return self.investment_account(name=name, opening_date="2026-01-01", **fields)
+
+
+class TransactionListTests(TransactionsApiTestCase):
+    def test_lists_the_operations_newest_first_with_their_asset(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        first = self.bought(account, asset, "2", "100", date="2026-03-10")
+        second = self.bought(account, asset, "1", "100", date="2026-06-10")
+        third = self.bought(account, asset, "1", "50", date="2026-06-10")
+
+        listed = self.listed()
+
+        self.assertEqual(
+            [item["id"] for item in listed["results"]], [third["id"], second["id"], first["id"]]
+        )
+        self.assertEqual(listed["results"][0]["asset"]["symbol"], "AAPL")
+        self.assertEqual(listed["results"][0]["cash_amount"], "50.00")
+        self.assertNotIn("account_balance", listed["results"][0])
+        self.assertEqual((listed["total"], listed["next_page"]), (3, None))
+
+    def test_lists_only_the_users_operations(self):
+        mine = self.bourse(user=1, opening_balance="1000.00")
+        theirs = self.bourse(user=2, opening_balance="1000.00")
+        asset = self.asset()
+        own = self.bought(mine, asset, "1", "10", user=1)
+        self.bought(theirs, asset, "1", "10", user=2)
+
+        listed = self.listed(user=1)
+
+        self.assertEqual([item["id"] for item in listed["results"]], [own["id"]])
+
+    def test_pages_follow_the_listing_contract(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        for day in ("10", "11", "12"):
+            self.bought(account, asset, "1", "10", date=f"2026-03-{day}")
+
+        second_page = self.listed("?page_size=2&page=2")
+        self.assertEqual(len(second_page["results"]), 1)
+        self.assertEqual((second_page["total"], second_page["next_page"]), (3, None))
+        self.assertEqual(self.listed("?page_size=2")["next_page"], 2)
+        self.assertEqual(self.call("GET", "/api/investments/transactions?page_size=201").status_code, 400)
+        self.assertEqual(self.call("GET", "/api/investments/transactions?page=3&page_size=2").status_code, 400)
+
+
+class TransactionReadTests(TransactionsApiTestCase):
+    def test_returns_one_operation_with_its_asset(self):
+        account = self.bourse(opening_balance="1000.00")
+        recorded = self.bought(account, self.asset(), "2", "100")
+
+        response = self.read(recorded)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["id"], recorded["id"])
+        self.assertEqual(body["asset"]["symbol"], "AAPL")
+        self.assertEqual((body["units"], body["cash_amount"]), ("2.00000000", "200.00"))
+
+    def test_another_users_operation_is_not_found(self):
+        recorded = self.bought(self.bourse(user=1, opening_balance="1000.00"), self.asset(), "1", "10")
+
+        response = self.read(recorded, user=2)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "not_found"})
+
+    def test_an_unknown_operation_is_not_found(self):
+        response = self.call("GET", "/api/investments/transactions/999999")
+
+        self.assertEqual(response.status_code, 404)
+
+
+class TransactionEditTests(TransactionsApiTestCase):
+    def test_a_correction_recalculates_the_cash_and_the_position(self):
+        account = self.bourse(opening_balance="1000.00")
+        recorded = self.bought(account, self.asset(), "2", "100", date="2026-03-10")
+
+        response = self.edited(recorded, units="3")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        body = response.json()
+        self.assertEqual((body["units"], body["cash_amount"]), ("3.00000000", "300.00"))
+        self.assertEqual(body["account_balance"], "700.00")
+        self.assertEqual(self.balance(account), "700.00")
+        self.assertEqual(self.positions()["results"][0]["units"], "3.00000000")
+
+    def test_a_correction_that_strands_a_later_sale_is_rejected_and_changes_nothing(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        purchase = self.bought(account, asset, "5", "100", date="2026-03-10")
+        self.sold(account, asset, "5", "120", date="2026-06-10")
+        before = (self.balance(account), self.positions())
+
+        response = self.edited(purchase, units="4")
+
+        self.assert_rejected(response, "units")
+        message = response.json()["errors"]["units"][0]
+        self.assertIn("No puedes guardar este cambio", message)
+        self.assertIn("la venta del 10 jun 2026 vende 5 unidades", message)
+        self.assertIn("ese día solo tendrías 4", message)
+        self.assertEqual((self.balance(account), self.positions()), before)
+
+    def test_moving_a_purchase_after_a_sale_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        purchase = self.bought(account, asset, "5", "100", date="2026-03-10")
+        self.sold(account, asset, "5", "120", date="2026-06-10")
+
+        response = self.edited(purchase, date="2026-07-01")
+
+        self.assert_rejected(response, "units")
+        self.assertIn("ese día solo tendrías 0", response.json()["errors"]["units"][0])
+
+    def test_moving_a_purchase_to_another_account_checks_the_position_it_leaves(self):
+        origin = self.bourse(name="Bróker", opening_balance="1000.00")
+        destination = self.bourse(name="Otro bróker", opening_balance="1000.00")
+        asset = self.asset()
+        purchase = self.bought(origin, asset, "5", "100", date="2026-03-10")
+        self.sold(origin, asset, "5", "120", date="2026-06-10")
+
+        response = self.edited(purchase, account_id=destination["id"])
+
+        self.assert_rejected(response, "units")
+
+    def test_moving_a_sale_to_an_account_without_units_is_rejected(self):
+        origin = self.bourse(name="Bróker", opening_balance="1000.00")
+        destination = self.bourse(name="Otro bróker", opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(origin, asset, "5", "100", date="2026-03-10")
+        sale = self.sold(origin, asset, "5", "120", date="2026-06-10")
+
+        response = self.edited(sale, account_id=destination["id"])
+
+        self.assert_rejected(response, "units")
+        self.assertIn("la venta del 10 jun 2026 vende 5 unidades", response.json()["errors"]["units"][0])
+
+    def test_changing_the_asset_checks_the_position_it_leaves(self):
+        account = self.bourse(opening_balance="1000.00")
+        apple = self.asset()
+        other = self.asset(symbol="MSFT", name="Microsoft")
+        purchase = self.bought(account, apple, "5", "100", date="2026-03-10")
+        self.sold(account, apple, "5", "120", date="2026-06-10")
+
+        response = self.edited(purchase, asset_id=other.id)
+
+        self.assert_rejected(response, "units")
+
+    def test_a_correction_of_the_price_changes_later_average_costs_and_the_balance(self):
+        account = self.bourse(opening_balance="10000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "100", date="2026-03-10")
+        second = self.bought(account, asset, "10", "200", date="2026-04-10")
+        self.sold(account, asset, "5", "180", date="2026-05-10")
+        self.assertEqual(self.positions()["results"][0]["average_cost"], "150.00000000")
+
+        response = self.edited(second, unit_price="300")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        position = self.positions()["results"][0]
+        self.assertEqual(
+            (position["units"], position["cost"], position["average_cost"]),
+            ("15.00000000", "3000.00", "200.00000000"),
+        )
+        self.assertEqual(self.balance(account), "6900.00")
+
+    def test_a_sale_on_the_day_of_its_purchase_keeps_its_place_after_a_correction(self):
+        account = self.bourse(opening_balance="10000.00")
+        asset = self.asset()
+        purchase = self.bought(account, asset, "10", "100", date="2026-06-10")
+        self.sold(account, asset, "5", "120", date="2026-06-10")
+
+        self.assertEqual(self.edited(purchase, units="12").status_code, 200)
+        response = self.edited(purchase, units="4")
+
+        self.assertIn("ese día solo tendrías 4", response.json()["errors"]["units"][0])
+
+    def test_a_correction_needs_the_date(self):
+        account = self.bourse(opening_balance="1000.00")
+        recorded = self.bought(account, self.asset(), "1", "10")
+
+        response = self.call(
+            "PUT",
+            f"/api/investments/transactions/{recorded['id']}",
+            {"account_id": account["id"], "asset_id": recorded["asset_id"], "units": "1", "unit_price": "10"},
+        )
+
+        self.assert_rejected(response, "date")
+
+    def test_a_correction_refuses_a_change_of_kind_as_an_unknown_field(self):
+        account = self.bourse(opening_balance="1000.00")
+        recorded = self.bought(account, self.asset(), "1", "10")
+
+        response = self.edited(recorded, type="sell")
+
+        self.assert_rejected(response, "type")
+        self.assertEqual(self.read(recorded).json()["type"], "buy")
+
+    def test_a_correction_keeps_the_date_within_the_account_and_today(self):
+        account = self.bourse(opening_balance="1000.00")
+        recorded = self.bought(account, self.asset(), "1", "10", date="2026-03-10")
+
+        self.assert_rejected(self.edited(recorded, date="2999-01-01"), "date")
+        self.assert_rejected(self.edited(recorded, date="2025-12-31"), "date")
+
+    def test_another_users_operation_cannot_be_corrected(self):
+        account = self.bourse(user=1, opening_balance="1000.00")
+        recorded = self.bought(account, self.asset(), "1", "10", user=1)
+
+        response = self.edited(recorded, user=2, units="2")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(self.read(recorded).json()["units"], "1.00000000")
+
+    def test_an_archived_account_keeps_its_operations_correctable_but_takes_no_move_into_it(self):
+        old = self.bourse(name="Bróker vieja", opening_balance="1000.00")
+        new = self.bourse(name="Bróker nueva", opening_balance="1000.00")
+        asset = self.asset()
+        recorded = self.bought(old, asset, "2", "100")
+        self.bought(new, self.asset(symbol="MSFT", name="Microsoft"), "1", "10")
+        self.archive(old)
+        self.archive(new)
+
+        self.assertEqual(self.edited(recorded, units="3").status_code, 200)
+        self.assert_rejected(self.edited(recorded, account_id=new["id"]), "account_id")
+
+
+class TransactionDeleteTests(TransactionsApiTestCase):
+    def test_deleting_a_purchase_returns_its_cash_and_units(self):
+        account = self.bourse(opening_balance="1000.00")
+        purchase = self.bought(account, self.asset(), "2", "100")
+
+        self.assertEqual(self.removed(purchase).status_code, 204)
+
+        self.assertEqual(self.balance(account), "1000.00")
+        self.assertEqual(self.positions()["results"], [])
+        self.assertEqual(self.listed()["total"], 0)
+
+    def test_deleting_a_purchase_a_later_sale_needs_is_rejected_and_changes_nothing(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        purchase = self.bought(account, asset, "5", "100", date="2026-03-10")
+        self.sold(account, asset, "5", "120", date="2026-06-10")
+        before = (self.balance(account), self.positions())
+
+        response = self.removed(purchase)
+
+        self.assert_rejected(response, "form")
+        self.assertIn("No puedes eliminar esta compra", response.json()["errors"]["form"][0])
+        self.assertIn("la venta del 10 jun 2026 vende 5 unidades", response.json()["errors"]["form"][0])
+        self.assertEqual(self.read(purchase).status_code, 200)
+        self.assertEqual((self.balance(account), self.positions()), before)
+
+    def test_deleting_a_sale_gives_its_units_back_to_the_position(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "5", "100", date="2026-03-10")
+        sale = self.sold(account, asset, "2", "120", date="2026-06-10")
+
+        self.assertEqual(self.removed(sale).status_code, 204)
+
+        self.assertEqual(self.positions()["results"][0]["units"], "5.00000000")
+        self.assertEqual(self.balance(account), "500.00")
+
+    def test_another_purchase_on_the_same_day_covers_the_sale_when_one_is_deleted(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        first = self.bought(account, asset, "5", "100", date="2026-03-10")
+        self.bought(account, asset, "5", "100", date="2026-03-10")
+        self.sold(account, asset, "5", "120", date="2026-06-10")
+
+        self.assertEqual(self.removed(first).status_code, 204)
+
+    def test_an_operation_of_an_archived_account_can_be_deleted(self):
+        account = self.bourse(opening_balance="1000.00")
+        other = self.bourse(name="Otro bróker", opening_balance="1000.00")
+        recorded = self.bought(account, self.asset(), "1", "10")
+        self.bought(other, self.asset(symbol="MSFT", name="Microsoft"), "1", "10")
+        self.archive(account)
+
+        self.assertEqual(self.removed(recorded).status_code, 204)
+
+    def test_another_users_operation_cannot_be_deleted(self):
+        account = self.bourse(user=1, opening_balance="1000.00")
+        recorded = self.bought(account, self.asset(), "1", "10", user=1)
+
+        self.assertEqual(self.removed(recorded, user=2).status_code, 404)
+        self.assertEqual(self.read(recorded).status_code, 200)
+
+
+@tag("database")
+@override_settings(INTERNAL_SERVICE_KEY="expected-key")
+class ConcurrentChangeTests(TransactionTestCase):
+    """Real commits on separate connections: a deletion and a sale of the same units must queue up."""
+
+    def test_a_deletion_and_a_sale_cannot_both_succeed(self):
+        headers = {"X-Okane-Service-Key": "expected-key", "X-Okane-User-Id": "1"}
+        patcher = mock.patch("accounts.clock.today", return_value=TODAY)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        def post(path, body):
+            return Client().post(path, json.dumps(body), content_type="application/json", headers=headers)
+
+        account_response = post(
+            "/api/accounts",
+            {
+                "name": "Bróker",
+                "type": "investment",
+                "opening_balance": "1000.00",
+                "opening_date": "2026-11-01",
+            },
+        )
+        self.assertEqual(account_response.status_code, 201, account_response.content)
+        account = account_response.json()
+        asset = Asset.objects.create(provider="fake", market="XNAS", symbol="AAPL", name="Apple")
+        trade = {"account_id": account["id"], "asset_id": asset.id, "units": "10", "unit_price": "10"}
+        purchase_response = post("/api/investments/transactions/buy", trade)
+        self.assertEqual(purchase_response.status_code, 201, purchase_response.content)
+        purchase = purchase_response.json()
+
+        outcomes = {}
+        barrier = threading.Barrier(2)
+
+        def delete():
+            try:
+                barrier.wait()
+                outcomes["deletion"] = (
+                    Client()
+                    .delete(f"/api/investments/transactions/{purchase['id']}", headers=headers)
+                    .status_code
+                )
+            finally:
+                connection.close()
+
+        def sell():
+            try:
+                barrier.wait()
+                outcomes["sale"] = post("/api/investments/transactions/sell", trade).status_code
+            finally:
+                connection.close()
+
+        threads = [threading.Thread(target=delete), threading.Thread(target=sell)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        succeeded = [name for name, status in outcomes.items() if status < 300]
+        refused = [name for name, status in outcomes.items() if status == 400]
+        self.assertEqual(len(succeeded), 1, outcomes)
+        self.assertEqual(len(refused), 1, outcomes)
+
+        remaining = InvestmentTransaction.objects.filter(account_id=account["id"]).count()
+        self.assertEqual(remaining, 0 if succeeded == ["deletion"] else 2)
 
 
 class SampleProviderTests(InvestmentApiTestCase):
@@ -1260,3 +1643,280 @@ class PastDayAndPeriodTests(PerformanceTestCase):
         self.investment_account()
 
         self.assertIsNone(self.read("performance")["period"])
+
+
+class CommissionTests(TransactionsApiTestCase):
+    def test_a_purchase_commission_takes_cash_and_joins_the_cost(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+
+        recorded = self.bought(account, asset, "2", "100", commission="1.50")
+
+        self.assertEqual(recorded["commission"], "1.50")
+        self.assertEqual(recorded["cash_amount"], "200.00")
+        self.assertEqual(recorded["account_balance"], "798.50")
+        [position] = self.positions()["results"]
+        self.assertEqual(position["cost"], "201.50")
+        self.assertEqual(position["average_cost"], "100.75000000")
+
+    def test_a_sale_commission_reduces_the_cash_received_and_leaves_the_cost_alone(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        sale = self.sold(account, asset, "1", "150", commission="2.25", date="2026-04-10")
+
+        self.assertEqual(sale["account_balance"], "947.75")
+        [position] = self.positions()["results"]
+        self.assertEqual(position["cost"], "100.00")
+
+    def test_the_commission_is_optional_and_zero_by_default(self):
+        account = self.bourse(opening_balance="1000.00")
+
+        recorded = self.bought(account, self.asset(), "1", "10")
+
+        self.assertEqual(recorded["commission"], "0.00")
+        self.assertEqual(recorded["account_balance"], "990.00")
+
+    def test_a_commission_is_never_negative_or_beyond_cents(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+
+        for value in ("-1.00", "1.005", "abc", 1.5):
+            with self.subTest(value=value):
+                response = self.trade("buy", account, asset, "1", "10", commission=value)
+                self.assert_rejected(response, "commission")
+        self.assertEqual(self.balance(account), "1000.00")
+
+    def test_the_commission_is_kept_exact_in_a_large_cost(self):
+        account = self.bourse(opening_balance="1000000000.00")
+        asset = self.asset()
+
+        self.bought(account, asset, "3", "333333333.33333333", commission="0.01")
+
+        [position] = self.positions()["results"]
+        self.assertEqual(position["cost"], "1000000000.01")
+
+    def test_correcting_a_purchase_commission_changes_a_later_sale_cost_and_the_balance(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        purchase = self.bought(account, asset, "2", "100", commission="10.00", date="2026-03-10")
+        self.sold(account, asset, "1", "150", date="2026-04-10")
+        self.assertEqual(self.positions()["results"][0]["cost"], "105.00")
+
+        response = self.edited(purchase, commission="0.00")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(self.positions()["results"][0]["cost"], "100.00")
+        self.assertEqual(self.balance(account), "950.00")
+
+    def test_a_commission_leaves_the_net_contribution_alone_and_lowers_the_return(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", commission="5.00", date="2026-11-02")
+        self.call("PUT", f"/api/investments/assets/{asset.id}/price", {"value": "50"})
+
+        body = self.call("GET", "/api/investments/dashboard").json()
+
+        self.assertEqual(body["net_contribution"], "1000.00")
+        self.assertEqual(body["return"]["amount"], "-5.00")
+
+
+class DividendTests(TransactionsApiTestCase):
+    def dividend(self, account, asset, amount, user=1, **fields):
+        body = {"account_id": account["id"], "asset_id": asset.id, "amount": amount, **fields}
+        return self.call("POST", "/api/investments/transactions/dividend", body, user=user)
+
+    def paid(self, account, asset, amount, user=1, **fields):
+        response = self.dividend(account, asset, amount, user=user, **fields)
+        self.assertEqual(response.status_code, 201, response.content)
+        return response.json()
+
+    def correct(self, paid, account, asset, **changes):
+        body = {
+            "account_id": account["id"],
+            "asset_id": asset.id,
+            "amount": paid["cash_amount"],
+            "date": paid["date"],
+            **changes,
+        }
+        return self.call("PUT", f"/api/investments/transactions/{paid['id']}", body)
+
+    def dashboard(self, query=""):
+        return self.call("GET", f"/api/investments/dashboard{query}").json()
+
+    def test_a_dividend_adds_cash_and_shows_without_units(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        recorded = self.paid(account, asset, "12.40", date="2026-04-01")
+
+        self.assertEqual(recorded["type"], "dividend")
+        self.assertEqual(recorded["cash_amount"], "12.40")
+        self.assertIsNone(recorded["units"])
+        self.assertEqual(recorded["account_balance"], "812.40")
+        self.assertEqual(self.balance(account), "812.40")
+
+    def test_a_dividend_counts_as_return_and_not_as_contribution(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", date="2026-11-02")
+        self.call("PUT", f"/api/investments/assets/{asset.id}/price", {"value": "50"})
+        before = self.dashboard()
+
+        self.paid(account, asset, "7.35", date="2026-11-03")
+
+        after = self.dashboard()
+        self.assertEqual(before["return"]["amount"], "0.00")
+        self.assertEqual(after["return"], {"amount": "7.35", "percent": "0.74"})
+        self.assertEqual(after["net_contribution"], before["net_contribution"])
+        self.assertEqual(after["cash"], "507.35")
+
+    def test_the_return_of_a_period_includes_only_the_dividends_paid_in_it(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", date="2026-11-02")
+        self.call("PUT", f"/api/investments/assets/{asset.id}/price", {"value": "50", "date": "2026-11-02"})
+        self.paid(account, asset, "5.00", date="2026-11-03")
+        self.paid(account, asset, "7.00", date="2026-11-10")
+
+        body = self.call("GET", "/api/investments/performance?from=2026-11-05").json()
+
+        self.assertEqual(body["return"]["amount"], "12.00")
+        self.assertEqual(body["period"]["return"], "7.00")
+        self.assertEqual(body["net_contribution"], "1000.00")
+
+    def test_a_closing_before_a_dividend_does_not_see_it(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", date="2026-11-02")
+        self.paid(account, asset, "7.00", date="2026-11-10")
+
+        body = self.dashboard("?as_of=2026-11-05")
+
+        self.assertEqual(body["cash"], "500.00")
+
+    def test_a_dividend_never_sets_the_price_or_changes_the_position(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        self.paid(account, asset, "5.00", date="2026-04-01")
+
+        [position] = self.positions()["results"]
+        self.assertEqual(
+            (position["units"], position["cost"], position["price"]["value"]),
+            ("2.00000000", "200.00", "100.00000000"),
+        )
+
+    def test_a_dividend_of_an_asset_the_user_does_not_hold_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+
+        response = self.dividend(account, self.asset(), "5.00")
+
+        self.assert_rejected(response, "asset_id")
+        self.assertEqual(self.balance(account), "1000.00")
+
+    def test_a_dividend_before_the_first_purchase_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        self.assert_rejected(self.dividend(account, asset, "5.00", date="2026-03-01"), "asset_id")
+
+    def test_a_dividend_of_units_held_in_another_account_is_rejected(self):
+        asset = self.asset()
+        holder = self.bourse(name="Uno")
+        other = self.bourse(name="Otro")
+        self.bought(holder, asset, "2", "100")
+
+        self.assert_rejected(self.dividend(other, asset, "5.00"), "asset_id")
+
+    def test_a_dividend_amount_is_positive_with_two_decimals(self):
+        account = self.bourse()
+        asset = self.asset()
+        self.bought(account, asset, "2", "100")
+
+        for value in ("0", "0.00", "-1.00", "1.005", "abc", 5):
+            with self.subTest(value=value):
+                self.assert_rejected(self.dividend(account, asset, value), "amount")
+
+    def test_a_dividend_takes_no_units_price_or_commission(self):
+        account = self.bourse()
+        asset = self.asset()
+        self.bought(account, asset, "2", "100")
+
+        for name in ("units", "unit_price", "commission"):
+            with self.subTest(name=name):
+                self.assert_rejected(self.dividend(account, asset, "5.00", **{name: "1"}), name)
+
+    def test_only_an_investment_account_takes_a_dividend(self):
+        checking = self.account(type="spending")
+
+        self.assert_rejected(self.dividend(checking, self.asset(), "5.00"), "account_id")
+
+    def test_another_users_account_is_not_found(self):
+        account = self.bourse()
+        asset = self.asset()
+        self.bought(account, asset, "2", "100")
+
+        self.assertEqual(self.dividend(account, asset, "5.00", user=2).status_code, 404)
+
+    def test_dividends_are_listed_with_the_other_operations(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        paid = self.paid(account, asset, "5.00", date="2026-04-01")
+
+        listed = self.listed()["results"]
+
+        self.assertEqual([item["type"] for item in listed], ["dividend", "buy"])
+        self.assertEqual(listed[0]["asset"]["symbol"], "AAPL")
+        self.assertEqual(self.read(paid).json()["cash_amount"], "5.00")
+
+    def test_a_dividend_can_be_corrected_and_deleted(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        paid = self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.correct(paid, account, asset, amount="6.00")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(self.balance(account), "806.00")
+        self.assertEqual(self.removed(paid).status_code, 204)
+        self.assertEqual(self.balance(account), "800.00")
+
+    def test_deleting_the_purchase_a_dividend_needs_is_rejected_and_changes_nothing(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        purchase = self.bought(account, asset, "2", "100", date="2026-03-10")
+        self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.removed(purchase)
+
+        self.assert_rejected(response, "form")
+        self.assertIn("Dividendo del 1 abr 2026", response.json()["errors"]["form"][0])
+        self.assertEqual(self.balance(account), "805.00")
+
+    def test_a_sale_that_would_leave_a_dividend_without_units_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.trade("sell", account, asset, "2", "120", date="2026-03-20")
+
+        self.assert_rejected(response, "units")
+        self.assertEqual(self.balance(account), "805.00")
+
+    def test_moving_a_dividend_before_the_purchase_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        paid = self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.correct(paid, account, asset, date="2026-03-01")
+
+        self.assert_rejected(response, "asset_id")

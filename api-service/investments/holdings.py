@@ -40,9 +40,10 @@ class Holding:
     def average_cost(self):
         return self.cost / self.units if self.units else ZERO
 
-    def apply(self, kind, units, unit_price):
+    def apply(self, kind, units, unit_price, commission=ZERO):
         if kind == InvestmentTransaction.Type.BUY:
-            return Holding(self.units + units, self.cost + units * unit_price)
+            # A purchase commission is part of what the units cost.
+            return Holding(self.units + units, self.cost + units * unit_price + commission)
         remaining = self.units - units
         if remaining == 0:
             # A Position that reaches zero starts its cost over.
@@ -56,8 +57,35 @@ def replay(transactions):
     """Fold ordered transactions into a Holding."""
     holding = Holding()
     for transaction in transactions:
-        holding = holding.apply(transaction.type, transaction.units, transaction.unit_price)
+        if transaction.type == InvestmentTransaction.Type.DIVIDEND:
+            continue
+        holding = holding.apply(
+            transaction.type, transaction.units, transaction.unit_price, transaction.commission
+        )
     return holding
+
+
+def units_held(transactions, day):
+    """Units held after every purchase and sale dated `day` or earlier."""
+    units = ZERO
+    for transaction in transactions:
+        if transaction.type == InvestmentTransaction.Type.DIVIDEND or transaction.date > day:
+            continue
+        sign = 1 if transaction.type == InvestmentTransaction.Type.BUY else -1
+        units += sign * transaction.units
+    return units
+
+
+def trimmed(units):
+    """Units as a User reads them: no trailing zeros, at least one digit."""
+    text = f"{units:f}"
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+def units_phrase(units):
+    """"1 unidad" or "2.5 unidades", the way a Spanish sentence reads them."""
+    text = trimmed(units)
+    return f"{text} {'unidad' if text == '1' else 'unidades'}"
 
 
 def sellable_units(transactions, sale_date):
@@ -69,6 +97,8 @@ def sellable_units(transactions, sale_date):
     units = ZERO
     sellable = None
     for transaction in transactions:
+        if transaction.type == InvestmentTransaction.Type.DIVIDEND:
+            continue
         if transaction.date > sale_date and sellable is None:
             sellable = units
         sign = 1 if transaction.type == InvestmentTransaction.Type.BUY else -1

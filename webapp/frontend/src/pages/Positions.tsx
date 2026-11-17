@@ -1,4 +1,4 @@
-import { ChartLine, TrendingDown } from 'lucide-react'
+import { ChartLine, History, TrendingDown } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { smallSecondaryButtonClassName } from '../components/buttons'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
@@ -68,6 +68,13 @@ export function Positions() {
         // With nothing held, the empty state already asks for the first purchase.
         action={hasPositions ? { to: '/investments/transactions/buy', label: 'Registrar compra' } : undefined}
       />
+
+      <div className="mb-5 lg:mb-6">
+        <Link to="/investments/transactions" className={smallSecondaryButtonClassName}>
+          <History size={17} aria-hidden="true" />
+          Ver transacciones
+        </Link>
+      </div>
 
       <NoticeBanner notice={notice} className="max-w-[44rem]" />
 

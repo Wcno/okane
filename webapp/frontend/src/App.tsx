@@ -40,6 +40,9 @@ import { TransferCreate } from './pages/TransferCreate'
 import { TransferDelete } from './pages/TransferDelete'
 import { TransferEdit } from './pages/TransferEdit'
 import { Transfers } from './pages/Transfers'
+import { TransactionDelete } from './pages/TransactionDelete'
+import { TransactionEdit } from './pages/TransactionEdit'
+import { Transactions } from './pages/Transactions'
 import { UnderConstruction } from './pages/UnderConstruction'
 
 export default function App() {
@@ -83,10 +86,14 @@ export default function App() {
             <Route path="/investments/positions" element={<Positions />} />
             <Route path="/investments/transactions/buy" element={<Trade kind="buy" />} />
             <Route path="/investments/transactions/sell" element={<Trade kind="sell" />} />
+            <Route path="/investments/transactions/dividend" element={<Trade kind="dividend" />} />
             <Route path="/transfers" element={<Transfers />} />
             <Route path="/transfers/create" element={<TransferCreate />} />
             <Route path="/transfers/:id/edit" element={<TransferEdit />} />
             <Route path="/transfers/:id/delete" element={<TransferDelete />} />
+            <Route path="/investments/transactions" element={<Transactions />} />
+            <Route path="/investments/transactions/:id/edit" element={<TransactionEdit />} />
+            <Route path="/investments/transactions/:id/delete" element={<TransactionDelete />} />
             <Route path="/incomes" element={<Incomes />} />
             <Route path="/incomes/create" element={<IncomeCreate />} />
             <Route path="/incomes/:id/edit" element={<IncomeEdit />} />

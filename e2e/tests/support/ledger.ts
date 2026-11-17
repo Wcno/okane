@@ -124,10 +124,22 @@ interface TradeFields {
   asset_id: number
   units: string
   unit_price: string
+  commission?: string
   date?: string
 }
 
-export async function recordTrade(request: APIRequestContext, kind: 'buy' | 'sell', fields: TradeFields) {
+interface DividendFields {
+  account_id: number
+  asset_id: number
+  amount: string
+  date?: string
+}
+
+export async function recordTrade(
+  request: APIRequestContext,
+  kind: 'buy' | 'sell' | 'dividend',
+  fields: TradeFields | DividendFields,
+) {
   const response = await send(request, 'POST', `/api/investments/transactions/${kind}`, fields)
   expect(response.status()).toBe(201)
   return (await response.json()) as { id: number }

@@ -7,8 +7,10 @@ class InvestmentLedgerSource:
     """Lets the ledger derive Balances from purchases and sales (ADR 0002, ADR 0003)."""
 
     def balance_changes(self, account_ids, as_of=None):
+        # A purchase costs its amount plus the commission; a sale brings its amount minus it.
         signed = Case(
-            When(type=InvestmentTransaction.Type.BUY, then=-F("cash_amount")),
+            When(type=InvestmentTransaction.Type.BUY, then=-F("cash_amount") - F("commission")),
+            When(type=InvestmentTransaction.Type.SELL, then=F("cash_amount") - F("commission")),
             default=F("cash_amount"),
             output_field=DecimalField(max_digits=14, decimal_places=2),
         )
