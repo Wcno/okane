@@ -21,7 +21,7 @@ function Row({ transfer, accounts }: { transfer: Transfer; accounts: Map<number,
     <RecordRow
       id={rowId(transfer)}
       to={`/transfers/${transfer.id}/edit`}
-      label={`Editar transferencia ${label}, ${formatMoney(transfer.amount)}${transfer.description && `, ${transfer.description}`}`}
+      action={`Editar transferencia ${label}, ${formatMoney(transfer.amount)}${transfer.description && `, ${transfer.description}`}`}
       icon={<TransferChip />}
       title={title}
       details={details}
