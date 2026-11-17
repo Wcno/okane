@@ -7,7 +7,10 @@ argument-hint: "[issue numbers to limit the run, or empty for every ready ticket
 
 You are the orchestrator. Workers build, gates judge, you decide, and the user merges.
 Run this in a session on the most capable model; workers and gates run on the cheaper models their agent files name.
-Sonnet builds tickets and reworks UI. Haiku takes mechanical fixes after a red gate (renames, copy, PR body, missing tests for existing behaviour) and restacks.
+The target is 10 to 20 minutes per ticket.
+Model split: Haiku builds tickets that mirror an existing pattern (Incomes mirroring Expenses) and takes mechanical fixes after a red gate (renames, copy, PR body, missing tests for existing behaviour) and restacks.
+Sonnet builds tickets that set a new pattern, and reworks UI.
+Pass `model` on the `Agent` call to override the worker's default.
 Invoking this skill is the user's request to implement the tickets in scope, as `AGENTS.md` requires.
 Every task uses the skill that fits its goal: building follows `implement` with `mattpocock-skills:tdd`, reviewing uses `mattpocock-skills:code-review`, PR bodies use `mattpocock-skills:pr`.
 For a task no skill covers, such as a restack or a checkpoint, use your own judgment.
@@ -34,12 +37,14 @@ Work continues without waiting for merges: each ticket's PR is based on the bran
    Prefer tickets that touch different areas. Keep at most 3 workers in flight.
    When nothing has a base and nothing is in flight, the run is finished.
 4. **Build.** Spawn one `ticket-worker` per ticket with `isolation: "worktree"`, prompt `Implement issue #<n> on base <branch>.`
+   A ticket with both a backend and a UI half may split into a backend worker and a frontend worker in parallel, prompts `Implement the backend of issue #<n> ...` and `Implement the frontend of issue #<n> ...`, both building against `docs/matrices.md`.
+   The frontend worker stubs the API until the backend branch lands, then merges it. The ticket's PR is the frontend one, based on the backend branch.
 5. **Gate each PR as its worker reports.** Run gates a to d in parallel, a alongside the others or once CI is green.
    A gate that goes red sends its findings back to that worker with `SendMessage`; a mechanical finding goes to a Haiku worker instead. The PR re-enters at the red gate.
    - a. **CI**: `gh pr checks <pr> --watch`. All of `frontend`, `api-service`, `webapp`, `compose` and `conventions` pass.
-   - b. **Playwright QA**: the e2e suite passes on the worker's stack at both widths, with the QA fixture clean and every `expectScreenQuality` green.
+   - b. **Playwright QA**: the ticket's e2e specs pass on the worker's stack at both widths, with the QA fixture clean and every `expectScreenQuality` green; CI runs the full suite.
      Then spawn `screenshot-qa` with the PR number and the worker's `e2e/qa-screenshots` directory. It returns `PASS`.
-   - c. **Review**: run the `mattpocock-skills:code-review` skill on the PR branch against its base, independent of the worker's own review, with the spec axis on Haiku and the standards axis on Sonnet.
+   - c. **Review**: run the `mattpocock-skills:code-review` skill on the PR branch against its base, with the spec axis on Haiku and the standards axis on Sonnet. Workers run no review of their own, so this is the review.
      No finding left that breaks a contract, a criterion or `docs/code-language.md`.
    - d. **Your read**: the diff stays inside the ticket, every acceptance criterion is ticked with a test, and the PR body is accurate.
 6. **Clear.** Comment on the PR with the gate results and its place in the stack (`Stacked on #<base pr>`, merge that first), then mark it ready with `gh pr ready <pr>`.
