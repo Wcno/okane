@@ -19,13 +19,16 @@ import { ForgotPassword } from './pages/ForgotPassword'
 import { Login } from './pages/Login'
 import { Logout } from './pages/Logout'
 import { Menu } from './pages/Menu'
+import { Positions } from './pages/Positions'
 import { Register } from './pages/Register'
 import { ResetPassword } from './pages/ResetPassword'
 import { TransferCreate } from './pages/TransferCreate'
 import { TransferDelete } from './pages/TransferDelete'
 import { TransferEdit } from './pages/TransferEdit'
 import { Transfers } from './pages/Transfers'
+import { Trade } from './pages/Trade'
 import { UnderConstruction } from './pages/UnderConstruction'
+import { UserDelete } from './pages/UserDelete'
 
 export default function App() {
   return (
@@ -56,11 +59,15 @@ export default function App() {
             <Route path="/transfers/create" element={<TransferCreate />} />
             <Route path="/transfers/:id/edit" element={<TransferEdit />} />
             <Route path="/transfers/:id/delete" element={<TransferDelete />} />
+            <Route path="/investments/positions" element={<Positions />} />
+            <Route path="/investments/transactions/buy" element={<Trade kind="buy" />} />
+            <Route path="/investments/transactions/sell" element={<Trade kind="sell" />} />
             <Route path="/incomes" element={<Incomes />} />
             <Route path="/incomes/create" element={<IncomeCreate />} />
             <Route path="/incomes/:id/edit" element={<IncomeEdit />} />
             <Route path="/incomes/:id/delete" element={<IncomeDelete />} />
             <Route path="/profile/change-password" element={<ChangePassword />} />
+            <Route path="/profile/delete" element={<UserDelete />} />
             <Route path="*" element={<UnderConstruction />} />
           </Route>
         </Route>

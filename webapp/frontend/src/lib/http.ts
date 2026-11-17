@@ -68,6 +68,8 @@ export interface WriteRequest<T, Field extends string> {
   fields?: Record<string, Field>
   /** What to say when the record is gone. */
   gone?: string
+  /** What to say when webapp answers 502 because api-service did not respond. */
+  unavailable?: string
   read: (response: Response) => Promise<T>
 }
 
@@ -91,6 +93,9 @@ export async function write<T, Field extends string>(request: WriteRequest<T, Fi
   return {
     ok: false,
     sessionEnded: response.status === 401,
-    errors: await readErrors(response, request.fields ?? {}, request.gone ?? GONE),
+    errors:
+      response.status === 502 && request.unavailable
+        ? { form: [request.unavailable] }
+        : await readErrors(response, request.fields ?? {}, request.gone ?? GONE),
   }
 }

@@ -189,7 +189,7 @@ El navegador y los clientes externos solo se comunican con `webapp`, que autenti
 | Restablecer contraseña | Sí | `POST /auth/reset-password` | `users` | webapp, webapp-db | A5 |
 | Cambiar contraseña | Sí | `PUT /auth/password` | `users` | webapp, webapp-db | A5 |
 | Cerrar sesión | Sí | `POST /auth/logout` | `sessions` | webapp, webapp-db | A5 |
-| Eliminar usuario | Sí | `DELETE /users/me` | `users` | webapp, webapp-db | A5 |
+| Eliminar usuario | Sí | `DELETE /users/me`; interno: `DELETE /internal/users/me` | `users` y los datos financieros del Usuario | webapp, webapp-db, api-service, api-db | A5 |
 
 Las pantallas de esta sección consultan además `GET /auth/session`, que no es un caso de uso propio.
 Devuelve quién inició sesión (o `null` si nadie) y el token CSRF que el navegador envía en cada escritura, porque la cookie CSRF es HttpOnly.

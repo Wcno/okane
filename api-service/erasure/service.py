@@ -1,0 +1,23 @@
+from django.db import transaction
+
+from accounts.models import Account
+from erasure.locks import lock_for_erasure
+from erasure.models import ErasedUser
+from expenses.models import Expense
+from incomes.models import Income
+from investments.models import InvestmentTransaction
+from transfers.models import Transfer
+
+# Children before parents: an Account with Expenses is protected from deletion.
+# Every module that stores data per User adds its model here;
+# `ErasureCoverageTests` fails until it does.
+ERASED_MODELS = (Expense, Income, Transfer, InvestmentTransaction, Account)
+
+
+@transaction.atomic
+def erase_user_data(user_id):
+    """Delete everything the User owns; safe to repeat and to run concurrently."""
+    lock_for_erasure(user_id)
+    for model in ERASED_MODELS:
+        model.objects.filter(user_id=user_id).delete()
+    ErasedUser.objects.get_or_create(user_id=user_id)

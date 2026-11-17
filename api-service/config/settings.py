@@ -27,19 +27,27 @@ ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS", "api-service,localhost,127.0.0.1").s
 # Shared credential that proves a request was built by webapp.
 INTERNAL_SERVICE_KEY = env("INTERNAL_SERVICE_KEY")
 
+# "twelvedata" asks the provider of docs/adr/0006; "sample" serves a small fixed catalog.
+QUOTES_PROVIDER = os.environ.get("QUOTES_PROVIDER", "twelvedata")
+# Optional: without it the Asset search offers only Assets the catalog already knows.
+TWELVE_DATA_API_KEY = os.environ.get("TWELVE_DATA_API_KEY", "")
+
 INSTALLED_APPS = [
     "rest_framework",
     "health",
     "accounts",
     "expenses",
     "transfers",
+    "investments",
     "incomes",
+    "erasure",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
     "service_access.middleware.ServiceCredentialMiddleware",
+    "erasure.middleware.ErasedUserWritesMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
