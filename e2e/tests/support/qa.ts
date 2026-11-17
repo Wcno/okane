@@ -8,33 +8,55 @@ const screenshotsDirectory = fileURLToPath(new URL('../../qa-screenshots/', impo
 /** A problem a test expects, matched against its description. */
 type ExpectedProblem = string | RegExp
 
+/** Whether a collected problem is the one an expectation describes. */
+function matches(problem: string, expected: ExpectedProblem) {
+  return typeof expected === 'string' ? problem.includes(expected) : expected.test(problem)
+}
+
+/** Runs one step during which the expected problems are tolerated, and no others. */
+export type ExpectProblemsDuring = (expected: ExpectedProblem, step: () => Promise<void>) => Promise<void>
+
 interface QaFixtures {
   /**
    * The opt-out list of one test: push each expected problem with a comment saying why,
    * for example a 400 the test provokes on purpose.
    */
   expectedProblems: ExpectedProblem[]
+  /**
+   * Tolerates the expected problem only while `step` runs, then once the page has
+   * settled. Use it for a problem a single action causes, so the rest of the test still fails on it.
+   */
+  expectProblemsDuring: ExpectProblemsDuring
+  /** The expectations `expectProblemsDuring` has open, read by the collector of the page. */
+  openExpectations: ExpectedProblem[]
 }
 
 /**
  * Collects what a User would never see but a QA pass must: console errors, page
  * errors, failed requests and 5xx responses of every page in the test's context.
+ * A problem matched by an open expectation is not collected.
  */
-function collectProblems(page: Page) {
+function collectProblems(page: Page, openExpectations: ExpectedProblem[]) {
   const problems: string[] = []
+  const report = (problem: string) => {
+    if (!openExpectations.some((expected) => matches(problem, expected))) problems.push(problem)
+  }
   const context = page.context()
   context.on('console', (message) => {
-    if (message.type() === 'error') problems.push(`console error: ${message.text()}`)
+    if (message.type() !== 'error') return
+    // A failed resource is reported without its address; the location carries the URL that failed.
+    const url = message.location().url
+    report(`console error: ${message.text()}${url ? ` ${url}` : ''}`)
   })
-  context.on('weberror', (error) => problems.push(`page error: ${error.error().message}`))
+  context.on('weberror', (error) => report(`page error: ${error.error().message}`))
   context.on('requestfailed', (request) => {
     const reason = request.failure()?.errorText
     // The browser cancels in-flight requests when the page navigates or reloads; nothing failed.
     if (reason === 'net::ERR_ABORTED') return
-    problems.push(`request failed: ${request.method()} ${request.url()} ${reason}`)
+    report(`request failed: ${request.method()} ${request.url()} ${reason}`)
   })
   context.on('response', (response) => {
-    if (response.status() >= 500) problems.push(`server error: ${response.status()} ${response.url()}`)
+    if (response.status() >= 500) report(`server error: ${response.status()} ${response.url()}`)
   })
   return problems
 }
@@ -42,13 +64,26 @@ function collectProblems(page: Page) {
 export const test = base.extend<QaFixtures>({
   expectedProblems: async ({}, use) => use([]),
 
-  page: async ({ page, expectedProblems }, use, testInfo) => {
-    const problems = collectProblems(page)
+  openExpectations: async ({}, use) => use([]),
+
+  expectProblemsDuring: async ({ page, openExpectations }, use) => {
+    await use(async (expected, step) => {
+      openExpectations.push(expected)
+      try {
+        await step()
+        // The reads the step cut short can be reported after it returns; keep the expectation until they are.
+        await page.waitForLoadState('networkidle')
+      } finally {
+        openExpectations.splice(openExpectations.indexOf(expected), 1)
+      }
+    })
+  },
+
+  page: async ({ page, expectedProblems, openExpectations }, use, testInfo) => {
+    const problems = collectProblems(page, openExpectations)
     await use(page)
     if (testInfo.status !== testInfo.expectedStatus) return
-    const unexpected = problems.filter(
-      (problem) => !expectedProblems.some((expected) => (typeof expected === 'string' ? problem.includes(expected) : expected.test(problem))),
-    )
+    const unexpected = problems.filter((problem) => !expectedProblems.some((expected) => matches(problem, expected)))
     expect(unexpected, 'the page logged errors or failed requests').toEqual([])
   },
 })

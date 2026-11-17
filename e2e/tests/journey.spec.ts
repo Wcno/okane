@@ -33,10 +33,7 @@ async function registerExpenseFromPanel(page: Page, amount: string) {
   await expect(sheet).toBeHidden()
 }
 
-test('a User walks the whole product and stays alone in it', async ({ page, browser, isMobile, expectedProblems }) => {
-  // Signing out and deleting the User end the session the screen was still reading: a read that was
-  // already in flight is answered with a 401, or with a 400 when it lands while the data is being erased.
-  expectedProblems.push(/status of 40[01]/)
+test('a User walks the whole product and stays alone in it', async ({ page, browser, isMobile, expectProblemsDuring }) => {
   // The whole product in one test: it needs more than the default budget.
   test.setTimeout(120_000)
   forbidBrowserDialogs(page)
@@ -134,8 +131,11 @@ test('a User walks the whole product and stays alone in it', async ({ page, brow
   await expect(page.getByText('Preferencias guardadas.')).toBeVisible()
   await expectScreenQuality(page, 'journey-preferences')
   await page.goto(isMobile ? '/menu' : '/dashboard')
-  await page.getByRole('button', { name: 'Cerrar sesión' }).click()
-  await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  // Signing out ends the session the screen was still reading: a read already in flight is answered with a 401 or a 400.
+  await expectProblemsDuring(/status of 40[01]\b.*\/(auth\/session|api\/)/, async () => {
+    await page.getByRole('button', { name: 'Cerrar sesión' }).click()
+    await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  })
   await page.goto('/login')
   await page.getByLabel('Correo').fill(email)
   await page.getByLabel('Contraseña').fill(PASSWORD)
@@ -177,8 +177,11 @@ test('a User walks the whole product and stays alone in it', async ({ page, brow
   await page.goto(isMobile ? '/menu' : '/dashboard')
   await page.getByRole('link', { name: 'Eliminar usuario' }).click()
   await page.getByLabel('Tu contraseña').fill(PASSWORD)
-  await page.getByRole('button', { name: 'Eliminar mi usuario' }).click()
-  await expect(page.getByRole('heading', { name: 'Eliminaste tu usuario' })).toBeVisible()
+  // Deleting the User erases its data while a read may still land: that read is answered with a 401 or a 400.
+  await expectProblemsDuring(/status of 40[01]\b.*\/api\//, async () => {
+    await page.getByRole('button', { name: 'Eliminar mi usuario' }).click()
+    await expect(page.getByRole('heading', { name: 'Eliminaste tu usuario' })).toBeVisible()
+  })
   await expectScreenQuality(page, 'journey-deleted')
   expect((await page.request.get('/api/accounts')).status()).toBe(401)
 })
