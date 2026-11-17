@@ -36,3 +36,17 @@ class ExpenseLedgerSource:
             )
             for expense in records.order_by("-date", "-id")[:limit]
         ]
+
+    def statement_entries(self, account_id):
+        return [
+            {
+                "kind": "expense",
+                "record_id": expense.id,
+                "date": expense.date,
+                "created_at": expense.created_at,
+                "description": expense.description,
+                "amount": -expense.amount,
+                "category_id": expense.category_id,
+            }
+            for expense in Expense.objects.filter(account_id=account_id)
+        ]

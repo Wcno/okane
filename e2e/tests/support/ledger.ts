@@ -237,3 +237,16 @@ export async function cancelOccurrence(request: APIRequestContext, occurrenceId:
   const response = await send(request, 'POST', `/api/recurring-payments/occurrences/${occurrenceId}/cancel`)
   expect(response.status()).toBe(200)
 }
+
+interface DividendFields {
+  account_id: number
+  asset_id: number
+  amount: string
+  date?: string
+}
+
+export async function recordDividend(request: APIRequestContext, fields: DividendFields) {
+  const response = await send(request, 'POST', '/api/investments/transactions/dividend', fields)
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number }
+}

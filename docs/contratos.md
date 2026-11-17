@@ -128,6 +128,15 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - El Estado de cuenta empieza por el Saldo inicial con su fecha. Cada línea
   tiene un orden estable, importe con signo y Saldo resultante; su última
   línea coincide con el Saldo consultado por la API de Cuentas.
+- `GET /api/accounts/{id}/statement` devuelve el Estado de cuenta paginado, del
+  más antiguo al más reciente o, con `order=desc`, al revés; el Saldo de cada línea
+  se calcula sobre todo el historial, nunca sobre la página. Cada línea trae `id`
+  (su posición, única), `kind` (`opening`, `income`, `expense`, `transfer_in`,
+  `transfer_out`, `buy`, `sell`, `dividend`), `record_id`, `date`, `description`,
+  `amount` con signo y `balance`; según el tipo, `category_id`,
+  `counterpart_account_id`, `asset`, `units` y `commission` (ya incluida en el
+  `amount`). El empate de una misma fecha sigue el orden de registro. Una Cuenta
+  ajena responde `404`.
 - `GET /api/expenses/{id}` devuelve un Gasto del Usuario, para abrir sus
   pantallas de edición y eliminación desde un enlace. `GET /api/expenses`
   añade a la paginación `last_used_account_id`: la Cuenta del Gasto registrado

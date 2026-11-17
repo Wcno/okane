@@ -50,3 +50,29 @@ class InvestmentLedgerSource:
             )
             for transaction in records.select_related("asset").order_by("-date", "type", "-id")[:limit]
         ]
+
+    def statement_entries(self, account_id):
+        trades = InvestmentTransaction.objects.filter(account_id=account_id).select_related("asset")
+        return [
+            {
+                "kind": trade.type,
+                "record_id": trade.id,
+                "date": trade.date,
+                "created_at": trade.created_at,
+                "description": "",
+                "amount": self._cash_effect(trade),
+                "commission": trade.commission,
+                "asset": {"symbol": trade.asset.symbol, "name": trade.asset.name},
+                "units": trade.units,
+            }
+            for trade in trades
+        ]
+
+    @staticmethod
+    def _cash_effect(trade):
+        """What the trade did to the cash: the same rule `balance_changes` sums."""
+        if trade.type == InvestmentTransaction.Type.BUY:
+            return -trade.cash_amount - trade.commission
+        if trade.type == InvestmentTransaction.Type.SELL:
+            return trade.cash_amount - trade.commission
+        return trade.cash_amount

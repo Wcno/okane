@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Q, Sum
 
 from accounts.ledger import movement_row
 from transfers.models import Transfer
@@ -53,3 +53,25 @@ class TransferLedgerSource:
             )
             for transfer in records.order_by("-date", "-id")[:limit]
         ]
+
+    def statement_entries(self, account_id):
+        """Each Transfer once for this Account: out of it, or into it."""
+        entries = []
+        for transfer in Transfer.objects.filter(
+            Q(source_account_id=account_id) | Q(destination_account_id=account_id)
+        ):
+            leaving = transfer.source_account_id == account_id
+            entries.append(
+                {
+                    "kind": "transfer_out" if leaving else "transfer_in",
+                    "record_id": transfer.id,
+                    "date": transfer.date,
+                    "created_at": transfer.created_at,
+                    "description": transfer.description,
+                    "amount": -transfer.amount if leaving else transfer.amount,
+                    "counterpart_account_id": (
+                        transfer.destination_account_id if leaving else transfer.source_account_id
+                    ),
+                }
+            )
+        return entries

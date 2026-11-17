@@ -36,3 +36,16 @@ class IncomeLedgerSource:
             )
             for income in records.order_by("-date", "-id")[:limit]
         ]
+
+    def statement_entries(self, account_id):
+        return [
+            {
+                "kind": "income",
+                "record_id": income.id,
+                "date": income.date,
+                "created_at": income.created_at,
+                "description": income.description,
+                "amount": income.amount,
+            }
+            for income in Income.objects.filter(account_id=account_id)
+        ]
