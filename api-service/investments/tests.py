@@ -285,8 +285,8 @@ class BuyTests(InvestmentApiTestCase):
 
         for kind in ("buy", "sell"):
             with self.subTest(kind=kind):
-                response = self.trade(kind, account, asset, "1", "10", commission="1.00")
-                self.assert_rejected(response, "commission")
+                response = self.trade(kind, account, asset, "1", "10", surcharge="1.00")
+                self.assert_rejected(response, "surcharge")
         self.assertEqual(self.balance(account), "1000.00")
 
     def test_a_missing_field_names_the_field(self):
@@ -1409,3 +1409,280 @@ class PastDayAndPeriodTests(PerformanceTestCase):
         self.investment_account()
 
         self.assertIsNone(self.read("performance")["period"])
+
+
+class CommissionTests(TransactionsApiTestCase):
+    def test_a_purchase_commission_takes_cash_and_joins_the_cost(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+
+        recorded = self.bought(account, asset, "2", "100", commission="1.50")
+
+        self.assertEqual(recorded["commission"], "1.50")
+        self.assertEqual(recorded["cash_amount"], "200.00")
+        self.assertEqual(recorded["account_balance"], "798.50")
+        [position] = self.positions()["results"]
+        self.assertEqual(position["cost"], "201.50")
+        self.assertEqual(position["average_cost"], "100.75000000")
+
+    def test_a_sale_commission_reduces_the_cash_received_and_leaves_the_cost_alone(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        sale = self.sold(account, asset, "1", "150", commission="2.25", date="2026-04-10")
+
+        self.assertEqual(sale["account_balance"], "947.75")
+        [position] = self.positions()["results"]
+        self.assertEqual(position["cost"], "100.00")
+
+    def test_the_commission_is_optional_and_zero_by_default(self):
+        account = self.bourse(opening_balance="1000.00")
+
+        recorded = self.bought(account, self.asset(), "1", "10")
+
+        self.assertEqual(recorded["commission"], "0.00")
+        self.assertEqual(recorded["account_balance"], "990.00")
+
+    def test_a_commission_is_never_negative_or_beyond_cents(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+
+        for value in ("-1.00", "1.005", "abc", 1.5):
+            with self.subTest(value=value):
+                response = self.trade("buy", account, asset, "1", "10", commission=value)
+                self.assert_rejected(response, "commission")
+        self.assertEqual(self.balance(account), "1000.00")
+
+    def test_the_commission_is_kept_exact_in_a_large_cost(self):
+        account = self.bourse(opening_balance="1000000000.00")
+        asset = self.asset()
+
+        self.bought(account, asset, "3", "333333333.33333333", commission="0.01")
+
+        [position] = self.positions()["results"]
+        self.assertEqual(position["cost"], "1000000000.00")
+
+    def test_correcting_a_purchase_commission_changes_a_later_sale_cost_and_the_balance(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        purchase = self.bought(account, asset, "2", "100", commission="10.00", date="2026-03-10")
+        self.sold(account, asset, "1", "150", date="2026-04-10")
+        self.assertEqual(self.positions()["results"][0]["cost"], "105.00")
+
+        response = self.edited(purchase, commission="0.00")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(self.positions()["results"][0]["cost"], "100.00")
+        self.assertEqual(self.balance(account), "950.00")
+
+    def test_a_commission_leaves_the_net_contribution_alone_and_lowers_the_return(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", commission="5.00", date="2026-11-02")
+        self.call("PUT", f"/api/investments/assets/{asset.id}/price", {"value": "50"})
+
+        body = self.call("GET", "/api/investments/dashboard").json()
+
+        self.assertEqual(body["net_contribution"], "1000.00")
+        self.assertEqual(body["return"]["amount"], "-5.00")
+
+
+class DividendTests(TransactionsApiTestCase):
+    def dividend(self, account, asset, amount, user=1, **fields):
+        body = {"account_id": account["id"], "asset_id": asset.id, "amount": amount, **fields}
+        return self.call("POST", "/api/investments/transactions/dividend", body, user=user)
+
+    def paid(self, account, asset, amount, user=1, **fields):
+        response = self.dividend(account, asset, amount, user=user, **fields)
+        self.assertEqual(response.status_code, 201, response.content)
+        return response.json()
+
+    def correct(self, paid, account, asset, **changes):
+        body = {
+            "account_id": account["id"],
+            "asset_id": asset.id,
+            "amount": paid["cash_amount"],
+            "date": paid["date"],
+            **changes,
+        }
+        return self.call("PUT", f"/api/investments/transactions/{paid['id']}", body)
+
+    def dashboard(self, query=""):
+        return self.call("GET", f"/api/investments/dashboard{query}").json()
+
+    def test_a_dividend_adds_cash_and_shows_without_units(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        recorded = self.paid(account, asset, "12.40", date="2026-04-01")
+
+        self.assertEqual(recorded["type"], "dividend")
+        self.assertEqual(recorded["cash_amount"], "12.40")
+        self.assertIsNone(recorded["units"])
+        self.assertEqual(recorded["account_balance"], "812.40")
+        self.assertEqual(self.balance(account), "812.40")
+
+    def test_a_dividend_counts_as_return_and_not_as_contribution(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", date="2026-11-02")
+        self.call("PUT", f"/api/investments/assets/{asset.id}/price", {"value": "50"})
+        before = self.dashboard()
+
+        self.paid(account, asset, "7.35", date="2026-11-03")
+
+        after = self.dashboard()
+        self.assertEqual(before["return"]["amount"], "0.00")
+        self.assertEqual(after["return"], {"amount": "7.35", "percent": "0.74"})
+        self.assertEqual(after["net_contribution"], before["net_contribution"])
+        self.assertEqual(after["cash"], "507.35")
+
+    def test_the_return_of_a_period_includes_only_the_dividends_paid_in_it(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", date="2026-11-02")
+        self.call("PUT", f"/api/investments/assets/{asset.id}/price", {"value": "50", "date": "2026-11-02"})
+        self.paid(account, asset, "5.00", date="2026-11-03")
+        self.paid(account, asset, "7.00", date="2026-11-10")
+
+        body = self.call("GET", "/api/investments/performance?from=2026-11-05").json()
+
+        self.assertEqual(body["return"]["amount"], "12.00")
+        self.assertEqual(body["period"]["return"], "7.00")
+        self.assertEqual(body["net_contribution"], "1000.00")
+
+    def test_a_closing_before_a_dividend_does_not_see_it(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "10", "50", date="2026-11-02")
+        self.paid(account, asset, "7.00", date="2026-11-10")
+
+        body = self.dashboard("?as_of=2026-11-05")
+
+        self.assertEqual(body["cash"], "500.00")
+
+    def test_a_dividend_never_sets_the_price_or_changes_the_position(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        self.paid(account, asset, "5.00", date="2026-04-01")
+
+        [position] = self.positions()["results"]
+        self.assertEqual(
+            (position["units"], position["cost"], position["price"]["value"]),
+            ("2.00000000", "200.00", "100.00000000"),
+        )
+
+    def test_a_dividend_of_an_asset_the_user_does_not_hold_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+
+        response = self.dividend(account, self.asset(), "5.00")
+
+        self.assert_rejected(response, "asset_id")
+        self.assertEqual(self.balance(account), "1000.00")
+
+    def test_a_dividend_before_the_first_purchase_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+
+        self.assert_rejected(self.dividend(account, asset, "5.00", date="2026-03-01"), "asset_id")
+
+    def test_a_dividend_of_units_held_in_another_account_is_rejected(self):
+        asset = self.asset()
+        holder = self.bourse(name="Uno")
+        other = self.bourse(name="Otro")
+        self.bought(holder, asset, "2", "100")
+
+        self.assert_rejected(self.dividend(other, asset, "5.00"), "asset_id")
+
+    def test_a_dividend_amount_is_positive_with_two_decimals(self):
+        account = self.bourse()
+        asset = self.asset()
+        self.bought(account, asset, "2", "100")
+
+        for value in ("0", "0.00", "-1.00", "1.005", "abc", 5):
+            with self.subTest(value=value):
+                self.assert_rejected(self.dividend(account, asset, value), "amount")
+
+    def test_a_dividend_takes_no_units_price_or_commission(self):
+        account = self.bourse()
+        asset = self.asset()
+        self.bought(account, asset, "2", "100")
+
+        for name in ("units", "unit_price", "commission"):
+            with self.subTest(name=name):
+                self.assert_rejected(self.dividend(account, asset, "5.00", **{name: "1"}), name)
+
+    def test_only_an_investment_account_takes_a_dividend(self):
+        checking = self.account(type="checking")
+
+        self.assert_rejected(self.dividend(checking, self.asset(), "5.00"), "account_id")
+
+    def test_another_users_account_is_not_found(self):
+        account = self.bourse()
+        asset = self.asset()
+        self.bought(account, asset, "2", "100")
+
+        self.assertEqual(self.dividend(account, asset, "5.00", user=2).status_code, 404)
+
+    def test_dividends_are_listed_with_the_other_operations(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        paid = self.paid(account, asset, "5.00", date="2026-04-01")
+
+        listed = self.listed()["results"]
+
+        self.assertEqual([item["type"] for item in listed], ["dividend", "buy"])
+        self.assertEqual(listed[0]["asset"]["symbol"], "AAPL")
+        self.assertEqual(self.read(paid).json()["cash_amount"], "5.00")
+
+    def test_a_dividend_can_be_corrected_and_deleted(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        paid = self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.correct(paid, account, asset, amount="6.00")
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(self.balance(account), "806.00")
+        self.assertEqual(self.removed(paid).status_code, 204)
+        self.assertEqual(self.balance(account), "800.00")
+
+    def test_deleting_the_purchase_a_dividend_needs_is_rejected_and_changes_nothing(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        purchase = self.bought(account, asset, "2", "100", date="2026-03-10")
+        self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.removed(purchase)
+
+        self.assert_rejected(response, "form")
+        self.assertIn("Dividendo del 1 abr 2026", response.json()["errors"]["form"][0])
+        self.assertEqual(self.balance(account), "805.00")
+
+    def test_a_sale_that_would_leave_a_dividend_without_units_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.trade("sell", account, asset, "2", "120", date="2026-03-20")
+
+        self.assert_rejected(response, "units")
+        self.assertEqual(self.balance(account), "805.00")
+
+    def test_moving_a_dividend_before_the_purchase_is_rejected(self):
+        account = self.bourse(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(account, asset, "2", "100", date="2026-03-10")
+        paid = self.paid(account, asset, "5.00", date="2026-04-01")
+
+        response = self.correct(paid, account, asset, date="2026-03-01")
+
+        self.assert_rejected(response, "asset_id")
