@@ -1,6 +1,4 @@
 import {
-  ArrowDownToLine,
-  ArrowLeftRight,
   Calculator,
   ChartLine,
   ChartPie,
@@ -10,7 +8,6 @@ import {
   List,
   SlidersHorizontal,
   PiggyBank,
-  ReceiptText,
   Repeat,
   UserX,
   Tags,
@@ -32,21 +29,12 @@ export interface NavigationGroup {
 }
 
 export const dashboard: Destination = { path: '/dashboard', name: 'Panel', icon: House }
-const spending: Destination = { path: '/expenses', name: 'Gastos', icon: ReceiptText }
+const movements: Destination = { path: '/movements', name: 'Movimientos', icon: List }
 const budgets: Destination = { path: '/budgets', name: 'Presupuestos', icon: PiggyBank }
 
 // Routes follow docs/matrices.md.
 export const navigationGroups: NavigationGroup[] = [
-  { title: null, destinations: [dashboard] },
-  {
-    title: 'Movimientos',
-    destinations: [
-      { path: '/movements', name: 'Movimientos', icon: List },
-      spending,
-      { path: '/incomes', name: 'Ingresos', icon: ArrowDownToLine },
-      { path: '/transfers', name: 'Transferencias', icon: ArrowLeftRight },
-    ],
-  },
+  { title: null, destinations: [dashboard, movements] },
   {
     title: 'Planificación',
     destinations: [
@@ -81,4 +69,4 @@ export const profileDestinations: Destination[] = [preferences, integrations, ch
 export const allDestinations =navigationGroups.flatMap((group) => group.destinations)
 
 /** Destinations that fit in the mobile bottom bar; the rest appear under the Spanish More label. */
-export const bottomBarDestinations = { left: [dashboard, spending], right: [budgets] }
+export const bottomBarDestinations = { left: [dashboard, movements], right: [budgets] }

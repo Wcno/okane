@@ -1,5 +1,4 @@
 import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
-import type { RecordPage } from '../lib/recordPage'
 
 /** An Asset of the catalog: identified by provider, market and symbol, never by symbol alone. */
 export interface Asset {
@@ -235,17 +234,6 @@ const toTransaction = (body: TransactionBody): Transaction => ({
   date: body.date,
   asset: toAsset(body.asset),
 })
-
-const TRANSACTIONS_PAGE_SIZE = 50
-
-/** One page of the User's Transactions, newest first. */
-export async function listTransactions(page: number): Promise<RecordPage<Transaction>> {
-  const body = await readJson<{ results: TransactionBody[]; total: number; next_page: number | null }>(
-    `/api/investments/transactions?page_size=${TRANSACTIONS_PAGE_SIZE}&page=${page}`,
-    { failed: TRANSACTIONS_FAILED },
-  )
-  return { records: body.results.map(toTransaction), total: body.total, nextPage: body.next_page }
-}
 
 /** One Transaction; throws NotFoundError when it is not the User's or no longer exists. */
 export async function getTransaction(id: number): Promise<Transaction> {
