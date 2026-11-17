@@ -328,6 +328,22 @@ class IsolationTests(AccountApiTestCase):
         self.assertEqual(response.json(), {"detail": "not_found"})
         self.assertEqual(self.accounts(user=2), [theirs])
 
+    def test_reading_the_account_of_another_user_answers_not_found(self):
+        theirs = self.created(user=2, name="Ajena")
+
+        response = self.call("GET", f"/api/accounts/{theirs['id']}", user=1)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "not_found"})
+
+    def test_reading_one_account_returns_it_as_the_list_does(self):
+        mine = self.created(user=1, name="Mía")
+
+        response = self.call("GET", f"/api/accounts/{mine['id']}", user=1)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), mine)
+
     def test_deleting_the_account_of_another_user_answers_not_found(self):
         theirs = self.created(user=2, name="Ajena")
         with_records = self.created(user=2, name="Con movimientos")

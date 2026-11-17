@@ -2,8 +2,8 @@ import type { Account } from '../../accounts/api'
 import { MOVEMENT_TYPES, isMovementType, type MovementFilter } from '../../movements/api'
 import { movementTypeFilterNames } from '../../movements/presentation'
 import { smallSecondaryButtonClassName } from '../buttons'
+import { SelectField } from '../SelectField'
 import { TextField } from '../TextField'
-import { borderClassName, fieldClassName } from '../record/fieldStyles'
 import { cardClassName } from '../screen/Screen'
 
 export const PERIOD_REVERSED = 'El período no puede terminar antes de empezar.'
@@ -11,45 +11,18 @@ export const PERIOD_REVERSED = 'El período no puede terminar antes de empezar.'
 export const isEmptyFilter = (filter: MovementFilter) =>
   filter.type === null && filter.accountId === null && filter.from === '' && filter.to === ''
 
-function SelectField({
-  id,
-  label,
-  value,
-  onChange,
-  children,
-}: {
-  id: string
-  label: string
-  value: string
-  onChange: (value: string) => void
-  children: React.ReactNode
-}) {
-  return (
-    <div className="col-span-2 sm:col-span-1">
-      <label htmlFor={id} className="text-[0.9rem] font-medium text-ink-2">
-        {label}
-      </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`${fieldClassName} ${borderClassName(false)} mt-1.5`}
-      >
-        {children}
-      </select>
-    </div>
-  )
-}
-
 /** The filters of the Movements view: type, Account and an inclusive period. */
 export function MovementFilters({
   filter,
   accounts,
   onChange,
+  onClear,
 }: {
   filter: MovementFilter
   accounts: Account[]
   onChange: (filter: MovementFilter) => void
+  /** Set when the address carries filters; going back leaves the User's preferences. */
+  onClear?: () => void
 }) {
   const reversed = filter.from !== '' && filter.to !== '' && filter.from > filter.to
 
@@ -99,11 +72,11 @@ export function MovementFilters({
           onChange={(event) => onChange({ ...filter, to: event.target.value })}
         />
       </div>
-      {!isEmptyFilter(filter) && (
+      {onClear && (
         <button
           type="button"
           className={`${smallSecondaryButtonClassName} mt-4`}
-          onClick={() => onChange({ type: null, accountId: null, from: '', to: '' })}
+          onClick={onClear}
         >
           Quitar filtros
         </button>

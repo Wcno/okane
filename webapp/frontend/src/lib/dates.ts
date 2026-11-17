@@ -38,3 +38,9 @@ export function formatDay(day: string): string {
 export function dayBefore(day: string): string {
   return new Date(Date.parse(`${day}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10)
 }
+
+/** The last calendar day of a month written as 2026-11. */
+export function lastDayOfMonth(month: string): string {
+  const next = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 1))
+  return new Date(next.getTime() - 86_400_000).toISOString().slice(0, 10)
+}

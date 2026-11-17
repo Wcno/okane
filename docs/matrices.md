@@ -199,7 +199,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar cuentas | Sí | `GET /api/accounts` | `accounts`, `transfers` | api-service, api-db | A5 |
+| Consultar cuentas | Sí | `GET /api/accounts`, `GET /api/accounts/{id}` | `accounts`, `transfers` | api-service, api-db | A5 |
 | Crear cuenta | Sí | `POST /api/accounts` | `accounts` | api-service, api-db | A5 |
 | Editar cuenta | Sí | `PUT /api/accounts/{id}` | `accounts` | api-service, api-db | A5 |
 | Eliminar cuenta | Sí | `DELETE /api/accounts/{id}` | `accounts` | api-service, api-db | A5 |

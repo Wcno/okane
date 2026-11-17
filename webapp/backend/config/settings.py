@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.sessions",
     "users",
+    "preferences",
 ]
 
 MIDDLEWARE = [

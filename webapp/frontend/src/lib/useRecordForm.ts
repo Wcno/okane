@@ -15,14 +15,14 @@ export type Validated<Input, Field extends string> =
 export function useRecordForm<Draft extends object, Field extends string, Input, Saved>({
   initial,
   validate,
-  dateDependsOn,
+  dateDependsOn = [],
   save,
   onSaved,
 }: {
   initial: Draft
   validate: (draft: Draft) => Validated<Input, Field>
-  /** The draft fields whose change re-judges the date: the Accounts, whose start the date may not precede. */
-  dateDependsOn: ReadonlyArray<keyof Draft>
+  /** The draft fields whose change re-judges the date: the Accounts, whose start the date may not precede. A form without a date has none. */
+  dateDependsOn?: ReadonlyArray<keyof Draft>
   save: (input: Input) => Promise<Outcome<Saved, Field>>
   onSaved: (saved: Saved) => void | Promise<void>
 }) {

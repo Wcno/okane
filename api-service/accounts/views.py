@@ -46,10 +46,12 @@ def account_collection(request):
     return Response({"results": represent_all(accounts), **page})
 
 
-@api_view(["PUT", "DELETE"])
+@api_view(["GET", "PUT", "DELETE"])
 @transaction.atomic
 def account_detail(request, account_id):
     account = owned_account_for_update(request, account_id)
+    if request.method == "GET":
+        return Response(represent(account))
     if request.method == "PUT":
         serializer = AccountUpdateSerializer(account, data=request.data)
         serializer.is_valid(raise_exception=True)

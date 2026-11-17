@@ -2,6 +2,7 @@ from django.urls import path, re_path
 
 from gateway.public_api import openapi, public_api
 from gateway.views import forward
+from preferences import views as preferences
 from health.views import health
 from spa.views import entry_page
 from users import token_views
@@ -26,6 +27,7 @@ urlpatterns = [
     path("auth/password", auth.change_password),
     path("api/v1/openapi.json", openapi),
     re_path(r"^api/v1(?:/|$)", public_api),
+    path("api/settings/preferences", preferences.preferences),
     re_path(r"^api/", forward),
     re_path(CLIENT_SIDE_ROUTE, entry_page),
 ]

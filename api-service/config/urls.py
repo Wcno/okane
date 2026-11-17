@@ -5,6 +5,7 @@ from accounts import movements
 from accounts import views as accounts
 from erasure import views as erasure
 from budgets import views as budgets
+from dashboard import views as dashboard
 from expenses import views as expenses
 from health.views import health
 from investments import views as investments
@@ -39,6 +40,8 @@ urlpatterns = [
     path("api/investments/assets/<int:asset_id>/price", investments.asset_price),
     path("api/transfers", transfers.transfer_collection),
     path("api/transfers/<int:transfer_id>", transfers.transfer_detail),
+
+    path("api/dashboard", dashboard.dashboard),
     path("api/budgets", budgets.budget_collection),
     path("api/budgets/<int:budget_id>", budgets.budget_detail),
     path("api/recurring-payments", recurring_payments.rule_collection),

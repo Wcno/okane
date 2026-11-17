@@ -136,6 +136,9 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `GET /api/transfers/{id}` devuelve una Transferencia del Usuario, con la misma
   forma que el listado, para abrir sus pantallas de edición y eliminación desde
   un enlace; la de otro Usuario responde `404`.
+- `GET /api/accounts/{id}` devuelve una Cuenta del Usuario, archivada o no, con
+  la forma del listado; la de otro Usuario o inexistente responde `404`. Lo usa
+  `webapp` para confirmar la Cuenta de las preferencias.
 - Cada Cuenta de `GET /api/accounts` incluye `net_contribution`: en una Cuenta de
   inversión, su Saldo inicial más las Transferencias que entran menos las que
   salen; en las demás, `null`. Una Transferencia entre dos Cuentas de inversión
@@ -282,6 +285,33 @@ los Saldos iniciales y el Rendimiento mensual está en el
   último del mes, incluido hoy. El último día divide entre uno; un Disponible
   negativo permanece negativo y nunca causa una división entre cero.
 
+## Panel
+
+- `GET /api/dashboard` devuelve, para el mes actual en America/Panama y solo
+  del Usuario de la sesión, las cifras que muestra el Panel. Las cantidades son
+  cadenas decimales. Al consultarlo se materializan las reservas debidas sin
+  crear Gastos ni cambiar Saldos.
+- `available`: Saldo de las Cuentas de gastos menos `committed`. Puede ser
+  negativo. `spending_balance` es esa suma de Saldos.
+- `committed`: suma de las reservas pendientes de Cuentas de gastos, las
+  vencidas y arrastradas incluidas; las de Cuentas de ahorro no cuentan.
+  `committed_count` es cuántas son.
+- `days_left`: días desde hoy hasta el último del mes, incluido hoy.
+  `per_day`: `available` entre `days_left`, truncado a centavos hacia cero; el
+  último día divide entre uno y un `available` negativo da un importe negativo.
+- `net_worth`: suma de los Saldos de todas las Cuentas, archivadas incluidas.
+- `income`, `expenses` y `net_savings`: Ingresos y Gastos con fecha del mes y su
+  diferencia (Ingresos − Gastos).
+- `budgets`: una fila por Presupuesto del mes, con la forma de `GET /api/budgets`
+  (mismo Restante); las Categorías sin Presupuesto no aparecen.
+- `overdue` y `upcoming`: las reservas pendientes de cualquier Cuenta, con la
+  forma de una ocurrencia de pago recurrente, ordenadas por vencimiento.
+  `overdue` son las de vencimiento anterior a hoy; `upcoming`, las demás.
+- `accounts`: `id`, `name`, `type`, `balance` y `archived` de cada Cuenta. Una
+  Cuenta archivada se lista solo si su Saldo no es cero.
+- No incluye Rendimiento ni evolución del Patrimonio; `GET /api/net-worth/history`
+  las ofrece cuando exista.
+
 ## Vista de Movimientos y preferencias
 
 - `GET /api/movements` agrega `income`, `expense`, `transfer`, `buy`,
@@ -314,6 +344,21 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Ocultar una sección nunca modifica cálculos ni permisos; las advertencias al
   registrar un Gasto siguen visibles. Las preferencias se validan, se conservan
   entre sesiones y se borran al eliminar al Usuario.
+- `GET /api/settings/preferences` y `PUT /api/settings/preferences` (sesión y
+  CSRF en `PUT`) los atiende `webapp` con `user_preferences` en `webapp-db`, una
+  fila por Usuario que se borra con él. Sin fila guardada, `GET` devuelve los
+  valores iniciales sin crear nada. Forma, idéntica en ambos sentidos:
+  `{movement_type, account_id, period, from, to, grouping, visible_sections}`.
+  `movement_type` es uno de los seis tipos o `null` (todos); `account_id` es
+  un entero o `null`; `period` es `current_month` (relativo, por defecto), `all`
+  o `custom`, y solo `custom` guarda `from` y `to` (`YYYY-MM-DD`, al menos uno,
+  inclusivos y en orden); `grouping` es `date` o `type`; `visible_sections` lista
+  las secciones del Panel visibles entre `available`, `budgets`, `net_worth`,
+  `upcoming` y `accounts`. `PUT` reemplaza el documento completo.
+- Un valor inválido responde `400` con `{"errors": {campo: [...]}}` y no guarda
+  nada. Una `account_id` se confirma contra `api-service` con el Usuario de la
+  sesión: una Cuenta ajena o inexistente responde `400` en `account_id`, y si
+  `api-service` no responde, `502`.
 
 ## API pública autenticada
 
