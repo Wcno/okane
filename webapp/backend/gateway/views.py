@@ -16,11 +16,33 @@ PUBLIC_PATHS = frozenset({"/api/health"})
 # substitutes for one.
 TOKEN_API = "/api/v1"
 
+# Reached only from webapp's own code; no browser route forwards to it.
+ERASURE_PATH = "/internal/users/me"
+ERASURE_ATTEMPTS = 2
+
 api_service = httpx.Client(timeout=10)
 
 
 def authentication_required():
     return JsonResponse({"detail": "authentication_required"}, status=401)
+
+
+def erase_financial_data(user_id):
+    """Ask api-service to delete the User's financial data; True once it confirms.
+
+    The call is idempotent, so a lost answer is settled by repeating it: only a
+    confirmed 204 counts as erased.
+    """
+    headers = {SERVICE_KEY_HEADER: settings.INTERNAL_SERVICE_KEY, USER_ID_HEADER: str(user_id)}
+    for _ in range(ERASURE_ATTEMPTS):
+        try:
+            answer = api_service.delete(
+                settings.API_SERVICE_URL + ERASURE_PATH, headers=headers
+            )
+        except httpx.TransportError:
+            continue
+        return answer.status_code == 204
+    return False
 
 
 def forward(request):
