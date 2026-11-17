@@ -34,8 +34,9 @@ async function registerExpenseFromPanel(page: Page, amount: string) {
 }
 
 test('a User walks the whole product and stays alone in it', async ({ page, browser, isMobile, expectedProblems }) => {
-  // Signing out and deleting the User end the session the screen was still reading: its next read is a 401.
-  expectedProblems.push('status of 401')
+  // Signing out and deleting the User end the session the screen was still reading: a read that was
+  // already in flight is answered with a 401, or with a 400 when it lands while the data is being erased.
+  expectedProblems.push(/status of 40[01]/)
   // The whole product in one test: it needs more than the default budget.
   test.setTimeout(120_000)
   forbidBrowserDialogs(page)

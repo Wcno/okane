@@ -139,7 +139,7 @@ test('the Google Apps Script example reuses its key when it retries and follows 
     },
   }
   vm.runInNewContext(readFileSync(APPS_SCRIPT, 'utf8'), sandbox)
-  ;(sandbox as any).createMovement({ type: 'expense', account_id: account.id, category_id: 1, amount: '5.00' })
+  ;(sandbox as any).createMovement({ type: 'expense', account_id: account.id, category_id: await categoryIdOf(page.request, 'food'), amount: '5.00' })
 
   expect(requests).toHaveLength(2)
   const [lost, retry] = requests
