@@ -103,6 +103,7 @@ function PreferencesEditor({
       submitLabel="Guardar preferencias"
       submittingLabel="Guardando…"
       cancelTo="/dashboard"
+      stickyActions
       fields={
         <>
           <h2 className="text-[1.1rem] font-semibold">Movimientos</h2>
