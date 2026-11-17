@@ -64,12 +64,18 @@ Dependency graph of open tickets:
 - Late: #21 (#16 #15 #12 #8), #30 (#22 #16 #15 #12 #8), #31 (#14 #18 #30), #32 (#14 #30 #9), #19 last (#32 #31 #10 #13 #18).
 - Multi-blocker tickets base on one blocker's branch and merge the others in.
 
+## Speed rules (user, 2026-11-16)
+
+Target 10-20 min per ticket: workers skip self-review; split backend and frontend workers per ticket; targeted tests only (CI runs full suites); Haiku for mirror tickets; Docker rebuild only on migrations or Docker changes; reports under 150 words. Chrome `ui-qa` once at run end, seeded and cheap.
+
 ## Contract decisions (user, 2026-11-16 evening)
 
 - Blanket yes: any ticket may add a read-one `GET /api/<resource>/{id}` mirroring #8, documented in matrices.md and contratos.md in its own PR. Any other contract change still asks.
 - #14: `DELETE /internal/users/me` on api-service, outside /api/, service-key auth, idempotent with a deleting lock (writes answer 409); webapp deletes the User only after a confirmed 204, else answers 502 and keeps the User. Documented in the #14 PR.
 
 ## Next step
+
+#47: round 2 CI green, standards review clean of breaches; Haiku applying round-3 mechanical fixes (44px px sizes, two-column Category grid per DESIGN.md with wrapping, shared date helpers, hook split, exact sample spend). Spec axis (Haiku) pending.
 
 In flight (all Sonnet):
 - #47 round-2 fixes in `.claude/worktrees/feat-8-expenses`.
