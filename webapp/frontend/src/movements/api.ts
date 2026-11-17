@@ -36,65 +36,88 @@ const LIST_FAILED = 'Okane no pudo consultar tus movimientos. Espera un momento 
 const FILTER_GONE = 'La Cuenta elegida ya no existe. Elige otra o quita el filtro.'
 const MOVEMENTS_PAGE_SIZE = 50
 
-interface MovementBody {
-  type: MovementType
+/** What every line carries; the rest depends on its type, and what a type does not have comes as `null`. */
+interface CommonBody {
   id: number
   date: string
   amount: string
   account_id: number
-  destination_account_id: number | null
-  category_id: number | null
   description: string
-  asset: AssetBody | null
-  units: string | null
-  unit_price: string | null
-  commission: string | null
 }
 
+type MovementBody =
+  | (CommonBody & { type: 'expense'; category_id: number })
+  | (CommonBody & { type: 'income' })
+  | (CommonBody & { type: 'transfer'; destination_account_id: number })
+  | (CommonBody & {
+      type: TradeKind
+      asset: AssetBody
+      units: string | null
+      unit_price: string | null
+      commission: string
+    })
+
 function toMovement(body: MovementBody): Movement {
-  const { id, date, type } = body
-  if (type === 'expense') {
-    const record = {
-      id,
-      date,
-      amount: body.amount,
-      accountId: body.account_id,
-      categoryId: body.category_id ?? 0,
-      description: body.description,
-      // The feed does not say which reservation an Expense confirmed; its own screen does.
-      recurringPaymentOccurrenceId: null,
+  const { id, date } = body
+  switch (body.type) {
+    case 'expense':
+      return {
+        type: body.type,
+        id,
+        date,
+        record: {
+          id,
+          date,
+          amount: body.amount,
+          accountId: body.account_id,
+          categoryId: body.category_id,
+          description: body.description,
+          // The feed does not say which reservation an Expense confirmed; its own screen does.
+          recurringPaymentOccurrenceId: null,
+        },
+      }
+    case 'income':
+      return {
+        type: body.type,
+        id,
+        date,
+        record: { id, date, amount: body.amount, accountId: body.account_id, description: body.description },
+      }
+    case 'transfer':
+      return {
+        type: body.type,
+        id,
+        date,
+        record: {
+          id,
+          date,
+          amount: body.amount,
+          sourceAccountId: body.account_id,
+          destinationAccountId: body.destination_account_id,
+          description: body.description,
+        },
+      }
+    default: {
+      const asset: Asset = toAsset(body.asset)
+      return {
+        type: body.type,
+        id,
+        date,
+        record: {
+          id,
+          date,
+          type: body.type,
+          asset,
+          assetId: asset.id,
+          accountId: body.account_id,
+          cashAmount: body.amount,
+          units: body.units,
+          unitPrice: body.unit_price,
+          commission: body.commission,
+        },
+      }
     }
-    return { type, id, date, record }
   }
-  if (type === 'income') {
-    const record = { id, date, amount: body.amount, accountId: body.account_id, description: body.description }
-    return { type, id, date, record }
-  }
-  if (type === 'transfer') {
-    const record = {
-      id,
-      date,
-      amount: body.amount,
-      sourceAccountId: body.account_id,
-      destinationAccountId: body.destination_account_id ?? 0,
-      description: body.description,
-    }
-    return { type, id, date, record }
-  }
-  const asset: Asset = toAsset(body.asset!)
-  const record: Transaction = {
-    id,
-    date,
-    type,
-    asset,
-    assetId: asset.id,
-    accountId: body.account_id,
-    cashAmount: body.amount,
-    units: body.units,
-    unitPrice: body.unit_price,
-    commission: body.commission ?? '0.00',
-  }
-  return { type, id, date, record }
 }
 
 /** The key of a Movement in a list: two kinds of record may share an id. */
