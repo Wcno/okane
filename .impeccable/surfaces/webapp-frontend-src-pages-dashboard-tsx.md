@@ -9,7 +9,7 @@ related_targets: ["webapp/frontend/src/components/AppShell.tsx"]
 
 Scope: la pantalla de inicio tras iniciar sesión y el armazón de navegación que comparten las 48 pantallas. Visitor mode: Operate.
 
-Audience and job: el Usuario abre Okane, en el teléfono o en la PC, para saber cuánto puede gastar hasta fin de mes y por qué cambió su Patrimonio; desde aquí registra un Gasto. Datos de ejemplo mientras `api-service` no exista. Vocabulario obligatorio: GLOSSARY.md.
+Audience and job: el Usuario abre Okane, en el teléfono o en la PC, para saber cuánto puede gastar hasta fin de mes y por qué cambió su Patrimonio; desde aquí registra un Gasto. Las cifras vienen de `GET /api/dashboard`; ninguna es de ejemplo. Vocabulario obligatorio: GLOSSARY.md.
 
 Unresolved: tema claro/oscuro sigue al sistema, sin selector; las demás rutas muestran una página "aún no construida".
 

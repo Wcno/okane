@@ -257,6 +257,33 @@ los Saldos iniciales y el Rendimiento mensual está en el
   último del mes, incluido hoy. El último día divide entre uno; un Disponible
   negativo permanece negativo y nunca causa una división entre cero.
 
+## Panel
+
+- `GET /api/dashboard` devuelve, para el mes actual en America/Panama y solo
+  del Usuario de la sesión, las cifras que muestra el Panel. Las cantidades son
+  cadenas decimales. Al consultarlo se materializan las reservas debidas sin
+  crear Gastos ni cambiar Saldos.
+- `available`: Saldo de las Cuentas de gastos menos `committed`. Puede ser
+  negativo. `spending_balance` es esa suma de Saldos.
+- `committed`: suma de las reservas pendientes de Cuentas de gastos, las
+  vencidas y arrastradas incluidas; las de Cuentas de ahorro no cuentan.
+  `committed_count` es cuántas son.
+- `days_left`: días desde hoy hasta el último del mes, incluido hoy.
+  `per_day`: `available` entre `days_left`, truncado a centavos hacia cero; el
+  último día divide entre uno y un `available` negativo da un importe negativo.
+- `net_worth`: suma de los Saldos de todas las Cuentas, archivadas incluidas.
+- `income`, `expenses` y `net_savings`: Ingresos y Gastos con fecha del mes y su
+  diferencia (Ingresos − Gastos).
+- `budgets`: una fila por Presupuesto del mes, con la forma de `GET /api/budgets`
+  (mismo Restante); las Categorías sin Presupuesto no aparecen.
+- `overdue` y `upcoming`: las reservas pendientes de cualquier Cuenta, con la
+  forma de una ocurrencia de pago recurrente, ordenadas por vencimiento.
+  `overdue` son las de vencimiento anterior a hoy; `upcoming`, las demás.
+- `accounts`: `id`, `name`, `type`, `balance` y `archived` de cada Cuenta. Una
+  Cuenta archivada se lista solo si su Saldo no es cero.
+- No incluye Rendimiento ni evolución del Patrimonio; `GET /api/net-worth/history`
+  las ofrece cuando exista.
+
 ## Vista de Movimientos y preferencias
 
 - `GET /api/movements` agrega `income`, `expense`, `transfer`, `buy`,
