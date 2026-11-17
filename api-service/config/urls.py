@@ -4,6 +4,7 @@ from accounts import views as accounts
 from erasure import views as erasure
 from expenses import views as expenses
 from health.views import health
+from transfers import views as transfers
 from investments import views as investments
 from incomes import views as incomes
 
@@ -16,6 +17,8 @@ urlpatterns = [
     path("api/accounts/<int:account_id>", accounts.account_detail),
     path("api/expenses", expenses.expense_collection),
     path("api/expenses/<int:expense_id>", expenses.expense_detail),
+    path("api/transfers", transfers.transfer_collection),
+    path("api/transfers/<int:transfer_id>", transfers.transfer_detail),
     path("api/investments/assets/search", investments.asset_search),
     path("api/investments/transactions/buy", investments.buy),
     path("api/investments/transactions/sell", investments.sell),
