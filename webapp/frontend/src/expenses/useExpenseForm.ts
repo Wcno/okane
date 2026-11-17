@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { Account } from '../accounts/api'
-import { useWrite } from '../lib/useWrite'
-import type { Expense, ExpenseErrors, ExpenseInput, Outcome } from './api'
+import { useFieldErrors } from '../lib/fieldErrors'
+import type { Outcome } from '../lib/http'
+import { useSubmission } from '../lib/useSubmission'
+import type { Expense, ExpenseErrors, ExpenseField, ExpenseInput } from './api'
 import { validateExpense, type ExpenseDraft } from './form'
+
+/** The fields whose errors depend on what was changed: the date is checked against the Account's start. */
+const affectedFields = (patch: Partial<ExpenseDraft>): ExpenseField[] => {
+  const fields = Object.keys(patch) as ExpenseField[]
+  return 'accountId' in patch ? [...fields, 'date'] : fields
+}
 
 /**
  * The state of a form that registers or corrects an Expense: the draft, what
@@ -12,21 +20,18 @@ import { validateExpense, type ExpenseDraft } from './form'
 export function useExpenseForm({
   initial,
   accounts,
-  today,
   save,
   onSaved,
 }: {
   initial: ExpenseDraft
   accounts: Account[]
-  today: string
-  save: (expense: ExpenseInput) => Promise<Outcome<Expense>>
+  save: (expense: ExpenseInput) => Promise<Outcome<Expense, ExpenseField>>
   onSaved: (expense: Expense) => void | Promise<void>
 }) {
-  const write = useWrite()
+  const { isSubmitting, submit: write } = useSubmission()
   const form = useRef<HTMLFormElement>(null)
   const [draft, setDraft] = useState(initial)
-  const [errors, setErrors] = useState<ExpenseErrors>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { errors, setErrors, clearErrors } = useFieldErrors<ExpenseField>()
   const [attention, setAttention] = useState(0)
 
   // After the errors are on screen, the keyboard goes to the first field that needs a fix.
@@ -39,29 +44,22 @@ export function useExpenseForm({
     setAttention((count) => count + 1)
   }
 
-  const change = (patch: Partial<ExpenseDraft>) => setDraft((previous) => ({ ...previous, ...patch }))
+  const change = (patch: Partial<ExpenseDraft>) => {
+    setDraft((previous) => ({ ...previous, ...patch }))
+    clearErrors(...affectedFields(patch))
+  }
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     if (isSubmitting) return
-    const checked = validateExpense(draft, { accounts, today })
+    const checked = validateExpense(draft, { accounts })
     if (!checked.ok) {
       showErrors(checked.errors)
       return
     }
     setErrors({})
-    setIsSubmitting(true)
-    const outcome = await write(() => save(checked.expense))
-    if (!outcome.ok) {
-      setIsSubmitting(false)
-      showErrors(outcome.errors)
-      return
-    }
-    try {
-      await onSaved(outcome.value)
-    } finally {
-      setIsSubmitting(false)
-    }
+    const outcome = await write(() => save(checked.expense), onSaved)
+    if (outcome && !outcome.ok) showErrors(outcome.errors)
   }
 
   return { form, draft, change, errors, isSubmitting, submit }

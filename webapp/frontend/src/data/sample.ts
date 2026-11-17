@@ -41,7 +41,7 @@ export interface NetWorthPoint {
   investmentReturn: number
 }
 
-/** Only these fields change when recording a demo Expense; the other fixtures are fixed. */
+/** The sample figures the Panel is built from; only the Budgets move while an Expense is registered (data/sampleRemaining.ts). */
 export interface DemoState {
   accounts: Account[]
   budgets: BudgetLine[]
@@ -152,17 +152,3 @@ export const netWorthHistory = (state: DemoState): NetWorthPoint[] => {
 /** An Expense can use spending or savings Accounts, never an investment Account. */
 export const expenseAccounts = (state: DemoState) =>
   state.accounts.filter((account) => account.type !== 'investment')
-
-export const recordExpense = (
-  state: DemoState,
-  expense: { amount: number; category: string; accountId: string },
-): DemoState => ({
-  accounts: state.accounts.map((account) =>
-    account.id === expense.accountId ? { ...account, balance: sum([account.balance, -expense.amount]) } : account,
-  ),
-  budgets: state.budgets.map((line) =>
-    line.category === expense.category
-      ? { ...line, spent: sum([line.spent, expense.amount]) }
-      : line,
-  ),
-})

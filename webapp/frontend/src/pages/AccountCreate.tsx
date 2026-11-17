@@ -1,21 +1,23 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { createAccount, type AccountErrors, type AccountType } from '../accounts/api'
-import { NAME_MAX_LENGTH, todayInPanama, validateNewAccount } from '../accounts/form'
+import { createAccount, type AccountField, type AccountType } from '../accounts/api'
+import { NAME_MAX_LENGTH, validateNewAccount } from '../accounts/form'
 import { accountsBack, accountTypeDescriptions, accountTypeLabels, accountTypes } from '../accounts/presentation'
 import { useSignedInUser } from '../auth/context'
 import { ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { primaryButtonClassName, secondaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
 import { TextField } from '../components/TextField'
+import { todayInPanama } from '../lib/dates'
+import { useFieldErrors } from '../lib/fieldErrors'
 import { formatMoney } from '../lib/money'
 import type { ScreenNotice } from '../lib/notice'
-import { useWrite } from '../lib/useWrite'
+import { useSubmission } from '../lib/useSubmission'
 
 /** Create account: name, type, opening balance and the day its record starts. */
 export function AccountCreate() {
   const { csrfToken } = useSignedInUser()
-  const write = useWrite()
+  const { isSubmitting, submit } = useSubmission()
   const navigate = useNavigate()
   const today = todayInPanama()
 
@@ -31,10 +33,9 @@ export function AccountCreate() {
   const [isDebt, setIsDebt] = useState(false)
   const [openingDate, setOpeningDate] = useState(today)
   const [annualRatePercent, setAnnualRatePercent] = useState('')
-  const [errors, setErrors] = useState<AccountErrors>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { errors, setErrors, clearErrors } = useFieldErrors<AccountField>()
 
-  const showErrors = (found: AccountErrors) => {
+  const showErrors = (found: typeof errors) => {
     setErrors(found)
     if (found.name) nameField.current?.focus()
     else if (found.type) firstTypeOption.current?.focus()
@@ -52,18 +53,16 @@ export function AccountCreate() {
       return
     }
     setErrors({})
-    setIsSubmitting(true)
-    const outcome = await write(() => createAccount(checked.account, csrfToken))
-    setIsSubmitting(false)
-    if (!outcome.ok) {
-      showErrors(outcome.errors)
-      return
-    }
-    const created = outcome.value
-    const state: ScreenNotice = {
-      notice: `Creaste ${created.name} con un Saldo inicial de ${formatMoney(created.openingBalance)}.`,
-    }
-    navigate('/accounts', { state })
+    const outcome = await submit(
+      () => createAccount(checked.account, csrfToken),
+      (created) => {
+        const state: ScreenNotice = {
+          notice: `Creaste ${created.name} con un Saldo inicial de ${formatMoney(created.openingBalance)}.`,
+        }
+        navigate('/accounts', { state })
+      },
+    )
+    if (outcome && !outcome.ok) showErrors(outcome.errors)
   }
 
   return (
@@ -86,7 +85,10 @@ export function AccountCreate() {
             maxLength={NAME_MAX_LENGTH}
             placeholder="Cuenta corriente"
             value={name}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              setName(event.target.value)
+              clearErrors('name')
+            }}
             errors={errors.name}
           />
 
@@ -108,7 +110,10 @@ export function AccountCreate() {
                       name="account-type"
                       value={option}
                       checked={selected}
-                      onChange={() => setType(option)}
+                      onChange={() => {
+                        setType(option)
+                        clearErrors('type')
+                      }}
                       className="mt-1 size-4 shrink-0 accent-(--ink) focus-visible:outline-none"
                     />
                     <span className="min-w-0">
@@ -141,7 +146,10 @@ export function AccountCreate() {
               autoComplete="off"
               placeholder="0.00"
               value={openingBalance}
-              onChange={(event) => setOpeningBalance(event.target.value)}
+              onChange={(event) => {
+                setOpeningBalance(event.target.value)
+                clearErrors('openingBalance')
+              }}
               hint={
                 type === 'spending' && isDebt
                   ? 'Lo que debías en la fecha de inicio. Se guardará en negativo y no se puede cambiar después.'
@@ -172,7 +180,10 @@ export function AccountCreate() {
             type="date"
             max={today}
             value={openingDate}
-            onChange={(event) => setOpeningDate(event.target.value)}
+            onChange={(event) => {
+              setOpeningDate(event.target.value)
+              clearErrors('openingDate')
+            }}
             hint="Podrás registrar movimientos desde este día. Elige una fecha anterior si vas a cargar meses pasados; no se puede cambiar después."
             errors={errors.openingDate}
           />
@@ -186,7 +197,10 @@ export function AccountCreate() {
               autoComplete="off"
               placeholder="4.25"
               value={annualRatePercent}
-              onChange={(event) => setAnnualRatePercent(event.target.value)}
+              onChange={(event) => {
+                setAnnualRatePercent(event.target.value)
+                clearErrors('annualInterestRate')
+              }}
               hint="Opcional. La que paga tu banco; sirve para proyectar tu ahorro."
               errors={errors.annualInterestRate}
             />
