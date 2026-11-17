@@ -80,15 +80,13 @@ Target 10-20 min per ticket: workers skip self-review; split backend and fronten
 
 ## Next step
 
-All 21 tickets built. Cleared and ready: #47 #49 #48 #52 #50 #51 #53 #54 #56 #55 #57 #59 #58 #60 #62 #61 #63 #64 #65 #67.
-#68 (#19) is the integrated top of the stack: full e2e 355 passed. Gate fix pushed (scoped console opt-out). CI pending.
-#66 (#31): its CI e2e failures are cross-feature and pass on #68; clear it together with #68.
-Final Chrome polish pass: PASS (53 tool calls, desktop only; 390 covered by Playwright). A Sonnet worker is applying its 10 polish findings on #68, rerunning the full e2e and re-seeding stack :8001.
-Then: clear #66 and #68, rebuild port 8000 from feat/19-e2e-journeys, seed it, stop for the user's final UI review.
+DONE: all 21 tickets built and every PR cleared and ready (#47-#68). The user merges bottom-up; see each PR's "Stacked on" line.
+Port 8000 serves the integrated app (#68, feat/19-e2e-journeys at 0a15767) from worktree `.claude/worktrees/agent-a9c3d77fb4b426f96`, seeded; the test login is in that worktree's `e2e/.qa-user.json`. The main-branch stack `okane` is stopped with its volumes kept.
+Next: the user's final UI review on port 8000.
 
-Open decisions for the user at review:
-- `conventions` CI fails on `wip:`/`merge:` commit subjects in #53, #57, #58, #60, #61, #63 and branches that merged them: reword the stack before merging, or relax the check.
+Open decisions for the user:
+- `conventions` CI fails on `wip:`/`merge:` commit subjects in several branches: reword the stack before merging, or relax the check.
 - docs/spec.md:175, 181, 231, 246 still describe the fixed catalog and sample data.
 - docs/contratos.md lists `description` as a common public-API field, but investment writes have none (400).
-- Twelve Data needs TWELVE_DATA_API_KEY for real prices; compose now defaults QUOTES_PROVIDER to sample.
-- The stack merges bottom-up; several PRs say "needs #N" for sibling branches merged in.
+- Archived Categories are read-only (restoring needs a contract change).
+- Real prices need TWELVE_DATA_API_KEY; compose defaults QUOTES_PROVIDER to sample.
