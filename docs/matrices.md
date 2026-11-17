@@ -254,7 +254,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar pagos recurrentes | Sí | `GET /api/recurring-payments` | `recurring_payments` | api-service, api-db | N2 |
+| Consultar pagos recurrentes | Sí | `GET /api/recurring-payments`, `GET /api/recurring-payments/{id}`, `GET /api/recurring-payments/occurrences/{id}` | `recurring_payments` | api-service, api-db | N2 |
 | Crear pago recurrente | Sí | `POST /api/recurring-payments` | `recurring_payments` | api-service, api-db | N2 |
 | Editar pago recurrente | Sí | `PUT /api/recurring-payments/{id}` | `recurring_payments` | api-service, api-db | N2 |
 | Eliminar pago recurrente | Sí | `DELETE /api/recurring-payments/{id}` | `recurring_payments` | api-service, api-db | N2 |
