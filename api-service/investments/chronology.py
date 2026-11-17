@@ -73,7 +73,8 @@ def first_shortfall(transactions):
 
 def first_unfunded_dividend(transactions):
     """The first Dividend paid on a day the Position holds no units, or None."""
-    for transaction in sorted(transactions, key=lambda t: (t.date, t.id)):
+    # A record not saved yet has no id and comes after every one of its day.
+    for transaction in sorted(transactions, key=lambda t: (t.date, t.id or float("inf"))):
         if (
             transaction.type == InvestmentTransaction.Type.DIVIDEND
             and units_held(transactions, transaction.date) <= 0

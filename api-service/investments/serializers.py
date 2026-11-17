@@ -125,7 +125,8 @@ class InvestmentTransactionSerializer(serializers.Serializer):
 
     def get_fields(self):
         fields = super().get_fields()
-        if self.context["type"] == InvestmentTransaction.Type.DIVIDEND:
+        kind = self.context.get("type") or getattr(self.instance, "type", None)
+        if kind == InvestmentTransaction.Type.DIVIDEND:
             # They stay in what is shown (null units, no commission) but are not accepted.
             for name, decimals in (("units", 8), ("unit_price", 8), ("commission", 2)):
                 fields[name] = serializers.DecimalField(

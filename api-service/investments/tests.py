@@ -166,6 +166,7 @@ class BuyTests(InvestmentApiTestCase):
                 "units": "2.00000000",
                 "unit_price": "100.00000000",
                 "cash_amount": "200.00",
+                "commission": "0.00",
                 "date": "2026-11-16",
                 "account_balance": "800.00",
             },
@@ -1461,7 +1462,7 @@ class CommissionTests(TransactionsApiTestCase):
         self.bought(account, asset, "3", "333333333.33333333", commission="0.01")
 
         [position] = self.positions()["results"]
-        self.assertEqual(position["cost"], "1000000000.00")
+        self.assertEqual(position["cost"], "1000000000.01")
 
     def test_correcting_a_purchase_commission_changes_a_later_sale_cost_and_the_balance(self):
         account = self.bourse(opening_balance="1000.00")
@@ -1618,7 +1619,7 @@ class DividendTests(TransactionsApiTestCase):
                 self.assert_rejected(self.dividend(account, asset, "5.00", **{name: "1"}), name)
 
     def test_only_an_investment_account_takes_a_dividend(self):
-        checking = self.account(type="checking")
+        checking = self.account(type="spending")
 
         self.assert_rejected(self.dividend(checking, self.asset(), "5.00"), "account_id")
 
