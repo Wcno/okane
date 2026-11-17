@@ -165,6 +165,11 @@ los Saldos iniciales y el Rendimiento mensual está en el
   Si alguna venta quedara sin unidades en ese orden, se responde `400` con el
   motivo y no cambia nada. Al mover una operación de Cuenta o de Activo se revalidan
   las dos Posiciones.
+- Un Dividendo exige unidades del Activo en esa Cuenta en su fecha: se rechaza el
+  Dividendo sin ellas y también la compra eliminada o movida, o la venta, que
+  dejaría sin unidades a un Dividendo. El cuerpo de un Dividendo es solo
+  `account_id`, `asset_id`, `amount` y `date`; `units`, `unit_price` o
+  `commission` responden `400`.
 
 ## Pagos recurrentes
 

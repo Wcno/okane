@@ -38,6 +38,7 @@ labels for the public interface.
 | Activo | Asset |
 | Transacción de inversión | InvestmentTransaction |
 | Dividendo | Dividend |
+| Comisión | Commission |
 | Posición | Position |
 | Precio de referencia | ReferencePrice |
 | Aporte / Aporte neto | Contribution / NetContribution |

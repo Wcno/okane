@@ -53,6 +53,11 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page.getByText('Escribe la comisión como un importe de cero o más')).toBeVisible()
     await expect(page.getByLabel('Comisión (opcional)')).toBeFocused()
 
+    // A sale commission lowers the cash that comes back.
+    await page.getByLabel('Comisión (opcional)').fill('2.25')
+    await expect(page.getByText('Volverá a la Cuenta: $147.75')).toBeVisible()
+    await expectScreenQuality(page, `sell-with-commission-${colorScheme}`)
+
     // The dividend adds cash and is reached from the list of transactions.
     await page.goto('/investments/transactions')
     await page.getByRole('link', { name: 'Registrar dividendo' }).click()
@@ -69,6 +74,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
     )
     await expect(page).toHaveURL(/\/investments\/positions$/)
     await page.goto('/investments/transactions')
+    // The purchase row shows the cash it took, commission included, and names the commission.
+    const purchaseRow = page.getByRole('link', { name: /^AAPL .*Compra/ })
+    await expect(purchaseRow).toContainText('comisión $1.50')
+    await expect(purchaseRow).toContainText('$201.50')
     const dividendRow = page.getByRole('link', { name: /^AAPL .*Dividendo/ })
     await expect(dividendRow).toContainText('Dividendo · Bróker')
     await expectScreenQuality(page, `transactions-with-dividend-${colorScheme}`)

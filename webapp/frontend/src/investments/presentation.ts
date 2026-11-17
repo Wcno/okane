@@ -1,3 +1,4 @@
+import { netCash } from './form'
 import { formatDay } from '../lib/dates'
 import { formatMoney } from '../lib/money'
 import type { Asset, ReferencePrice, Trade, TradeKind, Transaction } from './api'
@@ -63,6 +64,12 @@ export const describeAsset = (asset: Pick<Asset, 'symbol' | 'name' | 'market'>) 
   `${asset.symbol} · ${asset.name} · ${asset.market}`
 
 const kindNames: Record<TradeKind, string> = { buy: 'Compra', sell: 'Venta', dividend: 'Dividendo' }
+
+/** The cash a record moves in the Account: a purchase with its commission, a sale net of it, a Dividend as paid. */
+export const cashMoved = (transaction: Pick<Transaction, 'type' | 'cashAmount' | 'commission'>) =>
+  transaction.type === 'dividend'
+    ? transaction.cashAmount
+    : netCash(transaction.type, transaction.cashAmount, transaction.commission)
 
 /** "AAPL · Apple Inc · XNAS" as the title, and "Compra · 2 unidades a $100.00 · Bróker" as the details. */
 export function describeTransaction(
