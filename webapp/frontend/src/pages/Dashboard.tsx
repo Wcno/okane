@@ -1,4 +1,5 @@
 import { Wallet } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { AccountsCard } from '../components/dashboard/AccountsCard'
 import { AvailableCard } from '../components/dashboard/AvailableCard'
 import { BudgetRemainingCard } from '../components/dashboard/BudgetRemainingCard'
@@ -9,18 +10,21 @@ import type { Dashboard as DashboardFigures } from '../dashboard/api'
 import { daysLeftText } from '../dashboard/presentation'
 import { useDashboard } from '../dashboard/useDashboard'
 import { monthName } from '../lib/months'
+import { INITIAL_PREFERENCES, type DashboardSection } from '../preferences/api'
+import { usePreferences } from '../preferences/usePreferences'
 
-function Figures({ dashboard }: { dashboard: DashboardFigures }) {
+function Figures({ dashboard, visible }: { dashboard: DashboardFigures; visible: DashboardSection[] }) {
+  const shown = (section: DashboardSection, card: ReactNode) => (visible.includes(section) ? card : null)
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start lg:gap-5">
       <div className="min-w-0 space-y-4 lg:col-span-7 lg:space-y-5">
-        <AvailableCard dashboard={dashboard} />
-        <BudgetRemainingCard budgets={dashboard.budgets} />
+        {shown('available', <AvailableCard dashboard={dashboard} />)}
+        {shown('budgets', <BudgetRemainingCard budgets={dashboard.budgets} />)}
       </div>
       <div className="min-w-0 space-y-4 lg:col-span-5 lg:space-y-5">
-        <NetWorthCard dashboard={dashboard} />
-        <UpcomingPaymentsCard overdue={dashboard.overdue} upcoming={dashboard.upcoming} />
-        <AccountsCard accounts={dashboard.accounts} />
+        {shown('net_worth', <NetWorthCard dashboard={dashboard} />)}
+        {shown('upcoming', <UpcomingPaymentsCard overdue={dashboard.overdue} upcoming={dashboard.upcoming} />)}
+        {shown('accounts', <AccountsCard accounts={dashboard.accounts} />)}
       </div>
     </div>
   )
@@ -29,7 +33,12 @@ function Figures({ dashboard }: { dashboard: DashboardFigures }) {
 /** Home screen: the two product answers and their supporting information, all computed by api-service. */
 export function Dashboard() {
   const { state, retry } = useDashboard()
+  const preferences = usePreferences()
   const ready = state.status === 'ready' ? state.value : null
+  // The sections are a preference: when it cannot be read the Panel shows everything.
+  const visible =
+    preferences.state.status === 'ready' ? preferences.state.value.visibleSections : INITIAL_PREFERENCES.visibleSections
+  const preferencesPending = preferences.state.status === 'loading'
 
   return (
     <>
@@ -39,6 +48,8 @@ export function Dashboard() {
       />
       {state.status !== 'ready' ? (
         <Pending state={state} retry={retry} loading="Cargando tu Panel…" />
+      ) : preferencesPending ? (
+        <Pending state={{ status: 'loading' }} retry={retry} loading="Cargando tu Panel…" />
       ) : state.value.accounts.length === 0 ? (
         <EmptyState
           icon={Wallet}
@@ -47,7 +58,7 @@ export function Dashboard() {
           action={{ to: '/accounts/create', label: 'Crear tu primera Cuenta' }}
         />
       ) : (
-        <Figures dashboard={state.value} />
+        <Figures dashboard={state.value} visible={visible} />
       )}
     </>
   )

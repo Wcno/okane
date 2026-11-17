@@ -22,7 +22,15 @@ describe('describeMovement', () => {
       type: 'expense',
       id: 5,
       date: '2026-11-04',
-      record: { id: 5, date: '2026-11-04', amount: '12.50', accountId: 3, categoryId: 2, description: '' },
+      record: {
+        id: 5,
+        date: '2026-11-04',
+        amount: '12.50',
+        accountId: 3,
+        categoryId: 2,
+        description: '',
+        recurringPaymentOccurrenceId: null,
+      },
     }
     const income: Movement = {
       type: 'income',

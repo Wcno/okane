@@ -166,6 +166,35 @@ export async function listOccurrenceIds(request: APIRequestContext, ruleId: numb
   return [...(rule?.occurrences ?? [])].sort((a, b) => a.due_date.localeCompare(b.due_date)).map(({ id }) => id)
 }
 
+export interface PreferenceFields {
+  movement_type: string | null
+  account_id: number | null
+  period: 'current_month' | 'all' | 'custom'
+  from: string | null
+  to: string | null
+  grouping: 'date' | 'type'
+  visible_sections: string[]
+}
+
+export const ALL_SECTIONS = ['available', 'budgets', 'net_worth', 'upcoming', 'accounts']
+
+/** What a User who never opened the settings screen has. */
+export const INITIAL_PREFERENCES: PreferenceFields = {
+  movement_type: null,
+  account_id: null,
+  period: 'current_month',
+  from: null,
+  to: null,
+  grouping: 'date',
+  visible_sections: ALL_SECTIONS,
+}
+
+/** Saves preferences as the settings screen does; the fields not given keep their initial value. */
+export async function savePreferences(request: APIRequestContext, fields: Partial<PreferenceFields> = {}) {
+  const response = await send(request, 'PUT', '/api/settings/preferences', { ...INITIAL_PREFERENCES, ...fields })
+  expect(response.status()).toBe(200)
+}
+
 /** Cancels an occurrence behind the screen's back, as another tab would. */
 export async function cancelOccurrence(request: APIRequestContext, occurrenceId: number) {
   const response = await send(request, 'POST', `/api/recurring-payments/occurrences/${occurrenceId}/cancel`)

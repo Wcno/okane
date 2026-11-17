@@ -136,6 +136,9 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `GET /api/transfers/{id}` devuelve una Transferencia del Usuario, con la misma
   forma que el listado, para abrir sus pantallas de edición y eliminación desde
   un enlace; la de otro Usuario responde `404`.
+- `GET /api/accounts/{id}` devuelve una Cuenta del Usuario, archivada o no, con
+  la forma del listado; la de otro Usuario o inexistente responde `404`. Lo usa
+  `webapp` para confirmar la Cuenta de las preferencias.
 - Cada Cuenta de `GET /api/accounts` incluye `net_contribution`: en una Cuenta de
   inversión, su Saldo inicial más las Transferencias que entran menos las que
   salen; en las demás, `null`. Una Transferencia entre dos Cuentas de inversión
@@ -341,6 +344,21 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Ocultar una sección nunca modifica cálculos ni permisos; las advertencias al
   registrar un Gasto siguen visibles. Las preferencias se validan, se conservan
   entre sesiones y se borran al eliminar al Usuario.
+- `GET /api/settings/preferences` y `PUT /api/settings/preferences` (sesión y
+  CSRF en `PUT`) los atiende `webapp` con `user_preferences` en `webapp-db`, una
+  fila por Usuario que se borra con él. Sin fila guardada, `GET` devuelve los
+  valores iniciales sin crear nada. Forma, idéntica en ambos sentidos:
+  `{movement_type, account_id, period, from, to, grouping, visible_sections}`.
+  `movement_type` es uno de los seis tipos o `null` (todos); `account_id` es
+  un entero o `null`; `period` es `current_month` (relativo, por defecto), `all`
+  o `custom`, y solo `custom` guarda `from` y `to` (`YYYY-MM-DD`, al menos uno,
+  inclusivos y en orden); `grouping` es `date` o `type`; `visible_sections` lista
+  las secciones del Panel visibles entre `available`, `budgets`, `net_worth`,
+  `upcoming` y `accounts`. `PUT` reemplaza el documento completo.
+- Un valor inválido responde `400` con `{"errors": {campo: [...]}}` y no guarda
+  nada. Una `account_id` se confirma contra `api-service` con el Usuario de la
+  sesión: una Cuenta ajena o inexistente responde `400` en `account_id`, y si
+  `api-service` no responde, `502`.
 
 ## API pública autenticada
 

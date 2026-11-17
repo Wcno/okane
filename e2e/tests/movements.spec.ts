@@ -6,6 +6,7 @@ import {
   createTransfer,
   findAsset,
   recordTrade,
+  savePreferences,
 } from './support/ledger.js'
 import { expect, expectScreenQuality, test } from './support/qa.js'
 import { signUp } from './support/session.js'
@@ -64,6 +65,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
     forbidBrowserDialogs(page)
     await page.emulateMedia({ colorScheme })
     await signUp(page.request)
+    // The records have fixed days; the view starts on every day instead of the current month.
+    await savePreferences(page.request, { period: 'all' })
 
     await page.goto('/movements')
     await expect(page.getByRole('heading', { level: 1, name: 'Movimientos' })).toBeVisible()
@@ -130,6 +133,7 @@ test('the address filters the view and an Account of someone else is not found',
   // The browser logs the 404 that api-service answers on purpose.
   expectedProblems.push(/status of 404/)
   await signUp(page.request)
+  await savePreferences(page.request, { period: 'all' })
   await seed(page)
 
   await page.goto('/movements?type=income')

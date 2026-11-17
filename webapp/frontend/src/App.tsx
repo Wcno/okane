@@ -35,6 +35,7 @@ import { RecurringPaymentDelete } from './pages/RecurringPaymentDelete'
 import { RecurringPaymentEdit } from './pages/RecurringPaymentEdit'
 import { RecurringPayments } from './pages/RecurringPayments'
 import { Register } from './pages/Register'
+import { Settings } from './pages/Settings'
 import { ResetPassword } from './pages/ResetPassword'
 import { Trade } from './pages/Trade'
 import { TransferCreate } from './pages/TransferCreate'
@@ -97,6 +98,7 @@ export default function App() {
             <Route path="/recurring-payments/occurrences/:id/cancel" element={<OccurrenceCancel />} />
             <Route path="/recurring-payments/:id/edit" element={<RecurringPaymentEdit />} />
             <Route path="/recurring-payments/:id/delete" element={<RecurringPaymentDelete />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/incomes" element={<Incomes />} />
             <Route path="/incomes/create" element={<IncomeCreate />} />
             <Route path="/incomes/:id/edit" element={<IncomeEdit />} />

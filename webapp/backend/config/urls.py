@@ -1,6 +1,7 @@
 from django.urls import path, re_path
 
 from gateway.views import forward
+from preferences import views as preferences
 from health.views import health
 from spa.views import entry_page
 from users import views as auth
@@ -20,6 +21,7 @@ urlpatterns = [
     path("auth/forgot-password", auth.forgot_password),
     path("auth/reset-password", auth.reset_password),
     path("auth/password", auth.change_password),
+    path("api/settings/preferences", preferences.preferences),
     re_path(r"^api/", forward),
     re_path(CLIENT_SIDE_ROUTE, entry_page),
 ]

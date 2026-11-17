@@ -7,15 +7,24 @@ import { CategoryChip } from '../components/expenses/CategoryChip'
 import { IncomeChip } from '../components/incomes/IncomeChip'
 import { TradeChip } from '../components/investments/TradeChip'
 import { MovementFilters, isEmptyFilter } from '../components/movements/MovementFilters'
-import { DayFeed } from '../components/record/DayFeed'
+import { DayFeed, type FeedGroup } from '../components/record/DayFeed'
 import { RecordRow } from '../components/screen/RecordRow'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader } from '../components/screen/Screen'
 import { TransferChip } from '../components/transfers/TransferChip'
-import { isCalendarDay } from '../lib/dates'
+import { isCalendarDay, todayInPanama } from '../lib/dates'
 import { noticeFrom } from '../lib/notice'
 import { useRecordFeed } from '../lib/useRecordFeed'
-import { isMovementType, listMovements, movementKey, type Movement, type MovementFilter } from '../movements/api'
-import { describeMovement } from '../movements/presentation'
+import {
+  MOVEMENT_TYPES,
+  isMovementType,
+  listMovements,
+  movementKey,
+  type Movement,
+  type MovementFilter,
+} from '../movements/api'
+import { describeMovement, movementTypeFilterNames } from '../movements/presentation'
+import { INITIAL_PREFERENCES, movementFilterOf, type Preferences } from '../preferences/api'
+import { usePreferences } from '../preferences/usePreferences'
 
 const rowId = (movement: Movement) => `movement-${movementKey(movement)}`
 
@@ -71,10 +80,22 @@ function writeFilter(filter: MovementFilter): URLSearchParams {
 
 const EMPTY_PAGE = { records: [], total: 0, nextPage: null }
 
-/** Every record of the User, whatever its kind, newest first; the filter lives in the address. */
-export function Movements() {
+const FILTER_PARAMS = ['type', 'account', 'from', 'to']
+
+/** The records split under one heading per type, in the order the filter lists the types. */
+function groupByType(movements: Movement[]): FeedGroup<Movement>[] {
+  return MOVEMENT_TYPES.map((type) => ({
+    key: `type-${type}`,
+    heading: movementTypeFilterNames[type],
+    records: movements.filter((movement) => movement.type === type),
+  })).filter((group) => group.records.length > 0)
+}
+
+/** The filter of the address when it has any; otherwise the one the User's preferences ask for today. */
+function MovementsView({ preferences }: { preferences: Preferences }) {
   const [params, setParams] = useSearchParams()
-  const filter = readFilter(params)
+  const hasAddressFilter = FILTER_PARAMS.some((name) => params.has(name))
+  const filter = hasAddressFilter ? readFilter(params) : movementFilterOf(preferences, todayInPanama())
   const filterKey = writeFilter(filter).toString()
   const periodReversed = filter.from !== '' && filter.to !== '' && filter.from > filter.to
   const load = useCallback(
@@ -88,6 +109,9 @@ export function Movements() {
   const notice = noticeFrom(useLocation().state)
   const known = accounts.state.status === 'ready' ? accounts.state.value : []
   const byId = new Map(known.map((account) => [account.id, account]))
+  const asksForEverything = isEmptyFilter(filter)
+  const onlyThisMonth =
+    !hasAddressFilter && preferences.period === 'current_month' && isEmptyFilter({ ...filter, from: '', to: '' })
 
   return (
     <>
@@ -98,18 +122,31 @@ export function Movements() {
 
       <NoticeBanner notice={notice} className="max-w-[44rem]" />
 
-      <MovementFilters filter={filter} accounts={known} onChange={(next) => setParams(writeFilter(next), { replace: true })} />
+      <MovementFilters
+        filter={filter}
+        accounts={known}
+        onChange={(next) => setParams(writeFilter(next), { replace: true })}
+        onClear={hasAddressFilter ? () => setParams(new URLSearchParams(), { replace: true }) : undefined}
+      />
 
       {state.status !== 'ready' ? (
         <Pending state={state} retry={retry} loading="Cargando tus movimientos…" />
       ) : state.value.records.length === 0 ? (
         <EmptyState
           icon={ArrowLeftRight}
-          title={isEmptyFilter(filter) ? 'Aún no registras movimientos' : 'Ningún movimiento coincide con estos filtros'}
+          title={
+            asksForEverything
+              ? 'Aún no registras movimientos'
+              : onlyThisMonth
+                ? 'Aún no hay movimientos este mes'
+                : 'Ningún movimiento coincide con estos filtros'
+          }
           text={
-            isEmptyFilter(filter)
+            asksForEverything
               ? 'Cuando registres un gasto, un ingreso, una transferencia o una operación de inversión, aparecerá aquí.'
-              : 'Prueba con otro tipo, otra Cuenta u otro período.'
+              : onlyThisMonth
+                ? 'Tu vista empieza en el mes actual. Cambia el período aquí o en tus preferencias para ver otros meses.'
+                : 'Prueba con otro tipo, otra Cuenta u otro período.'
           }
           action={{ to: '/expenses/create', label: 'Registrar un gasto' }}
         />
@@ -120,8 +157,17 @@ export function Movements() {
           rowId={rowId}
           row={(movement) => <Row key={movementKey(movement)} movement={movement} accounts={byId} />}
           countText={(shown, total) => `Mostrando ${shown} de ${total} movimientos.`}
+          groupBy={preferences.grouping === 'type' ? groupByType : undefined}
         />
       )}
     </>
   )
+}
+
+/** Every record of the User, whatever its kind, newest first; the preferences set the start, the address overrides. */
+export function Movements() {
+  const { state, retry } = usePreferences()
+  // Preferences shape the view but never block it: when they cannot be read, the initial ones apply.
+  if (state.status === 'loading') return <Pending state={state} retry={retry} loading="Cargando tus movimientos…" />
+  return <MovementsView preferences={state.status === 'ready' ? state.value : INITIAL_PREFERENCES} />
 }

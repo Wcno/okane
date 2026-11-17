@@ -60,6 +60,8 @@ function toMovement(body: MovementBody): Movement {
       accountId: body.account_id,
       categoryId: body.category_id ?? 0,
       description: body.description,
+      // The view does not say which reserve confirmed an Expense; the edit screen reads it.
+      recurringPaymentOccurrenceId: null,
     }
     return { type, id, date, record }
   }

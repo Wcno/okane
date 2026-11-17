@@ -12,17 +12,17 @@ export type Validated<Input, Field extends string> =
  * what is wrong with it and the submit. `validate` runs in the browser first;
  * api-service has the last word, and its errors land on the same fields.
  */
-export function useRecordForm<Draft extends { date: string }, Field extends string, Input, Saved>({
+export function useRecordForm<Draft extends object, Field extends string, Input, Saved>({
   initial,
   validate,
-  dateDependsOn,
+  dateDependsOn = [],
   save,
   onSaved,
 }: {
   initial: Draft
   validate: (draft: Draft) => Validated<Input, Field>
-  /** The draft fields whose change re-judges the date: the Accounts, whose start the date may not precede. */
-  dateDependsOn: ReadonlyArray<keyof Draft>
+  /** The draft fields whose change re-judges the date: the Accounts, whose start the date may not precede. A form without a date has none. */
+  dateDependsOn?: ReadonlyArray<keyof Draft>
   save: (input: Input) => Promise<Outcome<Saved, Field>>
   onSaved: (saved: Saved) => void | Promise<void>
 }) {

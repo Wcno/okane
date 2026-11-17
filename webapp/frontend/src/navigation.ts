@@ -7,6 +7,7 @@ import {
   House,
   KeyRound,
   List,
+  SlidersHorizontal,
   PiggyBank,
   ReceiptText,
   Repeat,
@@ -65,8 +66,10 @@ export const changePassword: Destination = { path: '/profile/change-password', n
 
 export const userDeletion: Destination = { path: '/profile/delete', name: 'Eliminar usuario', icon: UserX }
 
+export const preferences: Destination = { path: '/settings', name: 'Preferencias', icon: SlidersHorizontal }
+
 /** The profile links shown in the sidebar and in Menú, in display order. */
-export const profileDestinations: Destination[] = [changePassword, userDeletion]
+export const profileDestinations: Destination[] = [preferences, changePassword, userDeletion]
 
 export const allDestinations =navigationGroups.flatMap((group) => group.destinations)
 
