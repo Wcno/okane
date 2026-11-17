@@ -22,6 +22,7 @@ import { Menu } from './pages/Menu'
 import { Register } from './pages/Register'
 import { ResetPassword } from './pages/ResetPassword'
 import { UnderConstruction } from './pages/UnderConstruction'
+import { UserDelete } from './pages/UserDelete'
 
 export default function App() {
   return (
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/incomes/:id/edit" element={<IncomeEdit />} />
             <Route path="/incomes/:id/delete" element={<IncomeDelete />} />
             <Route path="/profile/change-password" element={<ChangePassword />} />
+            <Route path="/profile/delete" element={<UserDelete />} />
             <Route path="*" element={<UnderConstruction />} />
           </Route>
         </Route>

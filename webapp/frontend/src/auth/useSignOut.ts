@@ -7,6 +7,11 @@ export type SignOutProgress = { status: 'idle' } | { status: 'closing' } | { sta
 /** Router state that tells /logout to show its closed state instead of asking. */
 export const SIGNED_OUT = { signedOut: true }
 
+/** The same landing, for a User who deleted their user: /logout says so instead. */
+export const USER_DELETED = { signedOut: true, userDeleted: true }
+
+export const isUserDeletedState = (state: unknown) => (state as typeof USER_DELETED | null)?.userDeleted === true
+
 export const isSignedOutState = (state: unknown) => (state as typeof SIGNED_OUT | null)?.signedOut === true
 
 /**
