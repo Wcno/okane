@@ -17,8 +17,8 @@ Partners are not on any of these tickets (confirmed by the user 2026-11-16).
   `ui-qa` runs on Sonnet.
 - Each PR passes CI, `ui-qa`, the two-axis `mattpocock-skills:code-review` and the orchestrator's diff read before the next ticket stacks on it.
 - The user's main concern is the UI; they trust the backend.
-  Pause after #8 for the user's UI sign-off, since #15, #17 and #9 reuse its list and form patterns.
-- Model trial, decided by the user on 2026-11-16: build #15 with `model: "haiku"` on the `ticket-worker` spawn. All gates stay the same.
+  The user dropped the #8 pause on 2026-11-16: run the whole stack through every gate, then stop once for the user's final UI review.
+- Superseded: this run's instructions say Sonnet on every worker spawn, so #15 uses Sonnet. Earlier trial idea: build #15 with `model: "haiku"` on the `ticket-worker` spawn. All gates stay the same.
   If #15 clears in 1-2 rounds, try Haiku on #9 too; #17 stays on Sonnet. If #15 goes red 3 times at the same gate, switch #15 to Sonnet and tell the user.
 - Workers stop and report before editing `docs/contratos.md`, `docs/spec.md`, `docs/matrices.md` or adding an endpoint missing from `docs/matrices.md`.
 
@@ -34,7 +34,7 @@ Partners are not on any of these tickets (confirmed by the user 2026-11-16).
 
 | Ticket | Base | Branch / PR | Status |
 |---|---|---|---|
-| #8 Gastos | `main` | `feat/8-expenses-fixed-categories`, PR #47 (draft) | round 2 at `22dc77b`: all round-1 items verified landed, CI pass; ui-qa and review running |
+| #8 Gastos | `main` | `feat/8-expenses-fixed-categories`, PR #47 (draft) | round 2 at `22dc77b`: CI pass, ui-qa PASS with UI findings, review found gaps; round-2 worker applying 23 fixes |
 | #15 Ingresos | #8 | - | waits for #8 sign-off |
 | #17 Pagos recurrentes | #15 | - | waits |
 | #9 Presupuestos | #17 | - | waits |
@@ -54,9 +54,12 @@ No other PR is open.
 
 ## Next step
 
-1. Round 2 of PR #47, head `22dc77b`. Orchestrator verified every round-1 item in the code; no new worker was spawned.
-   Gate a (CI) pass. Worktree stack rebuilt at the head on http://localhost:8001, smoke test green.
-2. Gate b: `ui-qa` (Sonnet) is walking PR #47 on :8001, also asked whether the populated list needs its own "Nuevo gasto" button.
-   Gate c: orchestrator's two-axis review of `origin/main...22dc77b` in progress.
-3. When b, c and d are green: comment "Gate results, round 2" on #47, `gh pr ready 47`.
-4. Rebuild port 8000 from the PR branch (`docker compose up --build --detach --wait`, `scripts/smoke-test.sh`) and stop for the user's UI sign-off before #15.
+1. PR #47 round 2 at `22dc77b`: gate a CI pass; gate b ui-qa PASS with findings; gate c review (Sonnet axes) found spec gaps and leftover duplication.
+   ui-qa could not resize Chrome; it framed the app at 1440/390 through a throwaway same-origin proxy on :8002 (stopped). Recommendation adopted: no list-level "Nuevo gasto" button.
+2. A fresh Sonnet `ticket-worker` is applying 23 numbered fixes in `.claude/worktrees/feat-8-expenses` (same branch, stack :8001):
+   UI (clear errors on change, sticky submit in the 390 quick sheet, rows become one link with delete on the edit screen for Expenses and Accounts, 44px targets, focus after "Mostrar más", chip fit, Spanish date in the opening-date error, Balance in the quick-sheet toast, matching empty-state widths),
+   spec (real Expense stops mutating sample Accounts, too-large amount message, one shared amount parser, today at submit time, PR body citations),
+   docs (user-approved: archived-Account edit rule, 140 chars, date required on PUT, 404 precedence in contratos/matrices),
+   standards (shared submit/confirm piece, lib/dates.ts, change kind instead of verb strings, renames, duplicate copy).
+3. When it reports: rerun gates a-d (ui-qa again since the UI changed), comment "Gate results, round 2", `gh pr ready 47`.
+4. Then build #15 on base `feat/8-expenses-fixed-categories` (Sonnet), and continue #17, #9, #18 the same way. Stop for the user's final UI review after #18 clears, with port 8000 rebuilt from the top of the stack.
