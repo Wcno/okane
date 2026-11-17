@@ -36,7 +36,7 @@ export function Trade({ kind }: { kind: TradeKind }) {
       ) : state.value.length === 0 ? (
         <EmptyState
           icon={Wallet}
-          title="Primero necesitas una Cuenta de inversión"
+          title="Necesitas una Cuenta de inversión"
           text="Una compra o una venta se registra en el efectivo de tu bróker. Crea esa Cuenta y vuelve aquí."
           action={{ to: '/accounts/create', label: 'Crear cuenta' }}
         />

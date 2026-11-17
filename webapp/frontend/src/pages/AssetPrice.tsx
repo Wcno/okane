@@ -1,62 +1,33 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useSignedInUser } from '../auth/context'
 import { RecordEditor } from '../components/record/RecordEditor'
 import { NotHere, Pending, ScreenHeader } from '../components/screen/Screen'
 import { TextField } from '../components/TextField'
-import { describeAsset, formatPrice, positionsBack, priceOrigin } from '../investments/presentation'
-import { getAssetPrice, saveAssetPrice, type AssetPrice as AssetPriceRecord, type PriceField } from '../investments/price'
+import { describeAsset, positionsBack, priceOrigin } from '../investments/presentation'
+import { getAssetPrice, saveAssetPrice, type AssetPrice as AssetPriceRecord } from '../investments/price'
 import { validatePrice } from '../investments/priceForm'
-import { formatDay, todayInPanama } from '../lib/dates'
+import { todayInPanama } from '../lib/dates'
 import type { ScreenNotice } from '../lib/notice'
-import { useFieldErrors } from '../lib/useFieldErrors'
 import { useLoaded } from '../lib/useLoaded'
-import { useSubmission } from '../lib/useSubmission'
+import { useRecordForm } from '../lib/useRecordForm'
 
 function PriceEditor({ record }: { record: AssetPriceRecord }) {
   const { csrfToken } = useSignedInUser()
   const navigate = useNavigate()
-  const { isSubmitting, submit: write } = useSubmission()
-  const form = useRef<HTMLFormElement>(null)
-  const [draft, setDraft] = useState({ value: '', date: todayInPanama() })
-  const { errors, setErrors, clearErrors } = useFieldErrors<PriceField>()
-  const [attention, setAttention] = useState(0)
   const { asset, price } = record
-
-  // After the errors are on screen, the keyboard goes to the first field that needs a fix.
-  useEffect(() => {
-    if (attention > 0) form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
-  }, [attention])
-
-  const change = (patch: Partial<typeof draft>) => {
-    setDraft((previous) => ({ ...previous, ...patch }))
-    clearErrors(...(Object.keys(patch) as PriceField[]))
-  }
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault()
-    if (isSubmitting) return
-    const checked = validatePrice(draft)
-    if (!checked.ok) {
-      setErrors(checked.errors)
-      setAttention((count) => count + 1)
-      return
-    }
-    setErrors({})
-    const outcome = await write(
-      () => saveAssetPrice(asset.id, checked.price, csrfToken),
-      () => {
-        const notice: ScreenNotice = {
-          notice: `Precio de ${asset.symbol} guardado: ${formatPrice(checked.price.value)}, ${formatDay(checked.price.date)}.`,
-        }
-        navigate(positionsBack.to, { state: notice })
-      },
-    )
-    if (outcome && !outcome.ok) {
-      setErrors(outcome.errors)
-      setAttention((count) => count + 1)
-    }
-  }
+  const { form, draft, change, errors, isSubmitting, submit } = useRecordForm({
+    initial: { value: '', date: todayInPanama() },
+    validate: (current) => {
+      const checked = validatePrice(current)
+      return checked.ok ? { ok: true, value: checked.price } : checked
+    },
+    dateDependsOn: [],
+    save: (input) => saveAssetPrice(asset.id, input, csrfToken),
+    onSaved: () => {
+      const notice: ScreenNotice = { notice: `Precio de ${asset.symbol} guardado.` }
+      navigate(positionsBack.to, { state: notice })
+    },
+  })
 
   return (
     <>

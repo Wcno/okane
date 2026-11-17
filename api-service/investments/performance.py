@@ -6,6 +6,7 @@ The simple return over the Net Contribution does not apply when that is not posi
 Nothing is stored: every figure is derived on each request.
 """
 
+import datetime
 from decimal import Decimal
 
 from accounts import ledger
@@ -33,9 +34,14 @@ def represent_return(amount, net_contribution):
 @exact
 def account_figures(user_id, as_of):
     """Cash, Positions value, Net Contribution and Return of each investment Account, archived included."""
-    accounts = list(Account.objects.filter(user_id=user_id, type=Account.Type.INVESTMENT))
-    cash = ledger.balances(accounts)
-    contributions = ledger.net_contributions(accounts)
+    # An Account that starts after the closing is not part of it yet.
+    accounts = list(
+        Account.objects.filter(
+            user_id=user_id, type=Account.Type.INVESTMENT, opening_date__lte=as_of
+        )
+    )
+    cash = ledger.balances(accounts, as_of)
+    contributions = ledger.net_contributions(accounts, as_of)
 
     positions_value = dict.fromkeys(cash, ZERO)
     estimated = set()
@@ -120,8 +126,30 @@ def dashboard_of(user_id, as_of):
     }
 
 
-def performance_of(user_id, as_of):
-    """The portfolio plus what each Position gained or lost against its cost."""
+def period_return(user_id, first_day, as_of):
+    """Return of the period from `first_day` to `as_of`: the cumulative Return at the close
+    minus the one at the start, which is the close of the day before `first_day`.
+
+    Contributions and Accounts that enter during the period cancel out: both cuts
+    subtract their own Net Contribution.
+    """
+    opening = portfolio_of(user_id, first_day - datetime.timedelta(days=1))
+    closing = portfolio_of(user_id, as_of)
+    amount = Decimal(closing["return"]["amount"]) - Decimal(opening["return"]["amount"])
+    return {
+        "from": first_day.isoformat(),
+        "to": as_of.isoformat(),
+        "opening_return": opening["return"]["amount"],
+        "closing_return": closing["return"]["amount"],
+        "return": money(amount),
+    }
+
+
+def performance_of(user_id, as_of, first_day=None):
+    """The portfolio plus what each Position gained or lost against its cost.
+
+    With `first_day`, also the Return of the period that starts that day.
+    """
     positions = []
     for position in positions_of(user_id, as_of):
         cost = Decimal(position["cost"])
@@ -137,4 +165,5 @@ def performance_of(user_id, as_of):
                 "price": position["price"],
             }
         )
-    return {**portfolio_of(user_id, as_of), "positions": positions}
+    period = None if first_day is None else period_return(user_id, first_day, as_of)
+    return {**portfolio_of(user_id, as_of), "positions": positions, "period": period}
