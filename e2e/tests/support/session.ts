@@ -11,11 +11,11 @@ export function uniqueEmail() {
  * Registers a User through webapp's HTTP surface. With `page.request` the
  * session cookie lands in the page's browser context, so the page is signed in.
  */
-export async function signUp(request: APIRequestContext, email = uniqueEmail()) {
+export async function signUp(request: APIRequestContext, email = uniqueEmail(), password = PASSWORD) {
   const session = await request.get('/auth/session')
   const { csrf_token: csrfToken } = await session.json()
   const response = await request.post('/auth/register', {
-    data: { email, password: PASSWORD },
+    data: { email, password },
     headers: { 'X-CSRFToken': csrfToken },
   })
   expect(response.status()).toBe(201)

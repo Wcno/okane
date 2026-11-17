@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useFieldErrors } from './fieldErrors'
+import { useFieldErrors } from './useFieldErrors'
 import type { FieldErrors, Outcome } from './http'
 import { useSubmission } from './useSubmission'
 
