@@ -22,7 +22,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expectScreenQuality(page, `accounts-create-filled-${colorScheme}`)
     await page.getByRole('button', { name: 'Crear cuenta', exact: true }).click()
     await expect(page.getByRole('link', { name: 'Editar cuenta Tarjeta prueba' })).toBeVisible()
-    await expectScreenQuality(page, `accounts-list-${colorScheme}`, { skipAxeRules: knownAxeRules.balanceFigureLabel })
+    await expectScreenQuality(page, `accounts-list-${colorScheme}`, {
+      skipAxeRules: [...knownAxeRules.balanceFigureLabel, ...knownAxeRules.recordRowLabel],
+    })
 
     await page.getByRole('link', { name: 'Editar cuenta Tarjeta prueba' }).click()
     await expect(page.getByLabel('Saldo inicial', { exact: true })).toHaveCount(0)

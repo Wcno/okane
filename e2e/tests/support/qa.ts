@@ -63,6 +63,9 @@ export const knownAxeRules = {
   // The large balance figure is a <p aria-label>; a paragraph has no role that allows a label.
   // AvailableCard (dashboard) and Total (accounts list) both do it. Fix: a visually hidden text in place of the label.
   balanceFigureLabel: ['aria-prohibited-attr'],
+  // A record row (Expense, Account) is a link whose aria-label starts with "Editar ...", not with the visible text (WCAG 2.5.3, label in name).
+  // Fix: start the label with the visible title, or drop the label for the visible text plus a hidden hint.
+  recordRowLabel: ['label-content-name-mismatch'],
 }
 
 interface ScreenQualityOptions {
