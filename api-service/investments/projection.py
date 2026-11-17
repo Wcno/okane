@@ -236,3 +236,48 @@ def projection_of(user_id, data):
         },
         "scenarios": scenarios,
     }
+
+
+DEFAULT_TERM = 12
+ACCOUNT_REQUIRED = "Elige la Cuenta de ahorro que quieres proyectar."
+NOT_SAVINGS = "Esta proyección es de una Cuenta de ahorro. Elige una."
+
+
+def savings_projection_of(user_id, params):
+    """The original savings Projection: one savings Account, one scenario read from the query.
+
+    Omitted, the capital is the Balance, the contribution is zero, the term twelve
+    months and the rate the one saved on the Account (zero without one).
+    """
+    account_id = params.get("account_id", "")
+    if not (account_id.isascii() and account_id.isdigit()):
+        raise serializers.ValidationError({"account_id": [ACCOUNT_REQUIRED]})
+    account = Account.objects.filter(user_id=user_id, pk=int(account_id)).first()
+    if account is None:
+        raise NotFound
+    if account.type != Account.Type.SAVINGS:
+        raise serializers.ValidationError({"account_id": [NOT_SAVINGS]})
+
+    months = params.get("months", DEFAULT_TERM)
+    if isinstance(months, str) and months.isascii() and months.isdigit():
+        months = int(months)
+    saved_rate = account.annual_interest_rate if account.annual_interest_rate is not None else 0
+    scenario = ScenarioSerializer(
+        data={
+            "monthly_contribution": params.get("monthly_contribution", "0"),
+            "months": months,
+            "annual_rate": params.get("annual_rate", f"{saved_rate:f}"),
+            **({"initial_capital": params["initial_capital"]} if "initial_capital" in params else {}),
+        }
+    )
+    scenario.is_valid(raise_exception=True)
+    try:
+        return projection_of(
+            user_id,
+            {"selection": {"kind": ACCOUNT, "account_id": account.id}, "scenarios": [scenario.validated_data]},
+        )
+    except serializers.ValidationError as error:
+        prefix = "scenarios.0."
+        raise serializers.ValidationError(
+            {key.removeprefix(prefix): found for key, found in error.detail.items()}
+        ) from None

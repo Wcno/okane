@@ -17,6 +17,8 @@ export interface Destination {
   path: string
   name: string
   icon: LucideIcon
+  /** Other routes of the same screen, which keep this destination highlighted. */
+  alsoActiveOn?: string[]
 }
 
 export interface NavigationGroup {
@@ -44,7 +46,7 @@ export const navigationGroups: NavigationGroup[] = [
     destinations: [
       budgets,
       { path: '/recurring-payments', name: 'Pagos recurrentes', icon: Repeat },
-      { path: '/savings/projection', name: 'Proyección', icon: Calculator },
+      { path: '/savings/projection', name: 'Proyección', icon: Calculator, alsoActiveOn: ['/investments/projection'] },
     ],
   },
   {

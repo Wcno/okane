@@ -7,6 +7,10 @@ const HEIGHT = 220
 const MARGIN = { top: 14, right: 14, bottom: 28, left: 52 }
 const TOOLTIP_WIDTH = 196
 
+/** The capital of a scenario at a month, as the decimal string api-service sent; month 0 is the initial capital. */
+const capitalAt = (scenario: ProjectedScenario, month: number) =>
+  month === 0 ? scenario.initialCapital : scenario.series[month - 1].capital
+
 /** A step of 1, 2, 2.5 or 5 times a power of ten that fits `maximum` in about four intervals. */
 function niceStep(maximum: number) {
   const raw = maximum / 4
@@ -98,7 +102,7 @@ export function ProjectionChart({ scenarios }: { scenarios: ProjectedScenario[] 
                       <span aria-hidden="true" className="size-2 rounded-full" style={{ background: scenarioTone(position) }} />
                       {scenarioName(position)}
                     </dt>
-                    <dd className="font-semibold tabular-nums text-ink">{formatMoney(lines[position][selected].toFixed(2))}</dd>
+                    <dd className="font-semibold tabular-nums text-ink">{formatMoney(capitalAt(scenario, selected))}</dd>
                   </div>
                 ) : null,
               )}

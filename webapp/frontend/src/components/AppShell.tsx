@@ -1,6 +1,6 @@
 import { Ellipsis, Plus, X } from 'lucide-react'
 import { useEffect } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useSignedInUser } from '../auth/context'
 import { bottomBarDestinations, changePassword, navigationGroups, type Destination } from '../navigation'
 import { useData } from '../state/context'
@@ -8,22 +8,28 @@ import { ExpenseForm } from './ExpenseForm'
 import { Logo } from './Logo'
 import { SignOutButton } from './SignOutButton'
 
+/** Whether the route on screen is the destination, below it or another route of the same screen. */
+const isCurrent = (destination: Destination, pathname: string) =>
+  [destination.path, ...(destination.alsoActiveOn ?? [])].some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  )
+
 function SidebarLink({ destination }: { destination: Destination }) {
   const Icon = destination.icon
+  const current = isCurrent(destination, useLocation().pathname)
   return (
-    <NavLink
+    <Link
       to={destination.path}
-      className={({ isActive }) =>
-        `flex h-10 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors duration-150 ${
-          isActive
-            ? 'bg-surface font-semibold text-ink shadow-card'
-            : 'font-medium text-ink-2 hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink'
-        }`
-      }
+      aria-current={current ? 'page' : undefined}
+      className={`flex h-10 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors duration-150 ${
+        current
+          ? 'bg-surface font-semibold text-ink shadow-card'
+          : 'font-medium text-ink-2 hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink'
+      }`}
     >
       <Icon size={18} strokeWidth={2} aria-hidden="true" />
       {destination.name}
-    </NavLink>
+    </Link>
   )
 }
 

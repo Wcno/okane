@@ -68,6 +68,11 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(evolution.getByRole('img')).toBeVisible()
     await evolution.getByText('Ver la tabla mensual').click()
     await expect(evolution.getByRole('table')).toContainText('$1,110.00')
+    // The table scrolls inside its card and keeps the month column in view.
+    const tableBox = evolution.getByRole('region', { name: 'Tabla mensual de la proyección' })
+    await tableBox.evaluate((element) => (element.scrollLeft = element.scrollWidth))
+    await expect(evolution.getByRole('columnheader', { name: 'Mes' })).toBeInViewport()
+    await tableBox.evaluate((element) => (element.scrollLeft = 0))
     await expectScreenQuality(page, `projection-two-scenarios-${colorScheme}`)
 
     // Savings take no negative rate: the screen says so and nothing is calculated.
@@ -91,6 +96,12 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     await page.goto('/investments/projection')
     await expect(page.getByLabel('Qué proyectar')).toHaveValue('portfolio')
+    // Both entries keep the Proyección item of the sidebar highlighted; a phone has no sidebar.
+    if ((page.viewportSize()?.width ?? 0) >= 1024) {
+      await expect(page.getByRole('navigation', { name: 'Secciones' }).getByRole('link', { name: 'Proyección' })).toHaveAttribute('aria-current', 'page')
+    }
+    // The main action is on screen without scrolling, even at 390px.
+    await expect(main(page).getByRole('button', { name: 'Proyectar' })).toBeInViewport()
     const start = page.getByRole('region', { name: 'Punto de partida' })
     await expect(start).toContainText('$1,000.00')
     await expect(start).toContainText('Posiciones, valoradas con tus Precios de referencia')

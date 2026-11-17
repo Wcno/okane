@@ -21,6 +21,7 @@ urlpatterns = [
     path("api/investments/dashboard", investments.dashboard),
     path("api/investments/performance", investments.performance),
     path("api/investments/projection", investments.projection),
+    path("api/savings/projection", investments.savings_projection),
     path("api/investments/assets/<int:asset_id>/price", investments.asset_price),
     path("api/transfers", transfers.transfer_collection),
     path("api/transfers/<int:transfer_id>", transfers.transfer_detail),

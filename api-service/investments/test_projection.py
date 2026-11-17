@@ -206,6 +206,26 @@ class ProjectionTests(PerformanceTestCase):
         near = self.projected(self.account_selection(broker), self.scenario(annual_rate="-11.99"))
         self.assertEqual(near["scenarios"][0]["final_capital"], "100.83")
 
+    def test_a_position_without_a_reference_price_is_valued_at_its_last_transaction_and_flagged_estimated(
+        self,
+    ):
+        broker = self.investment_account(opening_balance="1000.00")
+        asset = self.asset()
+        self.bought(broker, asset, "2", "100")
+        self.bought(broker, asset, "1", "120", date="2026-11-16")
+
+        body = self.projected(self.account_selection(broker), self.scenario(initial_capital=None))
+
+        # Cash 1000 - 200 - 120 plus 3 units at the last transaction price of 120.
+        self.assertEqual(body["source"]["value"], "1040.00")
+        self.assertTrue(body["source"]["estimated"])
+        self.assertEqual(body["scenarios"][0]["initial_capital"], "1040.00")
+
+        self.assertEqual(self.set_price(asset, "130").status_code, 200)
+        priced = self.projected(self.account_selection(broker), self.scenario(initial_capital=None))
+        self.assertEqual(priced["source"]["value"], "1070.00")
+        self.assertFalse(priced["source"]["estimated"])
+
     def test_a_projection_changes_nothing_that_was_recorded(self):
         savings = self.account(type="savings", annual_interest_rate="0.0300")
         before = self.call("GET", "/api/accounts").json()

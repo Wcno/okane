@@ -176,12 +176,13 @@ function MonthlyTable({ scenarios }: { scenarios: ProjectionResult['scenarios'] 
         <table className="w-full min-w-max border-collapse text-left text-[0.9rem] tabular-nums">
           <thead className="sticky top-0 bg-surface-2">
             <tr>
-              <th scope="col" className="px-3 py-2 font-medium text-ink-2">
+              <th scope="col" className="sticky left-0 bg-surface-2 px-3 py-2 font-medium text-ink-2">
                 Mes
               </th>
               {scenarios.map((_, position) => (
                 <th key={position} scope="col" className="px-3 py-2 text-right font-medium text-ink-2">
-                  {scenarioName(position)}: capital y aportado
+                  {scenarioName(position)}
+                  <span className="block text-[0.8rem] font-normal text-ink-3">capital (aportado)</span>
                 </th>
               ))}
             </tr>
@@ -189,7 +190,7 @@ function MonthlyTable({ scenarios }: { scenarios: ProjectionResult['scenarios'] 
           <tbody>
             {Array.from({ length: months }, (_, index) => (
               <tr key={index} className="border-t border-line">
-                <th scope="row" className="px-3 py-1.5 font-normal text-ink-2">
+                <th scope="row" className="sticky left-0 bg-surface px-3 py-1.5 font-normal text-ink-2">
                   {index + 1}
                 </th>
                 {scenarios.map((scenario, position) => {
@@ -198,7 +199,8 @@ function MonthlyTable({ scenarios }: { scenarios: ProjectionResult['scenarios'] 
                     <td key={position} className="px-3 py-1.5 text-right">
                       {point ? (
                         <>
-                          {formatMoney(point.capital)} <span className="text-ink-3">({formatMoney(point.contributed)})</span>
+                          {formatMoney(point.capital)}
+                          <span className="block text-[0.8rem] text-ink-3">({formatMoney(point.contributed)})</span>
                         </>
                       ) : (
                         <span className="text-ink-3">-</span>
@@ -326,15 +328,15 @@ function Comparator({ accounts, initialSelection }: { accounts: Account[]; initi
 
         {fieldErrors.length > 0 && <FormAlert>{fieldErrors.join(' ')}</FormAlert>}
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <button type="submit" disabled={calculating} className={`${primaryButtonClassName} sm:max-w-[16rem]`}>
+        <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 flex gap-3 rounded-2xl border border-line bg-surface p-3 shadow-card lg:static lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+          <button type="submit" disabled={calculating} className={`${primaryButtonClassName} min-w-0 flex-1 lg:max-w-[16rem]`}>
             {calculating ? 'Calculando…' : 'Proyectar'}
           </button>
           {drafts.length < SCENARIO_LIMIT && (
             <button
               type="button"
               onClick={() => setDrafts((current) => [...current, defaultDraft()])}
-              className={smallSecondaryButtonClassName}
+              className={`${smallSecondaryButtonClassName} h-12 shrink-0 lg:h-10`}
             >
               <Plus size={17} aria-hidden="true" />
               Agregar escenario
