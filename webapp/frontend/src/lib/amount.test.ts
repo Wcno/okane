@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseAmount } from './amount'
+import { parseAmount, parseQuantity } from './amount'
 
 describe('parseAmount', () => {
   it('reads an exact amount in cents as the decimal string the API takes', () => {
@@ -28,5 +28,24 @@ describe('parseAmount', () => {
     for (const text of ['1000000000000', '1234567890123.45', '-1000000000000']) {
       expect(parseAmount(text), text).toEqual({ error: 'too-large' })
     }
+  })
+})
+
+describe('parseQuantity', () => {
+  it('keeps up to eight decimals exactly and drops trailing zeros', () => {
+    expect(parseQuantity('0.12345678')).toEqual({ quantity: '0.12345678' })
+    expect(parseQuantity(' 2,50 ')).toEqual({ quantity: '2.5' })
+    expect(parseQuantity('007')).toEqual({ quantity: '7' })
+  })
+
+  it('rejects zero, signs, exponents and a ninth decimal', () => {
+    for (const text of ['0', '0.000', '-1', '1e3', '1.123456789', '', 'abc']) {
+      expect(parseQuantity(text)).toEqual({ error: 'invalid' })
+    }
+  })
+
+  it('rejects more than twelve integer digits as too large', () => {
+    expect(parseQuantity('1000000000000')).toEqual({ error: 'too-large' })
+    expect(parseQuantity('999999999999.99999999')).toEqual({ quantity: '999999999999.99999999' })
   })
 })

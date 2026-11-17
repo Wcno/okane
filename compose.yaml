@@ -79,6 +79,7 @@ services:
       DATABASE_NAME: okane_api
       DATABASE_USER: okane_api
       DATABASE_PASSWORD: ${API_DB_PASSWORD:?Set API_DB_PASSWORD in .env}
+      QUOTES_PROVIDER: ${QUOTES_PROVIDER:-twelvedata}
       TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
     depends_on:
       api-db:

@@ -52,3 +52,27 @@ export async function archiveAccount(request: APIRequestContext, accountId: numb
   const response = await send(request, 'DELETE', `/api/accounts/${accountId}`)
   expect(response.status()).toBe(200)
 }
+
+/** The first Asset the search finds for a query; the stack serves the sample catalog. */
+export async function findAsset(request: APIRequestContext, query: string, market?: string) {
+  const response = await request.get(`/api/investments/assets/search?q=${encodeURIComponent(query)}`)
+  expect(response.status()).toBe(200)
+  const { results } = (await response.json()) as { results: { id: number; market: string }[] }
+  const asset = results.find((item) => market === undefined || item.market === market)
+  expect(asset, `no ${query} in the catalog`).toBeTruthy()
+  return asset!
+}
+
+interface TradeFields {
+  account_id: number
+  asset_id: number
+  units: string
+  unit_price: string
+  date?: string
+}
+
+export async function recordTrade(request: APIRequestContext, kind: 'buy' | 'sell', fields: TradeFields) {
+  const response = await send(request, 'POST', `/api/investments/transactions/${kind}`, fields)
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number }
+}

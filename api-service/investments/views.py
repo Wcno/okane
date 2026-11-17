@@ -10,7 +10,7 @@ from accounts import clock, ledger
 from config.rest import paginate
 from investments import quotes
 from investments.models import Asset, InvestmentTransaction
-from investments.positions import positions_of
+from investments.positions import positions_of, represent_asset
 from investments.serializers import InvestmentTransactionSerializer
 
 SEARCH_RESULT_LIMIT = 20
@@ -19,18 +19,6 @@ QUERY_REQUIRED = "Escribe el símbolo o el nombre del Activo, por ejemplo AAPL."
 QUERY_TOO_LONG = f"La búsqueda admite hasta {QUERY_MAX_LENGTH} caracteres."
 AS_OF_INVALID = "Escribe la fecha del cierre, por ejemplo 2026-11-16."
 AS_OF_IN_FUTURE = "El cierre no puede ser una fecha futura."
-
-
-def represent_asset(asset):
-    return {
-        "id": asset.id,
-        "provider": asset.provider,
-        "market": asset.market,
-        "symbol": asset.symbol,
-        "name": asset.name,
-        "asset_type": asset.asset_type,
-        "currency": asset.currency,
-    }
 
 
 def remember(candidates):

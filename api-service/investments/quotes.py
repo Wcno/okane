@@ -60,7 +60,31 @@ class TwelveDataQuotes:
         )
 
 
+SAMPLE_CATALOG = (
+    AssetCandidate("sample", "XNAS", "AAPL", "Apple Inc", "Common Stock", "USD"),
+    AssetCandidate("sample", "XNAS", "MSFT", "Microsoft Corp", "Common Stock", "USD"),
+    AssetCandidate("sample", "ARCX", "VOO", "Vanguard S&P 500 ETF", "ETF", "USD"),
+    AssetCandidate("sample", "XNYS", "SHOP", "Shopify Inc (Nueva York)", "Common Stock", "USD"),
+    AssetCandidate("sample", "XTSE", "SHOP", "Shopify Inc (Toronto)", "Common Stock", "CAD"),
+    AssetCandidate("sample", "Binance", "BTC/USD", "Bitcoin", "Digital Currency", "USD"),
+)
+
+
+class SampleQuotes:
+    """A small fixed catalog for demos and browser tests; it needs no key and no network."""
+
+    def search(self, query):
+        needle = query.casefold()
+        return [
+            asset
+            for asset in SAMPLE_CATALOG
+            if needle in asset.symbol.casefold() or needle in asset.name.casefold()
+        ]
+
+
 def provider():
-    """The configured quotes service, or None when there is no key to ask with."""
+    """The configured quotes service, or None when there is none to ask."""
+    if settings.QUOTES_PROVIDER == "sample":
+        return SampleQuotes()
     api_key = settings.TWELVE_DATA_API_KEY
     return TwelveDataQuotes(api_key) if api_key else None

@@ -20,3 +20,4 @@ Verificado el 2026-11-16 en las páginas oficiales del proveedor:
 - La interfaz busca al enviar la búsqueda, no en cada tecla, para respetar los 8 créditos por minuto.
 - `api-service` necesita salida a internet, que se concede con una red solo de salida; ningún puerto se publica.
 - El precio de la última operación sigue siendo el respaldo del Precio de referencia; la actualización automática de precios (#23) verificará los límites de precios del mismo proveedor.
+- `QUOTES_PROVIDER=sample` sirve un catálogo fijo de seis Activos, sin red ni clave, para probar la aplicación y para las pruebas de navegador; `.env.example` lo trae activo. Para Activos reales se cambia a `twelvedata` y se configura la clave.

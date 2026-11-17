@@ -14,6 +14,18 @@ EIGHT_PLACES = Decimal("0.00000001")
 LAST_TRANSACTION = "last_transaction"
 
 
+def represent_asset(asset):
+    return {
+        "id": asset.id,
+        "provider": asset.provider,
+        "market": asset.market,
+        "symbol": asset.symbol,
+        "name": asset.name,
+        "asset_type": asset.asset_type,
+        "currency": asset.currency,
+    }
+
+
 def fixed(value, step):
     return f"{value.quantize(step, rounding=ROUND_HALF_UP):f}"
 
@@ -52,13 +64,7 @@ def positions_of(user_id, as_of):
         value = (total.units * priced.unit_price).quantize(CENT, rounding=ROUND_HALF_UP)
         positions.append(
             {
-                "asset": {
-                    "id": asset.id,
-                    "symbol": asset.symbol,
-                    "name": asset.name,
-                    "market": asset.market,
-                    "currency": asset.currency,
-                },
+                "asset": represent_asset(asset),
                 "units": fixed(total.units, EIGHT_PLACES),
                 "cost": fixed(total.cost, CENT),
                 "average_cost": fixed(total.average_cost, EIGHT_PLACES),

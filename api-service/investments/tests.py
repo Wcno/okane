@@ -610,3 +610,13 @@ class PositionTests(InvestmentApiTestCase):
 
     def test_positions_need_the_service_credentials(self):
         self.assertEqual(self.client.get("/api/investments/positions").status_code, 403)
+
+
+class SampleProviderTests(InvestmentApiTestCase):
+    @override_settings(QUOTES_PROVIDER="sample")
+    def test_the_sample_catalog_answers_without_a_key_and_keeps_markets_apart(self):
+        response = self.call("GET", "/api/investments/assets/search?q=shop")
+
+        body = response.json()
+        self.assertTrue(body["provider_available"])
+        self.assertEqual(sorted(item["market"] for item in body["results"]), ["XNYS", "XTSE"])
