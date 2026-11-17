@@ -22,7 +22,7 @@ export function parseAmount(text: string): ParsedAmount {
   return { amount: match[1] && amount !== '0.00' ? `-${amount}` : amount }
 }
 
-/** A money amount that must be above zero: zero and a negative one are as invalid as text. */
+/** A record of money (Expense, Income) takes a positive amount: zero and a negative one are as invalid as text. */
 export function parsePositiveAmount(text: string): ParsedAmount {
   const parsed = parseAmount(text)
   if ('error' in parsed) return parsed

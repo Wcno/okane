@@ -4,7 +4,7 @@ import type { Expense, ExpenseField, ExpenseInput } from '../../expenses/api'
 import type { ExpenseDraft } from '../../expenses/form'
 import type { Outcome } from '../../lib/http'
 import { useExpenseForm } from '../../expenses/useExpenseForm'
-import { RecordForm } from '../screen/RecordForm'
+import { RecordEditor } from '../record/RecordEditor'
 import { ExpenseFields } from './ExpenseFields'
 
 /** The card with the form that registers or corrects one Expense; Register and Edit differ in what they pass. */
@@ -32,19 +32,14 @@ export function ExpenseEditor({
   /** Extra content below the buttons, such as the way to the delete screen. */
   children?: ReactNode
 }) {
-  const { form, draft, change, errors, isSubmitting, submit } = useExpenseForm({
-    initial,
-    accounts,
-    save,
-    onSaved,
-  })
+  const { form, draft, change, errors, isSubmitting, submit } = useExpenseForm({ initial, accounts, save, onSaved })
 
   return (
-    <RecordForm
-      form={form}
+    <RecordEditor
+      formRef={form}
       onSubmit={submit}
-      formErrors={errors.form}
       isSubmitting={isSubmitting}
+      formError={errors.form}
       submitLabel={submitLabel}
       submittingLabel={submittingLabel}
       cancelTo={cancelTo}
@@ -60,6 +55,6 @@ export function ExpenseEditor({
       }
     >
       {children}
-    </RecordForm>
+    </RecordEditor>
   )
 }

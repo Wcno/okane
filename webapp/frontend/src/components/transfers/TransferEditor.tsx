@@ -4,18 +4,11 @@ import type { Outcome } from '../../lib/http'
 import { useRecordForm } from '../../lib/useRecordForm'
 import type { Transfer, TransferField, TransferInput } from '../../transfers/api'
 import { validateTransfer, type TransferDraft } from '../../transfers/form'
-import { RecordForm } from '../screen/RecordForm'
+import { RecordEditor } from '../record/RecordEditor'
 import { TransferFields } from './TransferFields'
-
-/** The date is checked against the start of both Accounts, so changing either re-judges it. */
-const affectedBy = (patch: Partial<TransferDraft>): TransferField[] =>
-  'sourceAccountId' in patch || 'destinationAccountId' in patch
-    ? ['date', 'sourceAccountId', 'destinationAccountId']
-    : []
 
 /** The card with the form that registers or corrects one Transfer; Register and Edit differ in what they pass. */
 export function TransferEditor({
-  idPrefix,
   initial,
   accounts,
   save,
@@ -25,7 +18,6 @@ export function TransferEditor({
   accountNote,
   children,
 }: {
-  idPrefix: string
   initial: TransferDraft
   accounts: Account[]
   save: (transfer: TransferInput) => Promise<Outcome<Transfer, TransferField>>
@@ -44,23 +36,23 @@ export function TransferEditor({
   >({
     initial,
     validate: (current) => validateTransfer(current, { accounts }),
-    affectedBy,
+    dateDependsOn: ['sourceAccountId', 'destinationAccountId'],
     save,
     onSaved,
   })
 
   return (
-    <RecordForm
-      form={form}
+    <RecordEditor
+      formRef={form}
       onSubmit={submit}
-      formErrors={errors.form}
       isSubmitting={isSubmitting}
+      formError={errors.form}
       submitLabel={submitLabel}
       submittingLabel={submittingLabel}
       cancelTo="/transfers"
       fields={
         <TransferFields
-          idPrefix={idPrefix}
+          idPrefix="transfer"
           draft={draft}
           onChange={change}
           errors={errors}
@@ -70,6 +62,6 @@ export function TransferEditor({
       }
     >
       {children}
-    </RecordForm>
+    </RecordEditor>
   )
 }

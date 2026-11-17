@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 import { todayInPanama } from '../lib/dates'
 import { createTransfer } from '../transfers/api'
 import { chooseDefaultAccounts } from '../transfers/form'
-import { NEEDS_TWO_ACCOUNTS, offeredAccounts, transfersBack } from '../transfers/presentation'
+import { NEEDS_TWO_ACCOUNTS, transferAccounts, transfersBack } from '../transfers/presentation'
 import { useAfterTransferChange } from '../transfers/useAfterTransferChange'
 
 /** Registers a Transfer: amount, the Account it leaves and the one it reaches; the date starts as today. */
@@ -16,7 +16,7 @@ export function TransferCreate() {
   const { csrfToken } = useSignedInUser()
   const afterChange = useAfterTransferChange()
   const { state, retry } = useAccounts()
-  const offered = state.status === 'ready' ? offeredAccounts(state.value) : []
+  const offered = state.status === 'ready' ? transferAccounts(state.value) : []
 
   return (
     <>
@@ -40,7 +40,6 @@ export function TransferCreate() {
         </section>
       ) : (
         <TransferEditor
-          idPrefix="transfer"
           initial={{ amount: '', ...chooseDefaultAccounts(offered), date: todayInPanama(), description: '' }}
           accounts={offered}
           save={(transfer) => createTransfer(transfer, csrfToken)}

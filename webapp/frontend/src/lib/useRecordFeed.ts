@@ -1,38 +1,42 @@
 import { useCallback, useState } from 'react'
-import { useLoaded, type Loaded } from './useLoaded'
 import { useSessionEnd } from './useSessionEnd'
+import { useLoaded, type Loaded } from './useLoaded'
 
-/** One page of a list, as the API sends it. */
-export interface Page<Item> {
-  items: Item[]
+/** One page of a list of records, newest first. */
+export interface RecordPage<Record> {
+  records: Record[]
   total: number
   nextPage: number | null
-}
-
-export interface PagedFeed<Item> {
-  items: Item[]
-  total: number
-  nextPage: number | null
-  more: { status: 'idle' } | { status: 'loading' } | { status: 'failed'; message: string }
 }
 
 /** The pages after the first one, which belong to one load of the first page. */
-interface LaterPages<Item> extends PagedFeed<Item> {
-  firstPage: Page<Item>
+interface LaterPages<Record> {
+  firstPage: RecordPage<Record>
+  records: Record[]
+  nextPage: number | null
+  total: number
+  more: { status: 'idle' } | { status: 'loading' } | { status: 'failed'; message: string }
+}
+
+export interface RecordFeed<Record> {
+  records: Record[]
+  total: number
+  nextPage: number | null
+  more: LaterPages<Record>['more']
 }
 
 /**
- * A list read page by page, newest first. The first page loads like any
- * screen's data (and again when `reloadOn` changes, e.g. a record changed
- * elsewhere); "more" appends the next one without ever showing a record twice.
+ * The User's records of one kind, newest first. The first page loads like any
+ * screen's data (and again when `revision` changes, because one changed
+ * elsewhere); "more" appends the next.
  */
-export function usePagedFeed<Item extends { id: number }>(
-  fetchPage: (page: number) => Promise<Page<Item>>,
-  reloadOn?: unknown,
+export function useRecordFeed<Record extends { id: number }>(
+  load: (page: number) => Promise<RecordPage<Record>>,
+  revision: number,
 ) {
   const endSession = useSessionEnd()
-  const { state, retry } = useLoaded(() => fetchPage(1), reloadOn)
-  const [later, setLater] = useState<LaterPages<Item> | null>(null)
+  const { state, retry } = useLoaded(() => load(1), revision)
+  const [later, setLater] = useState<LaterPages<Record> | null>(null)
 
   const firstPage = state.status === 'ready' ? state.value : null
   // Pages kept from before a reload of the first page no longer line up with it.
@@ -40,9 +44,9 @@ export function usePagedFeed<Item extends { id: number }>(
 
   const showMore = useCallback(async () => {
     if (firstPage === null) return
-    const base: LaterPages<Item> = current ?? {
+    const base: LaterPages<Record> = current ?? {
       firstPage,
-      items: [],
+      records: [],
       nextPage: firstPage.nextPage,
       total: firstPage.total,
       more: { status: 'idle' },
@@ -50,13 +54,13 @@ export function usePagedFeed<Item extends { id: number }>(
     if (base.nextPage === null || base.more.status === 'loading') return
     setLater({ ...base, more: { status: 'loading' } })
     try {
-      const page = await fetchPage(base.nextPage)
+      const page = await load(base.nextPage)
       setLater((now) => {
-        const shown = new Set([...firstPage.items, ...(now?.items ?? [])].map((item) => item.id))
+        const shown = new Set([...firstPage.records, ...(now?.records ?? [])].map((record) => record.id))
         return {
           firstPage,
           // A registration between two pages shifts the offsets; never show a row twice.
-          items: [...(now?.items ?? []), ...page.items.filter((item) => !shown.has(item.id))],
+          records: [...(now?.records ?? []), ...page.records.filter((record) => !shown.has(record.id))],
           nextPage: page.nextPage,
           total: page.total,
           more: { status: 'idle' },
@@ -66,15 +70,15 @@ export function usePagedFeed<Item extends { id: number }>(
       if (endSession(error)) return
       setLater({ ...base, more: { status: 'failed', message: (error as Error).message } })
     }
-  }, [firstPage, current, endSession, fetchPage])
+  }, [firstPage, current, load, endSession])
 
-  const feed: Loaded<PagedFeed<Item>> =
+  const feed: Loaded<RecordFeed<Record>> =
     state.status !== 'ready'
       ? state
       : {
           status: 'ready',
           value: {
-            items: [...state.value.items, ...(current?.items ?? [])],
+            records: [...state.value.records, ...(current?.records ?? [])],
             total: current?.total ?? state.value.total,
             nextPage: current ? current.nextPage : state.value.nextPage,
             more: current?.more ?? { status: 'idle' },

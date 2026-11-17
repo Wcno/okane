@@ -58,6 +58,12 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(transferRow(page, 'Ahorro de noviembre')).toBeVisible()
     await expectScreenQuality(page, `transfers-list-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
 
+    // The list keeps its create action once it has records.
+    await page.getByRole('link', { name: 'Registrar transferencia' }).click()
+    await expect(page).toHaveURL(/\/transfers\/create$/)
+    await page.goBack()
+    await expect(transferRow(page, 'Ahorro de noviembre')).toBeVisible()
+
     // Correcting the amount moves both Balances; the total of the Balances never changes.
     await transferRow(page, 'Ahorro de noviembre').click()
     await expect(page.getByLabel('Monto')).toHaveValue('250.00')
@@ -347,7 +353,7 @@ test.describe('on a phone', () => {
       [...link.querySelectorAll('span')].some((span) => span.scrollWidth > span.clientWidth + 1),
     )
     expect(clipped).toBe(false)
-    expect((await page.getByRole('link', { name: 'Nueva transferencia' }).boundingBox())?.height).toBeGreaterThanOrEqual(44)
+    expect((await page.getByRole('link', { name: 'Registrar transferencia' }).boundingBox())?.height).toBeGreaterThanOrEqual(44)
     expect(await noOverflow(page)).toBe(true)
 
     await row.click()

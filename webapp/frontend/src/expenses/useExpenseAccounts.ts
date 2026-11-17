@@ -1,7 +1,7 @@
 import { listAccounts } from '../accounts/api'
+import { offeredAccounts } from '../accounts/presentation'
 import { useLoaded } from '../lib/useLoaded'
 import { lastUsedAccountId } from './api'
-import { offeredAccounts } from './presentation'
 
 export function useExpenseAccounts() {
   return useLoaded(async () => {

@@ -1,19 +1,15 @@
-import { ArrowLeftRight, Plus } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { ArrowLeftRight } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import type { Account } from '../accounts/api'
 import { useAccounts } from '../accounts/useAccounts'
-import { smallSecondaryButtonClassName } from '../components/buttons'
-import { MoreFooter } from '../components/screen/MoreFooter'
+import { DayFeed } from '../components/record/DayFeed'
 import { RecordRow } from '../components/screen/RecordRow'
-import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
+import { EmptyState, NoticeBanner, Pending, ScreenHeader } from '../components/screen/Screen'
 import { TransferChip } from '../components/transfers/TransferChip'
-import { todayInPanama } from '../lib/dates'
-import { dayHeading, groupByDay } from '../lib/days'
 import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
-import type { PagedFeed } from '../lib/usePagedFeed'
 import type { Transfer } from '../transfers/api'
-import { NEEDS_TWO_ACCOUNTS, describeTransfer, offeredAccounts } from '../transfers/presentation'
+import { NEEDS_TWO_ACCOUNTS, describeTransfer, transferAccounts } from '../transfers/presentation'
 import { useTransferFeed } from '../transfers/useTransferFeed'
 
 const rowId = (transfer: Transfer) => `transfer-${transfer.id}`
@@ -34,45 +30,6 @@ function Row({ transfer, accounts }: { transfer: Transfer; accounts: Map<number,
   )
 }
 
-function Feed({
-  feed,
-  accounts,
-  canRegister,
-  showMore,
-}: {
-  feed: PagedFeed<Transfer>
-  accounts: Account[]
-  canRegister: boolean
-  showMore: () => void
-}) {
-  const today = todayInPanama()
-  const byId = new Map(accounts.map((account) => [account.id, account]))
-
-  return (
-    <div className="max-w-[44rem] space-y-4 lg:space-y-5">
-      {canRegister && (
-        <Link to="/transfers/create" className={smallSecondaryButtonClassName}>
-          <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
-          Nueva transferencia
-        </Link>
-      )}
-      {groupByDay(feed.items).map((group) => (
-        <section key={group.date} aria-labelledby={`day-${group.date}`} className={cardClassName}>
-          <h2 id={`day-${group.date}`} className="text-[1rem] font-medium text-ink-2">
-            {dayHeading(group.date, today)}
-          </h2>
-          <ul className="mt-3 divide-y divide-line">
-            {group.items.map((transfer) => (
-              <Row key={transfer.id} transfer={transfer} accounts={byId} />
-            ))}
-          </ul>
-        </section>
-      ))}
-      <MoreFooter feed={feed} noun="transferencias" rowId={rowId} showMore={showMore} />
-    </div>
-  )
-}
-
 /** The User's Transfers, newest first under a heading for each day. */
 export function Transfers() {
   const { state, retry, showMore } = useTransferFeed()
@@ -80,17 +37,23 @@ export function Transfers() {
   const location = useLocation()
   const notice = noticeFrom(location.state)
   const known = accounts.state.status === 'ready' ? accounts.state.value : []
-  const canRegister = accounts.state.status !== 'ready' || offeredAccounts(known).length >= 2
+  const byId = new Map(known.map((account) => [account.id, account]))
+  const canRegister = accounts.state.status !== 'ready' || transferAccounts(known).length >= 2
+  const create = { to: '/transfers/create', label: 'Registrar transferencia' }
 
   return (
     <>
-      <ScreenHeader title="Transferencias" intro="El dinero que moviste entre tus Cuentas, del más reciente al más antiguo." />
+      <ScreenHeader
+        title="Transferencias"
+        intro="El dinero que moviste entre tus Cuentas, del más reciente al más antiguo."
+        action={canRegister && state.status === 'ready' && state.value.records.length > 0 ? create : undefined}
+      />
 
       <NoticeBanner notice={notice} className="max-w-[44rem]" />
 
       {state.status !== 'ready' ? (
         <Pending state={state} retry={retry} loading="Cargando tus transferencias…" />
-      ) : state.value.items.length === 0 ? (
+      ) : state.value.records.length === 0 ? (
         <EmptyState
           icon={ArrowLeftRight}
           title="Aún no registras transferencias"
@@ -106,7 +69,13 @@ export function Transfers() {
           }
         />
       ) : (
-        <Feed feed={state.value} accounts={known} canRegister={canRegister} showMore={showMore} />
+        <DayFeed
+          feed={state.value}
+          showMore={showMore}
+          rowId={rowId}
+          row={(transfer) => <Row key={transfer.id} transfer={transfer} accounts={byId} />}
+          countText={(shown, total) => `Mostrando ${shown} de ${total} transferencias.`}
+        />
       )}
     </>
   )

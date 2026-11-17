@@ -43,7 +43,7 @@ describe('validateTransfer', () => {
   it('accepts a complete Transfer and trims the description', () => {
     expect(check({ amount: ' 250,5 ', description: '  Ahorro ' })).toEqual({
       ok: true,
-      input: {
+      value: {
         amount: '250.50',
         sourceAccountId: 1,
         destinationAccountId: 2,

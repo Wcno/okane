@@ -1,51 +1,8 @@
 import type { Account } from '../../accounts/api'
-import { DESCRIPTION_MAX_LENGTH, type TransferDraft } from '../../transfers/form'
 import type { TransferErrors } from '../../transfers/api'
+import type { TransferDraft } from '../../transfers/form'
 import { accountOptionLabel, isContribution } from '../../transfers/presentation'
-import { AmountField, DateField, DescriptionField, FieldError } from '../screen/fields'
-import { borderClassName, fieldClassName } from '../screen/fieldStyles'
-
-function AccountSelect({
-  id,
-  label,
-  value,
-  accounts,
-  errors,
-  describedBy,
-  onChange,
-}: {
-  id: string
-  label: string
-  value: number | null
-  accounts: Account[]
-  errors?: string[]
-  describedBy?: string
-  onChange: (accountId: number) => void
-}) {
-  const described = [errors ? `${id}-error` : undefined, describedBy].filter(Boolean).join(' ')
-  return (
-    <div className="min-w-0">
-      <label htmlFor={id} className="text-[0.9rem] font-medium text-ink-2">
-        {label}
-      </label>
-      <select
-        id={id}
-        value={value ?? ''}
-        onChange={(event) => onChange(Number(event.target.value))}
-        aria-invalid={Boolean(errors)}
-        aria-describedby={described || undefined}
-        className={`${fieldClassName} ${borderClassName(Boolean(errors))} mt-1.5`}
-      >
-        {accounts.map((account) => (
-          <option key={account.id} value={account.id}>
-            {accountOptionLabel(account)}
-          </option>
-        ))}
-      </select>
-      <FieldError id={`${id}-error`} errors={errors} />
-    </div>
-  )
-}
+import { AccountField, AmountField, DateField, DescriptionField, FieldError } from '../record/RecordFields'
 
 /** The fields of a Transfer: amount, the two Accounts, date and description. */
 export function TransferFields({
@@ -66,6 +23,7 @@ export function TransferFields({
   accountNote?: string
 }) {
   const id = (name: string) => `${idPrefix}-${name}`
+  const shared = { idPrefix, draft, onChange, errors }
   const destination = accounts.find((account) => account.id === draft.destinationAccountId)
   const startOfRecords = [draft.sourceAccountId, draft.destinationAccountId]
     .map((accountId) => accounts.find((account) => account.id === accountId)?.openingDate)
@@ -75,31 +33,34 @@ export function TransferFields({
 
   return (
     <>
-      <AmountField
-        id={id('amount')}
-        value={draft.amount}
-        onChange={(amount) => onChange({ amount })}
-        errors={errors.amount}
-      />
+      <AmountField {...shared} />
 
       <div className="space-y-4">
-        <AccountSelect
-          id={id('source')}
-          label="Sale de"
-          value={draft.sourceAccountId}
-          accounts={accounts}
-          errors={errors.sourceAccountId}
-          onChange={(sourceAccountId) => onChange({ sourceAccountId })}
-        />
-        <AccountSelect
-          id={id('destination')}
-          label="Llega a"
-          value={draft.destinationAccountId}
-          accounts={accounts}
-          errors={errors.destinationAccountId}
-          describedBy={id('contribution')}
-          onChange={(destinationAccountId) => onChange({ destinationAccountId })}
-        />
+        <div>
+          <AccountField
+            id={id('source')}
+            label="Sale de"
+            value={draft.sourceAccountId}
+            accounts={accounts}
+            errors={errors.sourceAccountId}
+            optionLabel={accountOptionLabel}
+            onChange={(sourceAccountId) => onChange({ sourceAccountId })}
+          />
+          <FieldError id={id('source-error')} errors={errors.sourceAccountId} />
+        </div>
+        <div>
+          <AccountField
+            id={id('destination')}
+            label="Llega a"
+            value={draft.destinationAccountId}
+            accounts={accounts}
+            errors={errors.destinationAccountId}
+            describedBy={id('contribution')}
+            optionLabel={accountOptionLabel}
+            onChange={(destinationAccountId) => onChange({ destinationAccountId })}
+          />
+          <FieldError id={id('destination-error')} errors={errors.destinationAccountId} />
+        </div>
         {/* Always in the page, so a screen reader hears the hint when it appears; empty, it takes no room. */}
         <div id={id('contribution')} aria-live="polite">
           {isContribution(destination) && (
@@ -109,25 +70,10 @@ export function TransferFields({
         {accountNote && <p className="-mt-1 text-[0.87rem] text-ink-3">{accountNote}</p>}
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <DateField
-          id={id('date')}
-          value={draft.date}
-          min={startOfRecords}
-          onChange={(date) => onChange({ date })}
-          errors={errors.date}
-        />
-        <FieldError id={id('date-error')} errors={errors.date} />
-      </div>
+      <DateField {...shared} min={startOfRecords} />
+      <FieldError id={id('date-error')} errors={errors.date} />
 
-      <DescriptionField
-        id={id('description')}
-        value={draft.description}
-        maxLength={DESCRIPTION_MAX_LENGTH}
-        placeholder="Ahorro de noviembre, aporte al bróker"
-        onChange={(description) => onChange({ description })}
-        errors={errors.description}
-      />
+      <DescriptionField {...shared} placeholder="Ahorro de noviembre, aporte al bróker" />
     </>
   )
 }

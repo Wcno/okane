@@ -1,5 +1,5 @@
 import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
-import type { Page } from '../lib/usePagedFeed'
+import type { RecordPage } from '../lib/useRecordFeed'
 
 /** A Transfer as api-service describes it. The amount stays a decimal string. */
 export interface Transfer {
@@ -58,12 +58,12 @@ const FORM_FIELDS: Record<string, TransferField> = {
   description: 'description',
 }
 
-export async function listTransfers(page: number): Promise<Page<Transfer>> {
+export async function listTransfers(page: number): Promise<RecordPage<Transfer>> {
   const body = await readJson<{ results: TransferBody[]; total: number; next_page: number | null }>(
     `/api/transfers?page_size=${TRANSFERS_PAGE_SIZE}&page=${page}`,
     { failed: LIST_FAILED },
   )
-  return { items: body.results.map(toTransfer), total: body.total, nextPage: body.next_page }
+  return { records: body.results.map(toTransfer), total: body.total, nextPage: body.next_page }
 }
 
 /** One Transfer; throws NotFoundError when it is not the User's or no longer exists. */

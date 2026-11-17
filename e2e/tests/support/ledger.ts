@@ -47,6 +47,19 @@ export async function createExpense(request: APIRequestContext, fields: ExpenseF
   return (await response.json()) as { id: number }
 }
 
+interface IncomeFields {
+  account_id: number
+  amount?: string
+  date?: string
+  description?: string
+}
+
+export async function createIncome(request: APIRequestContext, fields: IncomeFields) {
+  const response = await send(request, 'POST', '/api/incomes', { amount: '10.00', ...fields })
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number }
+}
+
 interface TransferFields {
   source_account_id: number
   destination_account_id: number

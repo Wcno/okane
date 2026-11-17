@@ -2,9 +2,8 @@ import type { ReactNode, Ref } from 'react'
 import type { Account } from '../../accounts/api'
 import { categories } from '../../data/categories'
 import type { ExpenseErrors } from '../../expenses/api'
-import { DESCRIPTION_MAX_LENGTH, type ExpenseDraft } from '../../expenses/form'
-import { AmountField, DateField, DescriptionField, FieldError } from '../screen/fields'
-import { borderClassName, fieldClassName } from '../screen/fieldStyles'
+import type { ExpenseDraft } from '../../expenses/form'
+import { AccountAndDateFields, AmountField, DescriptionField, FieldError } from '../record/RecordFields'
 import { CategoryChip } from './CategoryChip'
 
 /**
@@ -34,19 +33,10 @@ export function ExpenseFields({
   accountNote?: string
 }) {
   const id = (name: string) => `${idPrefix}-${name}`
-  const chosenAccount = accounts.find((account) => account.id === draft.accountId)
-  const accountNoteId = accountNote ? id('account-note') : undefined
-  const accountDescribedBy = [errors.accountId ? id('account-error') : undefined, accountNoteId].filter(Boolean).join(' ')
 
   return (
     <>
-      <AmountField
-        id={id('amount')}
-        value={draft.amount}
-        onChange={(amount) => onChange({ amount })}
-        errors={errors.amount}
-        inputRef={amountRef}
-      />
+      <AmountField idPrefix={idPrefix} draft={draft} onChange={onChange} errors={errors} amountRef={amountRef} />
 
       <fieldset aria-describedby={errors.categoryId ? id('category-error') : undefined}>
         <legend className="text-[0.9rem] font-medium text-ink-2">Categoría</legend>
@@ -84,50 +74,21 @@ export function ExpenseFields({
         <div aria-live="polite">{hint}</div>
       </fieldset>
 
-      <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 min-[420px]:gap-3">
-        <div className="min-w-0">
-          <label htmlFor={id('account')} className="text-[0.9rem] font-medium text-ink-2">
-            Cuenta
-          </label>
-          <select
-            id={id('account')}
-            value={draft.accountId ?? ''}
-            onChange={(event) => onChange({ accountId: Number(event.target.value) })}
-            aria-invalid={Boolean(errors.accountId)}
-            aria-describedby={accountDescribedBy || undefined}
-            className={`${fieldClassName} ${borderClassName(Boolean(errors.accountId))} mt-1.5`}
-          >
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-                {account.archivedAt !== null && ' (archivada)'}
-              </option>
-            ))}
-          </select>
-        </div>
-        <DateField
-          id={id('date')}
-          value={draft.date}
-          min={chosenAccount?.openingDate}
-          onChange={(date) => onChange({ date })}
-          errors={errors.date}
-        />
-      </div>
-      {accountNote && (
-        <p id={accountNoteId} className="-mt-1 text-[0.87rem] text-ink-3">
-          {accountNote}
-        </p>
-      )}
-      <FieldError id={id('account-error')} errors={errors.accountId} />
-      <FieldError id={id('date-error')} errors={errors.date} />
+      <AccountAndDateFields
+        idPrefix={idPrefix}
+        draft={draft}
+        onChange={onChange}
+        errors={errors}
+        accounts={accounts}
+        accountNote={accountNote}
+      />
 
       <DescriptionField
-        id={id('description')}
-        value={draft.description}
-        maxLength={DESCRIPTION_MAX_LENGTH}
+        idPrefix={idPrefix}
+        draft={draft}
+        onChange={onChange}
+        errors={errors}
         placeholder="Supermercado, taxi, farmacia"
-        onChange={(description) => onChange({ description })}
-        errors={errors.description}
       />
     </>
   )

@@ -6,7 +6,7 @@ import type { Transfer } from './api'
 export const transfersBack = { to: '/transfers', label: 'Transferencias' }
 
 /** Accounts that can take a Transfer: any type, not archived. `keep` stay even if archived. */
-export function offeredAccounts(accounts: Account[], keep: number[] = []): Account[] {
+export function transferAccounts(accounts: Account[], keep: number[] = []): Account[] {
   return accounts.filter((account) => keep.includes(account.id) || account.archivedAt === null)
 }
 

@@ -49,4 +49,3 @@ describe('parsePositiveAmount', () => {
     expect(parsePositiveAmount('9999999999999')).toEqual({ error: 'too-large' })
   })
 })
-

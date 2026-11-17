@@ -4,10 +4,7 @@ import { useRecordForm } from '../lib/useRecordForm'
 import type { Expense, ExpenseField, ExpenseInput } from './api'
 import { validateExpense, type ExpenseDraft } from './form'
 
-/** The date is checked against the Account's start, so changing the Account re-judges it. */
-const affectedBy = (patch: Partial<ExpenseDraft>): ExpenseField[] => ('accountId' in patch ? ['date'] : [])
-
-/** The form that registers or corrects an Expense. */
+/** The form that registers or corrects an Expense; the Expense is checked in the browser before it is sent. */
 export function useExpenseForm({
   initial,
   accounts,
@@ -23,9 +20,9 @@ export function useExpenseForm({
     initial,
     validate: (draft) => {
       const checked = validateExpense(draft, { accounts })
-      return checked.ok ? { ok: true, input: checked.expense } : checked
+      return checked.ok ? { ok: true, value: checked.expense } : checked
     },
-    affectedBy,
+    dateDependsOn: ['accountId'],
     save,
     onSaved,
   })

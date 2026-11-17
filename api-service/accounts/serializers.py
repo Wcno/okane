@@ -36,6 +36,15 @@ def messages(message, *codes):
     return dict.fromkeys(codes, message)
 
 
+class StrictIntegerField(serializers.IntegerField):
+    """A JSON integer: not a string, a float or a boolean."""
+
+    def to_internal_value(self, data):
+        if isinstance(data, bool) or not isinstance(data, int):
+            self.fail("invalid")
+        return super().to_internal_value(data)
+
+
 class DecimalStringField(serializers.DecimalField):
     """A decimal sent as a plain string, never as a binary floating point number."""
 

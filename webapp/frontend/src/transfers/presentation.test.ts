@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Account } from '../accounts/api'
-import { savedNotice } from './notices'
-import { describeTransfer, offeredAccounts } from './presentation'
+import { savedTransferNotice } from './notices'
+import { describeTransfer, transferAccounts } from './presentation'
 import type { Transfer } from './api'
 
 const account = (id: number, fields: Partial<Account> = {}): Account => ({
@@ -27,7 +27,7 @@ const transfer = (fields: Partial<Transfer> = {}): Transfer => ({
   ...fields,
 })
 
-describe('offeredAccounts', () => {
+describe('transferAccounts', () => {
   it('offers every type that is not archived, investment included', () => {
     const accounts = [
       account(1),
@@ -36,13 +36,13 @@ describe('offeredAccounts', () => {
       account(4, { archivedAt: '2026-11-10T00:00:00Z' }),
     ]
 
-    expect(offeredAccounts(accounts).map((item) => item.id)).toEqual([1, 2, 3])
+    expect(transferAccounts(accounts).map((item) => item.id)).toEqual([1, 2, 3])
   })
 
   it('keeps the archived Accounts a Transfer already has when editing it', () => {
     const accounts = [account(1), account(4, { archivedAt: '2026-11-10T00:00:00Z' })]
 
-    expect(offeredAccounts(accounts, [4]).map((item) => item.id)).toEqual([1, 4])
+    expect(transferAccounts(accounts, [4]).map((item) => item.id)).toEqual([1, 4])
   })
 })
 
@@ -75,16 +75,16 @@ describe('savedNotice', () => {
   const broker = { name: 'Bróker', balance: '1250.00', type: 'investment' as const }
 
   it('confirms a Transfer and both Balances', () => {
-    expect(savedNotice('created', { amount: '250.00' }, source, savings)).toBe(
+    expect(savedTransferNotice('created', { amount: '250.00' }, [source, savings])).toBe(
       'Registraste una transferencia de $250.00 de Corriente a Ahorro. Saldo de Corriente: $750.00. Saldo de Ahorro: $550.00.',
     )
   })
 
   it('calls a Transfer into an investment Account an aporte', () => {
-    expect(savedNotice('created', { amount: '250.00' }, source, broker)).toContain('Registraste un aporte de $250.00')
+    expect(savedTransferNotice('created', { amount: '250.00' }, [source, broker])).toContain('Registraste un aporte de $250.00')
   })
 
   it('still confirms when the Balances could not be read', () => {
-    expect(savedNotice('deleted', { amount: '250.00' }, undefined, undefined)).toBe('Eliminaste una transferencia de $250.00.')
+    expect(savedTransferNotice('deleted', { amount: '250.00' }, [undefined, undefined])).toBe('Eliminaste una transferencia de $250.00.')
   })
 })

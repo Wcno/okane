@@ -5,7 +5,7 @@ import { ScreenHeader } from '../components/screen/Screen'
 import { OneTransferScreen } from '../components/transfers/OneTransferScreen'
 import { TransferEditor } from '../components/transfers/TransferEditor'
 import { updateTransfer, type Transfer } from '../transfers/api'
-import { offeredAccounts, transfersBack } from '../transfers/presentation'
+import { transferAccounts, transfersBack } from '../transfers/presentation'
 import { useAfterTransferChange } from '../transfers/useAfterTransferChange'
 
 function EditForm({ transfer, accounts }: { transfer: Transfer; accounts: Account[] }) {
@@ -18,7 +18,6 @@ function EditForm({ transfer, accounts }: { transfer: Transfer; accounts: Accoun
     <>
       <ScreenHeader title="Editar transferencia" back={transfersBack} />
       <TransferEditor
-        idPrefix="transfer"
         initial={{
           amount: transfer.amount,
           sourceAccountId: transfer.sourceAccountId,
@@ -26,7 +25,7 @@ function EditForm({ transfer, accounts }: { transfer: Transfer; accounts: Accoun
           date: transfer.date,
           description: transfer.description,
         }}
-        accounts={offeredAccounts(accounts, kept)}
+        accounts={transferAccounts(accounts, kept)}
         save={(input) => updateTransfer(transfer.id, input, csrfToken)}
         onSaved={(saved) => afterChange('updated', saved)}
         submitLabel="Guardar cambios"

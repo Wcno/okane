@@ -136,6 +136,10 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `GET /api/transfers/{id}` devuelve una Transferencia del Usuario, con la misma
   forma que el listado, para abrir sus pantallas de edición y eliminación desde
   un enlace; la de otro Usuario responde `404`.
+- Cada Cuenta de `GET /api/accounts` incluye `net_contribution`: en una Cuenta de
+  inversión, su Saldo inicial más las Transferencias que entran menos las que
+  salen; en las demás, `null`. Una Transferencia entre dos Cuentas de inversión
+  no cambia la suma de sus Aportes netos.
 - Un Gasto lleva monto, Categoría, Cuenta y fecha. La descripción es opcional y
   admite hasta 140 caracteres. `PUT /api/expenses/{id}` reemplaza el Gasto
   completo y exige la fecha: no asume hoy como `POST`. Un monto de más de 12
@@ -145,6 +149,9 @@ los Saldos iniciales y el Rendimiento mensual está en el
   se rechaza, igual que registrar uno nuevo en ella.
 - Un identificador de Gasto o de Cuenta que no es del Usuario responde `404`, y
   ese `404` prevalece sobre la validación del resto de los campos.
+- `GET /api/incomes/{id}` devuelve un Ingreso del Usuario, para abrir sus
+  pantallas de edición y eliminación desde un enlace; el identificador de otro
+  Usuario responde `404`.
 
 ## Pagos recurrentes
 

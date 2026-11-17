@@ -44,7 +44,7 @@ describe('listTransfers', () => {
       .mockResolvedValue(json(200, { results: [received], total: 51, page: 1, page_size: 50, next_page: 2 }))
     vi.stubGlobal('fetch', fetch)
 
-    await expect(listTransfers(1)).resolves.toEqual({ items: [transfer], total: 51, nextPage: 2 })
+    await expect(listTransfers(1)).resolves.toEqual({ records: [transfer], total: 51, nextPage: 2 })
     expect(fetch.mock.calls[0][0]).toBe('/api/transfers?page_size=50&page=1')
   })
 

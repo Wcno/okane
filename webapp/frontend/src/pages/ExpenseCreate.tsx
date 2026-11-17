@@ -1,11 +1,10 @@
-import { Wallet } from 'lucide-react'
 import { useSignedInUser } from '../auth/context'
 import { ExpenseEditor } from '../components/expenses/ExpenseEditor'
-import { NeedsAnAccount } from '../components/expenses/NeedsAnAccount'
-import { Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
+import { NeedsAnAccountCard } from '../components/record/NeedsAnAccount'
+import { Pending, ScreenHeader } from '../components/screen/Screen'
 import { createExpense } from '../expenses/api'
 import { chooseDefaultAccount } from '../expenses/form'
-import { expensesBack } from '../expenses/presentation'
+import { NEEDS_AN_ACCOUNT, expensesBack } from '../expenses/presentation'
 import { useAfterExpenseChange } from '../expenses/useAfterExpenseChange'
 import { useExpenseAccounts } from '../expenses/useExpenseAccounts'
 import { todayInPanama } from '../lib/dates'
@@ -26,13 +25,7 @@ export function ExpenseCreate() {
       {state.status !== 'ready' ? (
         <Pending state={state} retry={retry} loading="Cargando tus Cuentas…" />
       ) : state.value.accounts.length === 0 ? (
-        <section className={`${cardClassName} max-w-[34rem]`}>
-          <span className="grid size-11 place-items-center rounded-xl bg-surface-2 text-ink-2">
-            <Wallet size={20} aria-hidden="true" />
-          </span>
-          <h2 className="mt-4 mb-2 text-[1.2rem] font-semibold tracking-[-0.01em]">Primero necesitas una Cuenta</h2>
-          <NeedsAnAccount />
-        </section>
+        <NeedsAnAccountCard text={NEEDS_AN_ACCOUNT} />
       ) : (
         <ExpenseEditor
           idPrefix="expense"

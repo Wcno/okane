@@ -12,10 +12,13 @@ export function ScreenHeader({
   title,
   intro,
   back,
+  action,
 }: {
   title: string
   intro?: ReactNode
   back?: { to: string; label: string }
+  /** The create action of a list: it stays at the top right of the screen while the list has records. */
+  action?: { to: string; label: string }
 }) {
   return (
     <header className="mb-5 lg:mb-7 lg:pr-48">
@@ -28,7 +31,18 @@ export function ScreenHeader({
           {back.label}
         </Link>
       )}
-      <h1 className="text-[1.65rem] font-semibold leading-tight tracking-[-0.025em] lg:text-[1.95rem]">{title}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h1 className="text-[1.65rem] font-semibold leading-tight tracking-[-0.025em] lg:text-[1.95rem]">{title}</h1>
+        {action && (
+          <Link
+            to={action.to}
+            className="inline-flex h-[44px] shrink-0 items-center gap-2 rounded-full bg-primary pl-3.5 pr-4.5 text-[0.95rem] font-semibold text-on-primary transition-transform duration-150 hover:-translate-y-px active:scale-[0.98]"
+          >
+            <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
+            {action.label}
+          </Link>
+        )}
+      </div>
       {intro && <p className="mt-1 max-w-[60ch] text-ink-2">{intro}</p>}
     </header>
   )
