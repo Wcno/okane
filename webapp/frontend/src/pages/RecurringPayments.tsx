@@ -30,14 +30,13 @@ interface Names {
 function PendingRow({ occurrence, names }: { occurrence: RecurringPaymentOccurrence; names: Names }) {
   const title = names.rule(occurrence)
   const account = names.account(occurrence.accountId)
-  const status = STATUS_LABELS[occurrence.status]
   const due = dueText(occurrence)
 
   return (
     <RecordRow
       id={`occurrence-${occurrence.id}`}
       to={`/recurring-payments/occurrences/${occurrence.id}/confirm`}
-      label={`Revisar pago ${title}, ${formatMoney(occurrence.amount)}, ${status.toLowerCase()}, ${due.toLowerCase()}`}
+      action="Revisar pago"
       icon={<CategoryChip categoryId={occurrence.categoryId} />}
       title={title}
       details={[due, account].filter(Boolean).join(' · ')}
@@ -106,7 +105,7 @@ function Rules({ rules, accounts }: { rules: RecurringPayment[]; accounts: Accou
                 <RecordRow
                   key={rule.id}
                   to={`/recurring-payments/${rule.id}/edit`}
-                  label={`Editar pago recurrente ${title}, ${formatMoney(rule.amount)}`}
+                  action="Editar pago recurrente"
                   icon={<CategoryChip categoryId={rule.categoryId} />}
                   title={title}
                   details={details}
@@ -151,7 +150,7 @@ export function RecurringPayments() {
         intro="Reserva cada mes el dinero de tus pagos fijos. El gasto se registra cuando confirmas que lo pagaste."
         action={
           state.status === 'ready' && state.value.length > 0 && canCreate
-            ? { to: '/recurring-payments/create', label: 'Nuevo pago' }
+            ? { to: '/recurring-payments/create', label: 'Nuevo pago recurrente', shortLabel: 'Nuevo' }
             : undefined
         }
       />

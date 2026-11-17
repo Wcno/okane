@@ -186,6 +186,12 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Editar o borrar el Gasto confirmado aplica las reglas de Gastos sin reabrir la
   reserva ni borrar su resolución original. La interfaz advierte este efecto y
   conserva el vínculo de auditoría incluso tras el borrado del Gasto.
+- Cada Gasto del API de Gastos (lista, lectura y respuestas de escritura) lleva
+  `recurring_payment_occurrence_id`: la ocurrencia confirmada de la que nació,
+  o `null` si se registró a mano. Es de solo lectura y se ignora al enviarlo.
+  Las pantallas de editar y eliminar ese Gasto muestran el aviso: "Este gasto
+  viene de un pago recurrente confirmado. Cambiarlo (o Eliminarlo) no reabre la
+  reserva ni cambia su resolución."
 - `GET /api/recurring-payments` pagina las reglas y las devuelve con
   `id`, `description`, `amount`, `account_id`, `category_id`, `day_of_month`,
   `start_date`, `status` (`active`, o `deleted` si una regla eliminada aún tiene

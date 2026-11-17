@@ -9,6 +9,7 @@ const expense = (id: number, date: string): Expense => ({
   accountId: 1,
   date,
   description: '',
+  recurringPaymentOccurrenceId: null,
 })
 
 describe('describeExpense', () => {
