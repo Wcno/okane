@@ -7,7 +7,7 @@ import { todayInPanama } from '../../lib/dates'
 import { CategoryChip } from './CategoryChip'
 
 const fieldClassName =
-  'h-11 w-full rounded-xl border bg-surface px-3.5 text-[1rem] text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/15'
+  'h-[44px] w-full rounded-xl border bg-surface px-3.5 text-[1rem] text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/15'
 
 const borderClassName = (invalid: boolean) =>
   invalid ? 'border-critical' : 'border-line-strong hover:border-ink-3 focus-visible:border-ink'
@@ -84,8 +84,7 @@ export function ExpenseFields({
 
       <fieldset aria-describedby={errors.categoryId ? id('category-error') : undefined}>
         <legend className="text-[0.9rem] font-medium text-ink-2">Categoría</legend>
-        {/* As many columns as keep the longest name whole (Entretenimiento needs about 165px); a narrow screen gets one. */}
-        <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-1.5">
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
           {categories.map((option) => {
             const selected = draft.categoryId === option.id
             return (

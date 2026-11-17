@@ -23,7 +23,7 @@ export function TextField({ id, label, hint, errors, ...input }: TextFieldProps)
         id={id}
         aria-invalid={Boolean(errors)}
         aria-describedby={describedBy}
-        className={`mt-1.5 h-11 w-full rounded-xl border bg-surface px-3.5 text-[1rem] text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/15 ${
+        className={`mt-1.5 h-[44px] w-full rounded-xl border bg-surface px-3.5 text-[1rem] text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/15 ${
           errors ? 'border-critical' : 'border-line-strong hover:border-ink-3 focus-visible:border-ink'
         }`}
         {...input}
