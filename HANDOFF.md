@@ -20,6 +20,14 @@ Partners are not on any of these tickets (confirmed by the user 2026-11-16).
   Pause after #8 for the user's UI sign-off, since #15, #17 and #9 reuse its list and form patterns.
 - Workers stop and report before editing `docs/contratos.md`, `docs/spec.md`, `docs/matrices.md` or adding an endpoint missing from `docs/matrices.md`.
 
+## Decisions for #8 (user, 2026-11-16)
+
+- Approved contract additions: `GET /api/expenses/{id}` and an additive `last_used_account_id` in the `GET /api/expenses` envelope, documented in `docs/matrices.md` and `docs/contratos.md` in the #8 PR.
+- Expenses list: day-grouped feed (Hoy / Ayer / date), newest first, "Mostrar más", no filters or totals. #15 and later lists copy it.
+- Quick-register keeps the demo Restante hint until #9 ("keep it until 9 and then implement it"). #9 must replace it with real Budgets.
+- Fixed Categories are integer ids 1-8 in code (Vivienda=1 ... Otros=8); #20 seeds a table with the same ids.
+- Edit or delete on an archived Account is allowed while the Account is unchanged; moving into an archived or investment Account is rejected.
+
 ## State
 
 | Ticket | Base | Branch / PR | Status |
