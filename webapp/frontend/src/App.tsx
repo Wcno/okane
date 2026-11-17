@@ -15,6 +15,7 @@ import { ForgotPassword } from './pages/ForgotPassword'
 import { Login } from './pages/Login'
 import { Logout } from './pages/Logout'
 import { Menu } from './pages/Menu'
+import { UserDelete } from './pages/UserDelete'
 import { Register } from './pages/Register'
 import { ResetPassword } from './pages/ResetPassword'
 import { UnderConstruction } from './pages/UnderConstruction'
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/expenses/:id/edit" element={<ExpenseEdit />} />
             <Route path="/expenses/:id/delete" element={<ExpenseDelete />} />
             <Route path="/profile/change-password" element={<ChangePassword />} />
+            <Route path="/profile/delete" element={<UserDelete />} />
             <Route path="*" element={<UnderConstruction />} />
           </Route>
         </Route>

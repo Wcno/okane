@@ -1,3 +1,4 @@
+import { write as send, type Outcome } from '../lib/http'
 import type { Credentials, CredentialsMode, FormErrors, PasswordChange } from './validation'
 
 export interface SessionUser {
@@ -150,4 +151,20 @@ export async function endSession(csrfToken: string): Promise<void> {
     const errors = await readErrors(response)
     throw new AuthRequestError(errors.form?.[0] ?? SERVER_FAILED)
   }
+}
+
+const API_SERVICE_DOWN =
+  'No pudimos borrar tus datos porque el servicio financiero no responde. No se eliminó nada: inténtalo de nuevo en un momento.'
+
+/** Deletes the User and their financial data; webapp keeps the User unless api-service confirms. */
+export function deleteUser(password: string, csrfToken: string): Promise<Outcome<void, 'password'>> {
+  return send({
+    method: 'DELETE',
+    path: '/users/me',
+    csrfToken,
+    body: { password },
+    fields: { password: 'password' },
+    unavailable: API_SERVICE_DOWN,
+    read: async () => undefined,
+  })
 }

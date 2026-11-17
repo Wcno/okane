@@ -8,6 +8,7 @@ import {
   PiggyBank,
   ReceiptText,
   Repeat,
+  UserX,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
@@ -57,6 +58,8 @@ export const navigationGroups: NavigationGroup[] = [
 
 /** Reached from the User's own block of the sidebar and of Menú, not from the sections. */
 export const changePassword: Destination = { path: '/profile/change-password', name: 'Cambiar contraseña', icon: KeyRound }
+
+export const deleteUser: Destination = { path: '/profile/delete', name: 'Eliminar usuario', icon: UserX }
 
 export const allDestinations =navigationGroups.flatMap((group) => group.destinations)
 
