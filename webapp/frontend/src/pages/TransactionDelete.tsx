@@ -5,8 +5,7 @@ import { TradeChip } from '../components/investments/TradeChip'
 import { ConfirmCard, RecordSummary } from '../components/screen/ConfirmCard'
 import { ScreenHeader } from '../components/screen/Screen'
 import { deleteTrade, type Transaction } from '../investments/api'
-import { describeTransaction, nouns, transactionsBack } from '../investments/presentation'
-import { netCash } from '../investments/form'
+import { cashMoved, describeTransaction, nouns, transactionsBack } from '../investments/presentation'
 import { useAfterTradeChange } from '../investments/useAfterTradeChange'
 import { formatMoney } from '../lib/money'
 
@@ -18,7 +17,7 @@ function Confirmation({ transaction, accounts }: { transaction: Transaction; acc
   const kindNoun = nouns[transaction.type]
   // Deleting a purchase gives its cash back to the Account; deleting a sale or a Dividend takes the cash it returned.
   const direction = transaction.type === 'buy' ? 'subirá' : 'bajará'
-  const moved = transaction.type === 'dividend' ? transaction.cashAmount : netCash(transaction.type, transaction.cashAmount, transaction.commission)
+  const moved = cashMoved(transaction)
 
   return (
     <>
@@ -29,7 +28,7 @@ function Confirmation({ transaction, accounts }: { transaction: Transaction; acc
             icon={<TradeChip kind={transaction.type} />}
             title={title}
             details={details}
-            amount={transaction.cashAmount}
+            amount={cashMoved(transaction)}
           />
         }
         message={
