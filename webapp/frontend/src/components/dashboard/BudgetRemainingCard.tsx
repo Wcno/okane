@@ -63,7 +63,7 @@ function BudgetMeter({ line, committed }: { line: BudgetLine; committed: number 
   )
 }
 
-function Row({ line, highlight }: { line: BudgetLine; highlight: string }) {
+function Row({ line }: { line: BudgetLine }) {
   const category = categoryByName(line.category)
   const Icon = category.icon
   const committed = committedByCategory(line.category)
@@ -74,7 +74,7 @@ function Row({ line, highlight }: { line: BudgetLine; highlight: string }) {
   return (
     <li
       style={{ '--tone': category.tone } as CSSProperties}
-      className={`-mx-2 flex items-start gap-3.5 rounded-2xl px-2 py-3 ${highlight}`}
+      className="-mx-2 flex items-start gap-3.5 rounded-2xl px-2 py-3"
     >
       <span className="mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl bg-[color-mix(in_oklab,var(--tone)_15%,transparent)] text-(--tone)">
         <Icon size={19} aria-hidden="true" />
@@ -114,7 +114,7 @@ function Row({ line, highlight }: { line: BudgetLine; highlight: string }) {
 
 /** Remaining Budget per Category, including committed payments. */
 export function BudgetRemainingCard() {
-  const { state, recentCategory, registrationCount } = useData()
+  const { state } = useData()
   const budgeted = sum(state.budgets.map((line) => line.budget ?? 0))
 
   return (
@@ -128,17 +128,7 @@ export function BudgetRemainingCard() {
       </p>
       <ul className="mt-3">
         {state.budgets.map((line) => (
-          <Row
-            key={line.category}
-            line={line}
-            highlight={
-              line.category === recentCategory
-                ? registrationCount % 2 === 0
-                  ? 'recent-row-a'
-                  : 'recent-row-b'
-                : ''
-            }
-          />
+          <Row key={line.category} line={line} />
         ))}
       </ul>
     </Card>

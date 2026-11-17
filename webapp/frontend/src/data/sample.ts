@@ -41,7 +41,7 @@ export interface NetWorthPoint {
   investmentReturn: number
 }
 
-/** The sample figures the Panel is built from; only the Budgets move while an Expense is registered (data/sampleRemaining.ts). */
+/** The sample figures the Panel is built from, until its own ticket reads api-service. */
 export interface DemoState {
   accounts: Account[]
   budgets: BudgetLine[]

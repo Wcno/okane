@@ -96,7 +96,7 @@ test('the quick form proposes the last Account used, saves for real and lowers i
   await expect(sheet.getByLabel('Monto')).toBeFocused()
   await sheet.getByLabel('Monto').fill('5')
   await sheet.getByText('Transporte', { exact: true }).click()
-  await expect(sheet.getByText(/Transporte quedará excedida/)).toBeVisible()
+  await expect(sheet.getByText('Transporte no tiene Presupuesto este mes; el gasto se registra igual.')).toBeVisible()
   await sheet.getByRole('button', { name: /Registrar gasto/ }).click()
 
   await expect(sheet).toBeHidden()
