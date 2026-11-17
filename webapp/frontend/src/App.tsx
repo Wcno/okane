@@ -9,6 +9,10 @@ import { BudgetCreate } from './pages/BudgetCreate'
 import { BudgetDelete } from './pages/BudgetDelete'
 import { BudgetEdit } from './pages/BudgetEdit'
 import { Budgets } from './pages/Budgets'
+import { Categories } from './pages/Categories'
+import { CategoryArchive } from './pages/CategoryArchive'
+import { CategoryCreate } from './pages/CategoryCreate'
+import { CategoryEdit } from './pages/CategoryEdit'
 import { ChangePassword } from './pages/ChangePassword'
 import { Dashboard } from './pages/Dashboard'
 import { ExpenseCreate } from './pages/ExpenseCreate'
@@ -96,6 +100,10 @@ export default function App() {
             <Route path="/budgets/create" element={<BudgetCreate />} />
             <Route path="/budgets/:id/edit" element={<BudgetEdit />} />
             <Route path="/budgets/:id/delete" element={<BudgetDelete />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/categories/create" element={<CategoryCreate />} />
+            <Route path="/categories/:id/edit" element={<CategoryEdit />} />
+            <Route path="/categories/:id/archive" element={<CategoryArchive />} />
             <Route path="/recurring-payments" element={<RecurringPayments />} />
             <Route path="/recurring-payments/create" element={<RecurringPaymentCreate />} />
             <Route path="/recurring-payments/occurrences/:id/confirm" element={<OccurrenceConfirm />} />

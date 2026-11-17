@@ -213,6 +213,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 | Crear categoría | Sí | `POST /api/categories` | `categories` | api-service, api-db | N3 |
 | Editar categoría | Sí | `PUT /api/categories/{id}` | `categories` | api-service, api-db | N3 |
 | Archivar categoría | Sí | `POST /api/categories/{id}/archive` | `categories` | api-service, api-db | N3 |
+| Eliminar categoría (archiva si tiene registros) | Sí | `DELETE /api/categories/{id}` | `categories` | api-service, api-db | N3 |
 
 ### Gestión de presupuestos
 
@@ -330,7 +331,7 @@ tipados, permisos y respuestas se detallan en [contratos.md](contratos.md).
 
 No existen tablas de saldos ni de posiciones: ambos se calculan a partir de lo registrado ([ADR 0002](adr/0002-el-saldo-se-deriva-de-los-movimientos.md)). Por eso varios casos originales leen más tablas que la que lista su fila; la columna "BD" conserva la tabla principal, como en la Asignación 5.
 
-Mientras `categories` no exista (nivel 3), las Categorías son un catálogo fijo definido por el sistema.
+Cada Usuario tiene sus propias Categorías en `categories`: parte de una copia del catálogo inicial de ocho (Vivienda, Alimentación, Transporte, Servicios, Salud, Entretenimiento, Educación y Otros) y puede renombrar, archivar o eliminar cualquiera de ellas, además de crear las suyas. Las Categorías se identifican por un `id` propio de cada Usuario, nunca por un número compartido. Eliminar una Categoría sin Gastos, Presupuestos ni Pagos recurrentes la borra; si tiene registros, se archiva y conserva su historial.
 
 Los Precios de referencia manuales son propios de cada Usuario; la identidad
 de un Activo distingue proveedor y mercado además del símbolo. Las Cuentas

@@ -1,6 +1,6 @@
 import type { Account } from '../accounts/api'
 import { balanceSentence } from '../accounts/presentation'
-import { categoryById } from '../data/categories'
+import { categoryById } from '../categories/catalog'
 import { formatMoney } from '../lib/money'
 import { changeVerbs, type RecordChange } from '../lib/recordChange'
 import type { Expense } from './api'

@@ -6,7 +6,16 @@ from django.test import TestCase, override_settings, tag
 
 TODAY = datetime.date(2026, 11, 16)
 
-HOUSING, FOOD, TRANSPORT, UTILITIES, HEALTH, ENTERTAINMENT, EDUCATION, OTHER = range(1, 9)
+
+
+class InitialCategory:
+    """One of the User 1's initial Categories, by key: ids are per User, so tests ask for them."""
+
+    def __init__(self, key):
+        self.key = key
+
+    def __get__(self, test, owner):
+        return test.initial_category(self.key) if test else self
 
 
 @tag("database")
@@ -18,6 +27,24 @@ class ExpenseApiTestCase(TestCase):
         clock = mock.patch("accounts.clock.today", return_value=TODAY)
         clock.start()
         self.addCleanup(clock.stop)
+
+    HOUSING = InitialCategory("housing")
+    FOOD = InitialCategory("food")
+    TRANSPORT = InitialCategory("transport")
+    UTILITIES = InitialCategory("utilities")
+    HEALTH = InitialCategory("health")
+    ENTERTAINMENT = InitialCategory("entertainment")
+    EDUCATION = InitialCategory("education")
+    OTHER = InitialCategory("other")
+
+    def initial_ids(self, user=1):
+        """The ids of the User's initial Categories, in catalog order."""
+        listed = self.call("GET", "/api/categories", user=user).json()["results"]
+        return [item["id"] for item in listed if item["key"]]
+
+    def initial_category(self, key, user=1):
+        listed = self.call("GET", "/api/categories", user=user).json()["results"]
+        return next(item["id"] for item in listed if item["key"] == key)
 
     def call(self, method, path, data=None, user=1):
         return self.client.generic(
@@ -51,7 +78,8 @@ class ExpenseApiTestCase(TestCase):
         return next(item for item in listed if item["id"] == account["id"])["balance"]
 
     def register(self, account, user=1, **fields):
-        body = {"amount": "12.50", "category_id": FOOD, "account_id": account["id"], **fields}
+        category_id = self.initial_category("food", user=user)
+        body = {"amount": "12.50", "category_id": category_id, "account_id": account["id"], **fields}
         return self.call("POST", "/api/expenses", body, user=user)
 
     def registered(self, account, user=1, **fields):
@@ -103,7 +131,7 @@ class RegisterExpenseTests(ExpenseApiTestCase):
             {
                 "id": created["id"],
                 "amount": "12.50",
-                "category_id": FOOD,
+                "category_id": self.FOOD,
                 "account_id": account["id"],
                 "date": "2026-11-16",
                 "description": "Supermercado",
@@ -124,7 +152,7 @@ class RegisterExpenseTests(ExpenseApiTestCase):
         # Budgets arrive with another ticket; a Category without one still takes Expenses.
         account = self.account()
 
-        for category in (HOUSING, OTHER):
+        for category in (self.HOUSING, self.OTHER):
             self.registered(account, category_id=category)
 
         self.assertEqual(self.balance(account), "975.00")
@@ -212,17 +240,17 @@ class ExpenseValidationTests(ExpenseApiTestCase):
 
         self.assertEqual(self.balance(account), "-1000000000000.00")
 
-    def test_rejects_a_category_outside_the_fixed_catalog(self):
+    def test_rejects_a_category_that_is_not_the_users(self):
         account = self.account()
 
-        for category in (0, 9, -1, "2", 2.0, True, None, "Alimentación"):
+        for category in (0, 99999, -1, "2", 2.0, True, None, "Alimentación"):
             with self.subTest(category=category):
                 self.assert_rejected(self.register(account, category_id=category), "category_id")
 
     def test_accepts_each_of_the_eight_categories(self):
         account = self.account()
 
-        for category in range(1, 9):
+        for category in self.initial_ids():
             self.registered(account, category_id=category)
 
         self.assertEqual(self.balance(account), "900.00")
@@ -506,11 +534,11 @@ class EditExpenseTests(ExpenseApiTestCase):
         account = self.account(opening_date="2026-01-01")
         expense = self.registered(account)
 
-        response = self.put(expense, category_id=HEALTH, date="2026-10-02", description="Farmacia")
+        response = self.put(expense, category_id=self.HEALTH, date="2026-10-02", description="Farmacia")
 
         self.assertEqual(
             response.json(),
-            {**expense, "category_id": HEALTH, "date": "2026-10-02", "description": "Farmacia"},
+            {**expense, "category_id": self.HEALTH, "date": "2026-10-02", "description": "Farmacia"},
         )
 
     def test_changing_the_account_moves_the_effect_and_updates_both_balances(self):
@@ -592,7 +620,7 @@ class EditExpenseTests(ExpenseApiTestCase):
         expense = self.registered(account, amount="100.00")
 
         self.assert_rejected(self.put(expense, amount="0"), "amount")
-        self.assert_rejected(self.put(expense, category_id=9), "category_id")
+        self.assert_rejected(self.put(expense, category_id=99999), "category_id")
 
         self.assertEqual(self.call("GET", f"/api/expenses/{expense['id']}").json(), expense)
         self.assertEqual(self.balance(account), "900.00")

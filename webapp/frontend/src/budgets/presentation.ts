@@ -1,4 +1,4 @@
-import { categoryById } from '../data/categories'
+import { categoryById } from '../categories/catalog'
 import { sumAmounts } from '../lib/decimal'
 import { formatMoney } from '../lib/money'
 import type { Budget, BudgetLine } from './api'

@@ -7,7 +7,7 @@ from rest_framework.exceptions import NotFound
 from accounts import clock
 from accounts.models import Account
 from accounts.serializers import DecimalStringField, amount_messages, messages
-from expenses.categories import CATEGORY_IDS
+from categories import rules as category_rules
 from expenses.models import DESCRIPTION_MAX_LENGTH
 from expenses.serializers import (
     ACCOUNT_IS_ARCHIVED,
@@ -16,6 +16,7 @@ from expenses.serializers import (
     AMOUNT_INVALID,
     AMOUNT_TOO_LARGE,
     CATEGORY_INVALID,
+    CATEGORY_IS_ARCHIVED,
     DESCRIPTION_NOT_TEXT,
     DESCRIPTION_TOO_LONG,
     StrictIntegerField,
@@ -66,9 +67,13 @@ class RecurringPaymentSerializer(serializers.Serializer):
     )
 
     def validate_category_id(self, value):
-        if value not in CATEGORY_IDS:
-            raise serializers.ValidationError(CATEGORY_INVALID)
-        return value
+        return category_rules.assignable(
+            self.context["user_id"],
+            value,
+            unchanged_from=self.instance.category_id if self.instance else None,
+            invalid=CATEGORY_INVALID,
+            archived=CATEGORY_IS_ARCHIVED,
+        )
 
     def validate_account_id(self, value):
         account = (

@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { expect, expectScreenQuality, test } from './support/qa.js'
-import { createAccount, createBudget, createExpense } from './support/ledger.js'
+import { archiveCategory, createAccount, createBudget, createCategory, createExpense } from './support/ledger.js'
 import { signUp } from './support/session.js'
 
 /** Fails the test if the page ever opens a browser alert, confirm or prompt. */
@@ -56,7 +56,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(budgetRow(page, 'Alimentación')).toContainText('$300.00')
 
     // An Expense lowers the Restante; one that passes the Budget is accepted and the Category is exceeded.
-    await createExpense(page.request, { account_id: account.id, amount: '120.00', category_id: 2 })
+    await createExpense(page.request, { account_id: account.id, amount: '120.00', category: 'food' })
     await page.goto('/budgets')
     await expect(budgetRow(page, 'Alimentación')).toContainText('Gastado $120.00 de $300.00')
     await expect(budgetRow(page, 'Alimentación')).toContainText('$180.00')
@@ -93,7 +93,7 @@ test('the quick form reads the real Restante and accepts an Expense that exceeds
   forbidBrowserDialogs(page)
   await signUp(page.request)
   await createAccount(page.request, { name: 'Cuenta corriente', opening_balance: '1000.00' })
-  await createBudget(page.request, { month: thisMonth(), category_id: 2, amount: '300.00' })
+  await createBudget(page.request, { month: thisMonth(), category: 'food', amount: '300.00' })
 
   await page.goto('/dashboard')
   await openQuickForm(page)
@@ -128,7 +128,7 @@ test('a past month can be browsed and its Budget edited', async ({ page }) => {
   await signUp(page.request)
   await createAccount(page.request)
   const previous = shiftMonth(thisMonth(), -1)
-  await createBudget(page.request, { month: previous, category_id: 4, amount: '80.00' })
+  await createBudget(page.request, { month: previous, category: 'utilities', amount: '80.00' })
 
   await page.goto('/budgets')
   await page.getByRole('link', { name: 'Mes anterior' }).click()
@@ -142,9 +142,41 @@ test('a past month can be browsed and its Budget edited', async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/budgets\\?month=${previous}`))
   await expect(budgetRow(page, 'Servicios')).toContainText('$95.00')
 
+  // The current month copied the old amount on first access; editing the past month leaves it alone.
   await page.getByRole('link', { name: 'Mes actual' }).click()
-  await expect(page.getByRole('heading', { name: `Sin Presupuestos en ${monthLabel(thisMonth())}` })).toBeVisible()
+  await expect(budgetRow(page, 'Servicios')).toContainText('$80.00')
 })
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`a new month starts with the previous Budgets in ${colorScheme}`, async ({ page }) => {
+    forbidBrowserDialogs(page)
+    await page.emulateMedia({ colorScheme })
+    await signUp(page.request)
+    const previous = shiftMonth(thisMonth(), -1)
+    const archived = await createCategory(page.request, 'Suscripciones')
+    await createBudget(page.request, { month: previous, category: 'utilities', amount: '80.50' })
+    await createBudget(page.request, { month: previous, category: 'food', amount: '300.00' })
+    await createBudget(page.request, { month: previous, category_id: archived.id, amount: '15.00' })
+    await archiveCategory(page.request, archived.id)
+
+    await page.goto('/budgets')
+    await expect(budgetRow(page, 'Servicios')).toContainText('$80.50')
+    await expect(budgetRow(page, 'Alimentación')).toContainText('$300.00')
+    await expect(page.getByText('Suscripciones')).toBeHidden()
+    await expectScreenQuality(page, `budgets-copied-${colorScheme}`)
+
+    // Deleting every copied Budget leaves the month empty on the next visit.
+    for (const category of ['Servicios', 'Alimentación']) {
+      await budgetRow(page, category).click()
+      await page.getByRole('link', { name: 'Eliminar este Presupuesto' }).click()
+      await page.getByRole('button', { name: 'Eliminar Presupuesto' }).click()
+      await expect(page.getByRole('status').filter({ hasText: 'Eliminaste' })).toBeVisible()
+    }
+    await page.goto('/budgets')
+    await expect(page.getByRole('heading', { name: `Sin Presupuestos en ${monthLabel(thisMonth())}` })).toBeVisible()
+    await expectScreenQuality(page, `budgets-copied-then-emptied-${colorScheme}`)
+  })
+}
 
 test('a second Budget for the same Category and month is refused and the draft stays', async ({
   page,
@@ -154,7 +186,7 @@ test('a second Budget for the same Category and month is refused and the draft s
   expectedProblems.push(/status of 409/)
   forbidBrowserDialogs(page)
   await signUp(page.request)
-  await createBudget(page.request, { month: thisMonth(), category_id: 5, amount: '60.00' })
+  await createBudget(page.request, { month: thisMonth(), category: 'health', amount: '60.00' })
 
   await page.goto('/budgets/create')
   await page.getByText('Salud', { exact: true }).click()

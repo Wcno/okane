@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useSignedInUser } from '../auth/context'
 import { bottomBarDestinations, navigationGroups, profileDestinations, type Destination } from '../navigation'
 import { useData } from '../state/context'
+import { CatalogGate } from './CatalogGate'
 import { ExpenseForm } from './ExpenseForm'
 import { Logo } from './Logo'
 import { SignOutButton } from './SignOutButton'
@@ -191,7 +192,9 @@ export function AppShell() {
           </button>
         </div>
         <main className="mx-auto w-full max-w-[1180px] px-4 pb-28 pt-2 sm:px-6 lg:px-10 lg:pb-14 lg:pt-9">
-          <Outlet />
+          <CatalogGate>
+            <Outlet />
+          </CatalogGate>
         </main>
       </div>
       <BottomBar />

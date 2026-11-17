@@ -35,6 +35,7 @@ TWELVE_DATA_API_KEY = os.environ.get("TWELVE_DATA_API_KEY", "")
 INSTALLED_APPS = [
     "rest_framework",
     "health",
+    "categories",
     "accounts",
     "expenses",
     "investments",

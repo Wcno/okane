@@ -6,6 +6,7 @@ from accounts import views as accounts
 from erasure import views as erasure
 from budgets import views as budgets
 from dashboard import views as dashboard
+from categories import views as categories
 from expenses import views as expenses
 from health.views import health
 from investments import views as investments
@@ -27,6 +28,9 @@ urlpatterns = [
     path("api/v1/accounts", require_safe(accounts.account_collection)),
     path("api/v1/budgets", require_safe(budgets.budget_collection)),
     path("api/v1/movements", public_api.movement_collection),
+    path("api/categories", categories.category_collection),
+    path("api/categories/<int:category_id>", categories.category_detail),
+    path("api/categories/<int:category_id>/archive", categories.category_archive),
     path("api/expenses", expenses.expense_collection),
     path("api/expenses/<int:expense_id>", expenses.expense_detail),
     path("api/investments/assets/search", investments.asset_search),

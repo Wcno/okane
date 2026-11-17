@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { categoryById } from '../../data/categories'
+import { categoryById } from '../../categories/catalog'
 
 /** The tinted icon chip of a Category (DESIGN.md, Ficha de Categoría); the name always sits beside it. */
 export function CategoryChip({ categoryId, size = 40 }: { categoryId: number; size?: 36 | 40 }) {

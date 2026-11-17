@@ -14,6 +14,19 @@ async function csrfToken(request: APIRequestContext) {
   return (await session.json()).csrf_token as string
 }
 
+/** The initial Categories every User starts with, by the key api-service gives their copy. */
+export type InitialCategory = 'housing' | 'food' | 'transport' | 'utilities' | 'health' | 'entertainment' | 'education' | 'other'
+
+/** The id of one of the User's initial Categories; ids are per User, so they are looked up. */
+export async function categoryIdOf(request: APIRequestContext, key: InitialCategory) {
+  const response = await request.get('/api/categories')
+  expect(response.status()).toBe(200)
+  const { results } = (await response.json()) as { results: { id: number; key: string | null }[] }
+  const found = results.find((category) => category.key === key)
+  expect(found, `the initial Category ${key}`).toBeDefined()
+  return found!.id
+}
+
 async function send(request: APIRequestContext, method: 'POST' | 'PUT' | 'DELETE', path: string, data?: unknown) {
   return request.fetch(path, {
     method,
@@ -38,25 +51,29 @@ export async function createAccount(request: APIRequestContext, fields: AccountF
 interface ExpenseFields {
   account_id: number
   amount?: string
+  category?: InitialCategory
   category_id?: number
   date?: string
   description?: string
 }
 
-export async function createExpense(request: APIRequestContext, fields: ExpenseFields) {
-  const response = await send(request, 'POST', '/api/expenses', { amount: '10.00', category_id: 2, ...fields })
+export async function createExpense(request: APIRequestContext, { category = 'food', ...fields }: ExpenseFields) {
+  const category_id = fields.category_id ?? (await categoryIdOf(request, category))
+  const response = await send(request, 'POST', '/api/expenses', { amount: '10.00', ...fields, category_id })
   expect(response.status()).toBe(201)
   return (await response.json()) as { id: number }
 }
 
 interface BudgetFields {
+  category?: InitialCategory
   category_id?: number
   month: string
   amount?: string
 }
 
-export async function createBudget(request: APIRequestContext, fields: BudgetFields) {
-  const response = await send(request, 'POST', '/api/budgets', { category_id: 2, amount: '300.00', ...fields })
+export async function createBudget(request: APIRequestContext, { category = 'food', ...fields }: BudgetFields) {
+  const category_id = fields.category_id ?? (await categoryIdOf(request, category))
+  const response = await send(request, 'POST', '/api/budgets', { amount: '300.00', ...fields, category_id })
   expect(response.status()).toBe(201)
   return (await response.json()) as { id: number }
 }
@@ -134,18 +151,23 @@ interface RecurringPaymentFields {
   account_id: number
   start_date: string
   amount?: string
+  category?: InitialCategory
   category_id?: number
   day_of_month?: number
   description?: string
 }
 
 /** Creates a rule; api-service materializes its occurrences the next time the User reads financial data. */
-export async function createRecurringPayment(request: APIRequestContext, fields: RecurringPaymentFields) {
+export async function createRecurringPayment(
+  request: APIRequestContext,
+  { category = 'housing', ...fields }: RecurringPaymentFields,
+) {
+  const category_id = fields.category_id ?? (await categoryIdOf(request, category))
   const response = await send(request, 'POST', '/api/recurring-payments', {
     amount: '500.00',
-    category_id: 1,
     day_of_month: 1,
     ...fields,
+    category_id,
   })
   expect(response.status()).toBe(201)
   return (await response.json()) as { id: number }
@@ -154,6 +176,19 @@ export async function createRecurringPayment(request: APIRequestContext, fields:
 /** Sets the User's own Reference Price of an Asset for a day, as the price screen does. */
 export async function setReferencePrice(request: APIRequestContext, assetId: number, value: string, date?: string) {
   const response = await send(request, 'PUT', `/api/investments/assets/${assetId}/price`, { value, date })
+  expect(response.status()).toBe(200)
+}
+
+/** Creates one of the User's own Categories. */
+export async function createCategory(request: APIRequestContext, name: string) {
+  const response = await send(request, 'POST', '/api/categories', { name })
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number; name: string }
+}
+
+/** Archives one of the User's own Categories. */
+export async function archiveCategory(request: APIRequestContext, categoryId: number) {
+  const response = await send(request, 'POST', `/api/categories/${categoryId}/archive`)
   expect(response.status()).toBe(200)
 }
 

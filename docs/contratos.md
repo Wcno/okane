@@ -237,6 +237,35 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Saldo o Disponible negativos se informan, sin bloquear un Gasto válido. No
   existe una opción de Configuración para activar cobros automáticos o bloqueos.
 
+## Categorías
+
+- Cada Usuario tiene sus propias Categorías; sus ids son suyos y no se comparten.
+  Parte de una copia del catálogo inicial (Vivienda, Alimentación, Transporte,
+  Servicios, Salud, Entretenimiento, Educación y Otros) que api-service crea la
+  primera vez que necesita sus Categorías, porque no tiene un evento de registro.
+  Una marca por Usuario evita que el catálogo reaparezca si las elimina todas.
+  La migración que introdujo el modelo copió el catálogo para cada Usuario con
+  registros y reasignó sus Gastos, Presupuestos, reglas y ocurrencias a su copia.
+- `GET /api/categories` devuelve `{results}` sin paginar, archivadas incluidas:
+  `id`, `name`, `key`, `has_records` y `archived_at`. `key` nombra la inicial de
+  la que es copia (`housing`, `food`, `transport`, `utilities`, `health`,
+  `entertainment`, `education`, `other`; fija su icono y tono) y es `null` en las
+  creadas por el Usuario. `GET /api/categories/{id}` devuelve una; la de otro
+  Usuario es `404`.
+- `POST /api/categories` y `PUT /api/categories/{id}` reciben `name` (hasta 40
+  caracteres, único entre las Categorías activas del Usuario sin distinguir
+  mayúsculas); cualquiera puede renombrarse.
+- `DELETE /api/categories/{id}` responde `204` y borra una Categoría sin Gastos,
+  Presupuestos, reglas ni ocurrencias; con registros la archiva y responde `200`
+  con la Categoría, igual que las Cuentas. `POST /api/categories/{id}/archive`
+  archiva sin borrar y es idempotente.
+- Archivar devuelve `409` mientras la Categoría tenga Pagos recurrentes vigentes
+  o reservas pendientes. Las Categorías archivadas se rechazan en Gastos,
+  Presupuestos y Pagos recurrentes nuevos, pero se conservan en los registros
+  que ya las usan, que pueden corregirse sin cambiar de Categoría.
+- `GET /api/budgets` incluye una fila por Categoría activa y por cada archivada
+  que tenga Presupuesto, Gastos o reservas en el mes.
+
 ## Presupuestos y Proyección
 
 - La unicidad del Presupuesto es por Usuario, Categoría y mes. Las Categorías
@@ -262,6 +291,11 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - La inicialización se registra incluso si no hay nada para copiar. Eliminar
   todos los Presupuestos de un mes no vuelve a disparar la copia. Reintentos y
   consultas simultáneas no duplican filas; archivar Categorías las excluye.
+  No hay endpoint propio ni cambia la forma de `GET /api/budgets`: la copia
+  ocurre al listar el mes actual (`month` omitido o igual al mes en America/Panama)
+  o al crear en él un Presupuesto, que lo marca sin copiar. Listar, leer, editar
+  o eliminar otros meses no la dispara. Se copian los montos exactos de las
+  Categorías no archivadas, como filas independientes.
 - La Proyección usa una tasa anual nominal: tasa mensual = anual / 12.
   El aporte hipotético se incorpora al final de cada mes, después del interés.
   Los meses son enteros positivos y el aporte es no negativo. Se redondean solo

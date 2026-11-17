@@ -5,7 +5,7 @@ import { useAfterBudgetChange } from '../budgets/useAfterBudgetChange'
 import { useSignedInUser } from '../auth/context'
 import { BudgetEditor } from '../components/budgets/BudgetEditor'
 import { ScreenHeader } from '../components/screen/Screen'
-import { categories } from '../data/categories'
+import { findCategory, isOffered } from '../categories/catalog'
 import { todayInPanama } from '../lib/dates'
 import { isMonth, monthOf } from '../lib/months'
 
@@ -16,7 +16,8 @@ export function BudgetCreate() {
   const [params] = useSearchParams()
   const asked = params.get('month') ?? ''
   const month = isMonth(asked) ? asked : monthOf(todayInPanama())
-  const category = categories.find((candidate) => String(candidate.id) === params.get('category'))
+  const asking = findCategory(Number(params.get('category')))
+  const category = asking && isOffered(asking) ? asking : undefined
 
   return (
     <>
