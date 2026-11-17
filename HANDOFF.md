@@ -80,12 +80,16 @@ Target 10-20 min per ticket: workers skip self-review; split backend and fronten
 
 ## Next step
 
-Cleared, ready to merge (bottom first): #47 (#8) -> #49 (QA chore) -> #52 (#15, canonical shared record layer) -> #50 (#11). Also #48 (#14) on #47.
-Last fix round (gate findings sent), then clear each:
-- #51 (#16, on #52): Haiku fixing the 390 header clip (shortLabel "Nueva"), StrictIntegerField import, startOfRecords move.
-- #53 (#17, on #52): Sonnet adding `recurring_payment_occurrence_id` + warning; re-merging #52 2f45e6f.
-- #54 (#9, on #53): after #53 pushes, merge it (CategoryField mid-word fix), concurrency test, doc month fix.
-- #55 (#12, on #50): Haiku merging #50 1483057 and using ScreenHeader `action`.
-- #56 (#13, on #50 + #51): Sonnet implementing period Rendimiento with as_of, docs for the price read-one, ScreenHeader, AssetPrice on useRecordForm.
-Not started (time ran out): #18, #20, #25, #10, #22, #23, #24, #21, #30, #31, #32, #19.
-After the round: one seeded Chrome `ui-qa` polish pass on a stack built from the top of the stack, then the user's final UI review on port 8000.
+Cleared (ready): #47 #49 #48 #52 #50 #51 #53 #54 #56 #55 #57 #59 #58 (tickets #8 #14 #15 #11 #16 #17 #9 #13 #12 #23 #18 #10).
+In progress:
+- #61 (#20): per-User Categories pushed (f21c3e2), re-gating.
+- #63 (#25): re-merging #61.
+- #60 (#22): fixes in; CI red only on `conventions` (wip:/merge: commit subjects).
+- #62 (#21): CI running; conventions red too (inherits #60's commits).
+- #64 (#24): gate fixes (contract line, 390 table, chart per DESIGN.md).
+- #65 (#30): finishing per-type routes and nav.
+- #31, #32: building on #65.
+Then #19, then one seeded Chrome polish pass, then the user's UI review.
+
+Known merge issue for the user: `conventions` rejects `wip:` and `merge:` subjects in #53, #60 and branches that merged them. Options: reword via an interactive-free rebase of the chain before merging, or relax the check. Decide at the final review.
+Docs needing the user's OK: docs/spec.md:175, 181, 231 still describe the fixed catalog and sample data.
