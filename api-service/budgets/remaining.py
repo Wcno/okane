@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.db.models import Q, Sum
 
 from budgets.models import Budget
-from expenses.categories import CATEGORY_IDS
+from categories.rules import visible_to
 from expenses.models import Expense
 from recurring_payments import reservations, schedule
 
@@ -37,12 +37,21 @@ def committed_by_category(user_id, month):
 
 
 def represent_month(user_id, month):
-    """One row per Category of the catalog, with or without a Budget."""
+    """One row per Category the User can use, with or without a Budget.
+
+    An archived Category still appears when the month has something of it to show.
+    """
     budgets = {
         budget.category_id: budget for budget in Budget.objects.filter(user_id=user_id, month=month)
     }
     spent = spent_by_category(user_id, month)
     committed = committed_by_category(user_id, month)
+    with_history = budgets.keys() | spent.keys() | committed.keys()
+    category_ids = [
+        category.id
+        for category in visible_to(user_id)
+        if category.archived_at is None or category.id in with_history
+    ]
     return [
         represent_row(
             category_id,
@@ -51,7 +60,7 @@ def represent_month(user_id, month):
             spent.get(category_id, ZERO),
             *committed.get(category_id, (ZERO, ZERO)),
         )
-        for category_id in CATEGORY_IDS
+        for category_id in category_ids
     ]
 
 

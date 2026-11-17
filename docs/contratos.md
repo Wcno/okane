@@ -209,6 +209,24 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Saldo o Disponible negativos se informan, sin bloquear un Gasto válido. No
   existe una opción de Configuración para activar cobros automáticos o bloqueos.
 
+## Categorías
+
+- `GET /api/categories` devuelve `{results}` sin paginar, con el catálogo inicial
+  (ids estables 1 a 8: Vivienda, Alimentación, Transporte, Servicios, Salud,
+  Entretenimiento, Educación, Otros) y las Categorías propias del Usuario,
+  archivadas incluidas: `id`, `name`, `is_custom`, `archived_at`.
+  `GET /api/categories/{id}` devuelve una; otra Categoría ajena es `404`.
+- `POST /api/categories` y `PUT /api/categories/{id}` reciben `name` (hasta 40
+  caracteres, único entre las Categorías activas del Usuario sin distinguir
+  mayúsculas). `POST /api/categories/{id}/archive` archiva y es idempotente.
+  El catálogo inicial no se renombra ni se archiva (`409`).
+- Archivar devuelve `409` mientras la Categoría tenga Pagos recurrentes vigentes
+  o reservas pendientes. Las Categorías archivadas se rechazan en Gastos,
+  Presupuestos y Pagos recurrentes nuevos, pero se conservan en los registros
+  que ya las usan, que pueden corregirse sin cambiar de Categoría.
+- `GET /api/budgets` incluye una fila por Categoría activa y por cada archivada
+  que tenga Presupuesto, Gastos o reservas en el mes.
+
 ## Presupuestos y Proyección
 
 - La unicidad del Presupuesto es por Usuario, Categoría y mes. Las Categorías

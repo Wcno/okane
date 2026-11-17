@@ -1,6 +1,6 @@
 import { CircleAlert } from 'lucide-react'
 import type { CSSProperties } from 'react'
-import { categoryByName } from '../../data/categories'
+import { categoryByName } from '../../categories/catalog'
 import {
   committedByCategory,
   monthlyExpenses,

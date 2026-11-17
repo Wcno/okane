@@ -13,12 +13,13 @@ from accounts.serializers import (
     amount_messages,
     messages,
 )
-from expenses.categories import CATEGORY_IDS
+from categories import rules as category_rules
 from expenses.models import DESCRIPTION_MAX_LENGTH, Expense
 
 AMOUNT_INVALID = "Escribe un monto mayor que cero, con dos decimales como máximo. Ejemplo: 12.50"
 AMOUNT_TOO_LARGE = f"El monto es demasiado grande. El máximo es ${AMOUNT_LIMIT}."
 CATEGORY_INVALID = "Elige la Categoría del gasto."
+CATEGORY_IS_ARCHIVED = "Esta Categoría está archivada y no admite registros nuevos. Elige otra."
 ACCOUNT_REQUIRED = "Elige la Cuenta de la que salió el dinero."
 ACCOUNT_IS_INVESTMENT = "Una Cuenta de inversión no admite Gastos. Elige una Cuenta de gastos o de ahorro."
 ACCOUNT_IS_ARCHIVED = "Esta Cuenta está archivada y no admite registros nuevos. Elige otra."
@@ -71,9 +72,14 @@ class ExpenseSerializer(serializers.Serializer):
         return self.context.get("occurrence_ids", {}).get(expense.id)
 
     def validate_category_id(self, value):
-        if value not in CATEGORY_IDS:
-            raise serializers.ValidationError(CATEGORY_INVALID)
-        return value
+        # Correcting an Expense whose Category was archived since keeps it; choosing it is new.
+        return category_rules.assignable(
+            self.context["user_id"],
+            value,
+            unchanged_from=self.instance.category_id if self.instance else None,
+            invalid=CATEGORY_INVALID,
+            archived=CATEGORY_IS_ARCHIVED,
+        )
 
     def validate_account_id(self, value):
         # Another User's Account is as absent as an unknown one.

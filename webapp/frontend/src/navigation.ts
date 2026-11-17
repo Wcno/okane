@@ -8,6 +8,7 @@ import {
   PiggyBank,
   ReceiptText,
   Repeat,
+  Tags,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
@@ -42,6 +43,7 @@ export const navigationGroups: NavigationGroup[] = [
     title: 'Planificación',
     destinations: [
       budgets,
+      { path: '/categories', name: 'Categorías', icon: Tags },
       { path: '/recurring-payments', name: 'Pagos recurrentes', icon: Repeat },
       { path: '/savings/projection', name: 'Proyección', icon: Calculator },
     ],

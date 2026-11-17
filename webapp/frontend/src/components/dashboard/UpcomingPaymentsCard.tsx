@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { categoryByName } from '../../data/categories'
+import { categoryByName } from '../../categories/catalog'
 import { committed, today, upcomingPayments } from '../../data/sample'
 import { formatMoney } from '../../lib/money'
 import { Card } from './Card'
