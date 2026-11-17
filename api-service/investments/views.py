@@ -12,6 +12,7 @@ from config.rest import paginate
 from investments import quotes
 from investments.models import Asset, InvestmentTransaction, ReferencePrice
 from investments.performance import dashboard_of, performance_of
+from investments.projection import ProjectionSerializer, projection_of
 from investments.positions import (
     MANUAL,
     positions_of,
@@ -119,6 +120,14 @@ def positions(request):
 @api_view(["GET"])
 def dashboard(request):
     return Response(dashboard_of(request.okane_user_id, requested_day(request)))
+
+
+@api_view(["POST"])
+def projection(request):
+    """Compare hypothetical scenarios; nothing is stored."""
+    serializer = ProjectionSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    return Response(projection_of(request.okane_user_id, serializer.validated_data))
 
 
 @api_view(["GET"])
