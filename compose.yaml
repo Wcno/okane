@@ -79,6 +79,7 @@ services:
       DATABASE_NAME: okane_api
       DATABASE_USER: okane_api
       DATABASE_PASSWORD: ${API_DB_PASSWORD:?Set API_DB_PASSWORD in .env}
+      TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
     depends_on:
       api-db:
         condition: service_healthy
@@ -95,6 +96,7 @@ services:
     networks:
       - services
       - api-data
+      - egress
     restart: unless-stopped
 
   api-db:
@@ -118,6 +120,8 @@ services:
 networks:
   # The only network with a route to the host; webapp alone joins it.
   public:
+  # Outbound only, for api-service to reach the quotes service; nothing is published.
+  egress:
   # webapp to api-service.
   services:
     internal: true

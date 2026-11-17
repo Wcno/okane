@@ -41,6 +41,15 @@ class DecimalStringField(serializers.DecimalField):
         return super().to_internal_value(data)
 
 
+class StrictIntegerField(serializers.IntegerField):
+    """A JSON integer: not a string, a float or a boolean."""
+
+    def to_internal_value(self, data):
+        if isinstance(data, bool) or not isinstance(data, int):
+            self.fail("invalid")
+        return super().to_internal_value(data)
+
+
 DECIMAL_ERRORS = ("invalid", "required", "null", "max_digits", "max_decimal_places",
                   "max_whole_digits", "min_value", "max_value")
 

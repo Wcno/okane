@@ -5,7 +5,7 @@ from rest_framework.exceptions import NotFound
 
 from accounts import clock
 from accounts.models import Account
-from accounts.serializers import DECIMAL_ERRORS, DecimalStringField, messages
+from accounts.serializers import DECIMAL_ERRORS, DecimalStringField, StrictIntegerField, messages
 from expenses.categories import CATEGORY_IDS
 from expenses.models import DESCRIPTION_MAX_LENGTH, Expense
 
@@ -18,15 +18,6 @@ DATE_INVALID = "Escribe la fecha del gasto, por ejemplo 2026-11-16."
 DATE_IN_FUTURE = "La fecha no puede ser futura. Elige hoy o un día anterior."
 DATE_BEFORE_ACCOUNT = "La fecha no puede ser anterior al inicio del registro de la Cuenta ({opening_date})."
 DESCRIPTION_TOO_LONG = f"La descripción admite hasta {DESCRIPTION_MAX_LENGTH} caracteres."
-
-
-class StrictIntegerField(serializers.IntegerField):
-    """A JSON integer: not a string, a float or a boolean."""
-
-    def to_internal_value(self, data):
-        if isinstance(data, bool) or not isinstance(data, int):
-            self.fail("invalid")
-        return super().to_internal_value(data)
 
 
 class ExpenseSerializer(serializers.Serializer):

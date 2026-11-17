@@ -27,11 +27,15 @@ ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS", "api-service,localhost,127.0.0.1").s
 # Shared credential that proves a request was built by webapp.
 INTERNAL_SERVICE_KEY = env("INTERNAL_SERVICE_KEY")
 
+# Optional: without it the Asset search offers only Assets the catalog already knows.
+TWELVE_DATA_API_KEY = os.environ.get("TWELVE_DATA_API_KEY", "")
+
 INSTALLED_APPS = [
     "rest_framework",
     "health",
     "accounts",
     "expenses",
+    "investments",
 ]
 
 MIDDLEWARE = [
