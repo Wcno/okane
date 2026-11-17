@@ -1,7 +1,6 @@
 import { Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { searchAssets, type Asset, type AssetSearch } from '../../investments/api'
-import { describeAsset } from '../../investments/presentation'
 import { useSessionEnd } from '../../lib/useSessionEnd'
 
 type Lookup =
@@ -146,7 +145,6 @@ export function AssetPicker({
                   <button
                     type="button"
                     onClick={() => choose(found)}
-                    aria-label={`Elegir ${describeAsset(found)}`}
                     className="flex min-h-[56px] w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors duration-150 hover:bg-surface-2"
                   >
                     <span className="min-w-0 flex-1">

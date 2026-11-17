@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import { createAccount, findAsset, recordTrade } from './support/ledger.js'
+import { expect, expectScreenQuality, test } from './support/qa.js'
 import { signUp } from './support/session.js'
 
 const noOverflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
@@ -44,16 +45,18 @@ for (const [width, height] of [
       await page.goto('/investments/positions')
       await expect(page.getByRole('heading', { name: 'Aún no tienes Posiciones' })).toBeVisible()
       expect(await noOverflow(page)).toBe(true)
+      await expectScreenQuality(page, `investments-positions-empty-${width}-${colorScheme}`)
       await page.getByRole('link', { name: 'Registrar tu primera compra' }).click()
 
       await expect(page).toHaveURL(/\/investments\/transactions\/buy$/)
       await expect(page.getByLabel('Fecha')).toHaveValue(panamaToday())
       // The primary action stays on screen however long the form is.
       await expect(submit(page, 'Registrar compra')).toBeInViewport()
-      await pickAsset(page, 'aapl', /^Elegir AAPL/)
+      await pickAsset(page, 'aapl', /^AAPL/)
       await expect(page.getByRole('button', { name: 'Cambiar el Activo AAPL' })).toBeFocused()
       await fillTrade(page, '2', '100')
       await expect(page.getByText('Saldrá de la Cuenta: $200.00')).toBeVisible()
+      await expectScreenQuality(page, `investments-buy-filled-${width}-${colorScheme}`)
       await expect(submit(page, 'Registrar compra')).toBeInViewport()
       expect(await noOverflow(page)).toBe(true)
       await submit(page, 'Registrar compra').click()
@@ -67,13 +70,15 @@ for (const [width, height] of [
       await expect(row).toContainText('costo promedio $100.00')
       await expect(row).toContainText('$200.00')
       await expect(row).toContainText('100.00 %')
+      await expectScreenQuality(page, `investments-positions-${width}-${colorScheme}`)
       expect(await noOverflow(page)).toBe(true)
 
       await page.getByRole('link', { name: 'Registrar venta' }).click()
       await expect(page).toHaveURL(/\/investments\/transactions\/sell$/)
-      await pickAsset(page, 'aapl', /^Elegir AAPL/)
+      await pickAsset(page, 'aapl', /^AAPL/)
       await fillTrade(page, '1', '150')
       await expect(page.getByText('Volverá a la Cuenta: $150.00')).toBeVisible()
+      await expectScreenQuality(page, `investments-sell-filled-${width}-${colorScheme}`)
       await submit(page, 'Registrar venta').click()
 
       await expect(page.getByRole('status').filter({ hasText: 'Vendiste' })).toHaveText(
@@ -94,9 +99,10 @@ test('a purchase without enough cash warns first and is accepted anyway', async 
   await createAccount(page.request, { name: 'Bróker', type: 'investment', opening_balance: '50.00' })
 
   await page.goto('/investments/transactions/buy')
-  await pickAsset(page, 'msft', /^Elegir MSFT/)
+  await pickAsset(page, 'msft', /^MSFT/)
   await fillTrade(page, '1', '80')
   await expect(page.getByText(/Esta compra supera el efectivo de Bróker \(\$50\.00\)/)).toBeVisible()
+  await expectScreenQuality(page, 'investments-buy-cash-warning')
   await submit(page, 'Registrar compra').click()
 
   await expect(page.getByRole('status').filter({ hasText: 'Compraste' })).toContainText(
@@ -109,12 +115,13 @@ test('fractional units with eight decimals are kept', async ({ page }) => {
   await createAccount(page.request, { name: 'Bróker', type: 'investment', opening_balance: '1000.00' })
 
   await page.goto('/investments/transactions/buy')
-  await pickAsset(page, 'btc', /^Elegir BTC\/USD/)
+  await pickAsset(page, 'btc', /^BTC\/USD/)
   await fillTrade(page, '0.12345678', '40000')
   await expect(page.getByText('Saldrá de la Cuenta: $4,938.27')).toBeVisible()
   await page.getByLabel('Unidades').fill('0.123456789')
   await submit(page, 'Registrar compra').click()
   await expect(page.getByText(/ocho decimales como máximo|8 decimales como máximo/)).toBeVisible()
+  await expectScreenQuality(page, 'investments-buy-ninth-decimal')
   await page.getByLabel('Unidades').fill('0.01234567')
   await expect(page.getByText(/decimales como máximo/)).toHaveCount(0)
   await submit(page, 'Registrar compra').click()
@@ -122,7 +129,9 @@ test('fractional units with eight decimals are kept', async ({ page }) => {
   await expect(page.getByRole('listitem').filter({ hasText: 'BTC/USD' })).toContainText('0.01234567 unidades')
 })
 
-test('selling more units than the Position holds is refused and keeps what was typed', async ({ page }) => {
+test('selling more units than the Position holds is refused and keeps what was typed', async ({ page, expectedProblems }) => {
+  // api-service refuses the sale on purpose, and the browser logs the 400.
+  expectedProblems.push('status of 400')
   forbidBrowserDialogs(page)
   await signUp(page.request)
   const account = await createAccount(page.request, { name: 'Bróker', type: 'investment', opening_balance: '1000.00' })
@@ -130,7 +139,7 @@ test('selling more units than the Position holds is refused and keeps what was t
   await recordTrade(page.request, 'buy', { account_id: account.id, asset_id: asset.id, units: '2', unit_price: '100' })
 
   await page.goto('/investments/transactions/sell')
-  await pickAsset(page, 'aapl', /^Elegir AAPL/)
+  await pickAsset(page, 'aapl', /^AAPL/)
   await fillTrade(page, '3', '120')
   await submit(page, 'Registrar venta').click()
 
@@ -139,6 +148,7 @@ test('selling more units than the Position holds is refused and keeps what was t
   await expect(units).toHaveAttribute('aria-invalid', 'true')
   await expect(units).toBeFocused()
   await expect(units).toHaveValue('3')
+  await expectScreenQuality(page, 'investments-sell-refused')
   await units.fill('2')
   await expect(page.getByText(/No puedes vender/)).toHaveCount(0)
   await submit(page, 'Registrar venta').click()
@@ -156,6 +166,7 @@ test('an empty form names every field that needs a fix and each error clears as 
   await expect(page.getByText('Busca el Activo y elígelo de la lista.')).toBeVisible()
   await expect(page.getByText(/Escribe las unidades mayores que cero/)).toBeVisible()
   await expect(page.getByText(/Escribe el precio por unidad mayor que cero/)).toBeVisible()
+  await expectScreenQuality(page, 'investments-buy-errors')
   await page.getByLabel('Unidades').fill('1')
   await expect(page.getByText(/Escribe las unidades mayores que cero/)).toHaveCount(0)
   await page.getByLabel('Precio por unidad').fill('10')
@@ -180,14 +191,18 @@ test('the search keeps markets apart, explains an empty result and never submits
   await expect(results).toContainText('XTSE')
   await expect(page).toHaveURL(/\/transactions\/buy$/)
   await expect(page.getByText(/Escribe las unidades mayores/)).toHaveCount(0)
+  await expectScreenQuality(page, 'investments-buy-search-results')
 
   await search.fill('zzzz')
   await search.press('Enter')
   await expect(page.getByText(/No encontramos Activos con esa búsqueda/)).toBeVisible()
+  await expectScreenQuality(page, 'investments-buy-search-empty')
   expect(await noOverflow(page)).toBe(true)
 })
 
-test('a search that cannot connect says so and works again on retry', async ({ page }) => {
+test('a search that cannot connect says so and works again on retry', async ({ page, expectedProblems }) => {
+  // The test cuts the connection on purpose.
+  expectedProblems.push('net::ERR_FAILED')
   await signUp(page.request)
   await createAccount(page.request, { name: 'Bróker', type: 'investment' })
   let blocked = true
@@ -197,10 +212,11 @@ test('a search that cannot connect says so and works again on retry', async ({ p
   await page.getByRole('textbox', { name: 'Activo' }).fill('aapl')
   await page.getByRole('button', { name: 'Buscar' }).click()
   await expect(page.getByText('No pudimos conectar con Okane. Revisa tu conexión e inténtalo de nuevo.')).toBeVisible()
+  await expectScreenQuality(page, 'investments-buy-search-failed')
 
   blocked = false
   await page.getByRole('button', { name: 'Buscar' }).click()
-  await expect(page.getByRole('button', { name: /^Elegir AAPL/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^AAPL/ })).toBeVisible()
   await expect(page.getByText('No pudimos conectar con Okane.')).toHaveCount(0)
 })
 
@@ -220,6 +236,7 @@ test('the same Asset in two Accounts is one Position with a weighted average', a
   await expect(rows).toContainText('costo promedio $175.00')
   await expect(rows).toContainText('En 2 Cuentas: Bróker uno 1 · Bróker dos 3')
   await expect(rows).toContainText('precio $200.00 de tu última operación')
+  await expectScreenQuality(page, 'investments-positions-grouped')
 })
 
 test('each share is a portion of the portfolio value', async ({ page }) => {
@@ -234,6 +251,7 @@ test('each share is a portion of the portfolio value', async ({ page }) => {
 
   await expect(page.getByRole('listitem').filter({ hasText: 'AAPL' })).toContainText('75.00 %')
   await expect(page.getByRole('listitem').filter({ hasText: 'MSFT' })).toContainText('25.00 %')
+  await expectScreenQuality(page, 'investments-positions-two-assets')
 })
 
 test('without an investment Account a purchase asks for one first', async ({ page }) => {
@@ -243,17 +261,21 @@ test('without an investment Account a purchase asks for one first', async ({ pag
   await page.goto('/investments/transactions/buy')
 
   await expect(page.getByRole('heading', { name: 'Primero necesitas una Cuenta de inversión' })).toBeVisible()
+  await expectScreenQuality(page, 'investments-buy-needs-account')
   await page.getByRole('link', { name: 'Crear cuenta' }).click()
   await expect(page).toHaveURL(/\/accounts\/create$/)
 })
 
-test('Positions that fail to load can be retried', async ({ page }) => {
+test('Positions that fail to load can be retried', async ({ page, expectedProblems }) => {
+  // The test cuts the connection on purpose.
+  expectedProblems.push('net::ERR_FAILED')
   await signUp(page.request)
   let blocked = true
   await page.route('**/api/investments/positions*', (route) => (blocked ? route.abort() : route.continue()))
 
   await page.goto('/investments/positions')
   await expect(page.getByText('No pudimos conectar con Okane. Revisa tu conexión e inténtalo de nuevo.')).toBeVisible()
+  await expectScreenQuality(page, 'investments-positions-failed')
 
   blocked = false
   await page.getByRole('button', { name: 'Reintentar' }).click()
@@ -271,7 +293,7 @@ test('the controls of the purchase screen are at least 44px tall on a phone', as
 
   const controls = [
     page.getByRole('button', { name: 'Buscar' }),
-    page.getByRole('button', { name: /^Elegir AAPL/ }),
+    page.getByRole('button', { name: /^AAPL/ }),
     page.getByLabel('Unidades'),
     page.getByLabel('Precio por unidad'),
     submit(page, 'Registrar compra'),
