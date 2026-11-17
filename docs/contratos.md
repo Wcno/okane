@@ -133,6 +133,13 @@ los Saldos iniciales y el Rendimiento mensual está en el
   añade a la paginación `last_used_account_id`: la Cuenta del Gasto registrado
   más recientemente por el Usuario, según el orden de registro y no la fecha del
   Gasto, o `null` si no tiene Gastos. El registro rápido la propone al abrirse.
+- `GET /api/transfers/{id}` devuelve una Transferencia del Usuario, con la misma
+  forma que el listado, para abrir sus pantallas de edición y eliminación desde
+  un enlace; la de otro Usuario responde `404`.
+- Cada Cuenta de `GET /api/accounts` incluye `net_contribution`: en una Cuenta de
+  inversión, su Saldo inicial más las Transferencias que entran menos las que
+  salen; en las demás, `null`. Una Transferencia entre dos Cuentas de inversión
+  no cambia la suma de sus Aportes netos.
 - Un Gasto lleva monto, Categoría, Cuenta y fecha. La descripción es opcional y
   admite hasta 140 caracteres. `PUT /api/expenses/{id}` reemplaza el Gasto
   completo y exige la fecha: no asume hoy como `POST`. Un monto de más de 12
@@ -375,6 +382,17 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Solo al completar el borrado se elimina el Usuario, se invalidan sus sesiones
   y sus tokens, se borran preferencias e idempotencia, y se libera su correo.
   Cada nuevo módulo incorpora sus datos a este contrato.
+- El borrado interno es `DELETE /internal/users/me` en `api-service`, fuera de
+  `/api/`: `webapp` nunca lo reenvía desde el navegador y lo llama solo con la
+  credencial y el `X-Okane-User-Id` del Usuario autenticado. Responde `204`
+  también al repetirse. Borra los datos del Usuario y registra su identificador
+  en la misma transacción, bajo un candado por Usuario que espera a las
+  escrituras en curso. Desde entonces toda escritura de ese Usuario en `/api/`
+  responde `409` y no crea nada, y las lecturas devuelven vacío.
+- `webapp` solo elimina al Usuario tras recibir `204`. Si `api-service` no
+  responde o contesta otra cosa, repite la llamada una vez (es idempotente);
+  si sigue sin confirmar, responde `502`, conserva al Usuario y su sesión, y la
+  pantalla permite reintentar.
 
 ## Ejemplos para las pruebas HTTP
 

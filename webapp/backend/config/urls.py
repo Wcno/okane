@@ -7,12 +7,13 @@ from users import views as auth
 
 # Prefixes owned by the backend (docs/matrices.md). A request under one of them
 # is answered by a backend view or with 404, never with the frontend.
-BACKEND_PREFIXES = ("api", "auth", "users", "health")
+BACKEND_PREFIXES = ("api", "auth", "users", "internal", "health")
 CLIENT_SIDE_ROUTE = rf"^(?!(?:{'|'.join(BACKEND_PREFIXES)})(?:/|$))"
 
 urlpatterns = [
     path("health", health),
     path("auth/session", auth.session),
+    path("users/me", auth.delete_me),
     path("auth/register", auth.register),
     path("auth/login", auth.login_view),
     path("auth/logout", auth.logout_view),

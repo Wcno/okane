@@ -23,6 +23,7 @@ export function useIncomeForm({
       const checked = validateIncome(draft, { accounts })
       return checked.ok ? { ok: true, value: checked.income } : checked
     },
+    dateDependsOn: ['accountId'],
     save,
     onSaved,
   })
