@@ -9,7 +9,7 @@ import { FormAlert } from '../components/FormAlert'
 import { primaryButtonClassName, smallSecondaryButtonClassName } from '../components/buttons'
 import { Figure } from '../components/investments/Figures'
 import { ProjectionChart } from '../components/investments/ProjectionChart'
-import { fieldClassName, borderClassName } from '../components/record/RecordFields'
+import { fieldClassName, borderClassName } from '../components/record/fieldStyles'
 import { EmptyState, Pending, ScreenHeader } from '../components/screen/Screen'
 import { TextField } from '../components/TextField'
 import {

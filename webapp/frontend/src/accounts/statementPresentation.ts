@@ -1,4 +1,4 @@
-import { categoryById } from '../data/categories'
+import { categoryById } from '../categories/catalog'
 import { unitsPhrase } from '../investments/presentation'
 import { formatDay } from '../lib/dates'
 import { formatMoney } from '../lib/money'
