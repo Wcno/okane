@@ -80,12 +80,14 @@ Target 10-20 min per ticket: workers skip self-review; split backend and fronten
 
 ## Next step
 
-DONE: all 21 tickets built and every PR cleared and ready (#47-#68). The user merges bottom-up; see each PR's "Stacked on" line.
-Port 8000 serves the integrated app (#68, feat/19-e2e-journeys at 0a15767) from worktree `.claude/worktrees/agent-a9c3d77fb4b426f96`, seeded; the test login is in that worktree's `e2e/.qa-user.json`. The main-branch stack `okane` is stopped with its volumes kept.
-Next: the user's final UI review on port 8000.
+DONE (2026-11-17): every implementation ticket is merged into main and closed; only the spec index #3 stays open.
+- #47 was squash-merged; #48-#63 and #55 merged with conventional merge commits; #56, #57, #58, #60, #62, #64-#68 landed through #70, whose tree is identical to the CI-verified integrated branch.
+- #56, #60, #65, #67 and #68 were closed (not merged) only because GitHub's native stack blocked retargeting; their commits are in main via #70.
+- Merged feature branches deleted; worktrees under .claude/worktrees can be removed.
+- Port 8000 serves the integrated app from worktree agent-a9c3d77fb4b426f96 (same tree as main), seeded; the main checkout's own stack is stopped with its volumes kept.
 
 Open decisions for the user:
-- `conventions` CI fails on `wip:`/`merge:` commit subjects in several branches: reword the stack before merging, or relax the check.
+- `conventions` CI rejects some inner `wip:`/`merge:` commit subjects now in main's history (behind conventional merge commits).
 - docs/spec.md:175, 181, 231, 246 still describe the fixed catalog and sample data.
 - docs/contratos.md lists `description` as a common public-API field, but investment writes have none (400).
 - Archived Categories are read-only (restoring needs a contract change).
