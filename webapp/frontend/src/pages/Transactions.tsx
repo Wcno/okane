@@ -20,6 +20,7 @@ function Row({ transaction, accountName }: { transaction: Transaction; accountNa
     <RecordRow
       id={rowId(transaction)}
       to={`/investments/transactions/${transaction.id}/edit`}
+      action="Editar transacción"
       icon={<TradeChip kind={transaction.type} />}
       title={title}
       details={details}

@@ -1,4 +1,4 @@
-import { expect, expectScreenQuality, knownAxeRules, test } from './support/qa.js'
+import { expect, expectScreenQuality, test } from './support/qa.js'
 import { signUp } from './support/session.js'
 
 const routes = ['/dashboard', '/menu', '/expenses']
@@ -15,8 +15,6 @@ for (const route of routes) {
     await expect(page).toHaveTitle(/Okane/)
     await expect(page.getByRole('main')).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Secciones' }).first()).toBeVisible()
-    await expectScreenQuality(page, `shell${route.replaceAll('/', '-')}`, {
-      skipAxeRules: route === '/dashboard' ? knownAxeRules.balanceFigureLabel : [],
-    })
+    await expectScreenQuality(page, `shell${route.replaceAll('/', '-')}`)
   })
 }

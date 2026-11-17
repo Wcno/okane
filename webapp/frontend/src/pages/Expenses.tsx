@@ -9,7 +9,6 @@ import { EmptyState, NoticeBanner, Pending, ScreenHeader } from '../components/s
 import type { Expense } from '../expenses/api'
 import { NEEDS_AN_ACCOUNT_FOR_EXPENSE, describeExpense } from '../expenses/presentation'
 import { useExpenseFeed } from '../expenses/useExpenseFeed'
-import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
 
 const rowId = (expense: Expense) => `expense-${expense.id}`
@@ -21,7 +20,7 @@ function Row({ expense, accountName }: { expense: Expense; accountName: string }
     <RecordRow
       id={rowId(expense)}
       to={`/expenses/${expense.id}/edit`}
-      label={`Editar gasto ${title}, ${formatMoney(expense.amount)}${accountName && `, ${accountName}`}`}
+      action="Editar gasto"
       icon={<CategoryChip categoryId={expense.categoryId} />}
       title={title}
       details={details}

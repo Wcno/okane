@@ -4,6 +4,7 @@ from accounts import views as accounts
 from expenses import views as expenses
 from health.views import health
 from investments import views as investments
+from transfers import views as transfers
 from incomes import views as incomes
 
 # Paths match the ones webapp exposes, so forwarding never rewrites them.
@@ -19,6 +20,8 @@ urlpatterns = [
     path("api/investments/transactions/sell", investments.sell),
     path("api/investments/transactions/<int:transaction_id>", investments.transaction_detail),
     path("api/investments/positions", investments.positions),
+    path("api/transfers", transfers.transfer_collection),
+    path("api/transfers/<int:transfer_id>", transfers.transfer_detail),
     path("api/incomes", incomes.income_collection),
     path("api/incomes/<int:income_id>", incomes.income_detail),
 ]

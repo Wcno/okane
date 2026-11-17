@@ -13,6 +13,7 @@ from config.rest import paginate
 def represent_all(accounts):
     context = {
         "balances": ledger.balances(accounts),
+        "net_contributions": ledger.net_contributions(accounts),
         "with_records": ledger.accounts_with_records(accounts),
     }
     return AccountSerializer(accounts, many=True, context=context).data
