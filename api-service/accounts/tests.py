@@ -95,6 +95,7 @@ class CreateAccountTests(AccountApiTestCase):
                 "opening_date": "2026-11-01",
                 "annual_interest_rate": None,
                 "balance": "1000.00",
+                "net_contribution": None,
                 "has_records": False,
                 "archived_at": None,
             },

@@ -45,7 +45,7 @@ export type BudgetErrors = FieldErrors<BudgetField>
 const LIST_FAILED = 'Okane no pudo consultar tus Presupuestos. Espera un momento e inténtalo de nuevo.'
 const BUDGET_GONE = 'Este Presupuesto ya no existe. Vuelve a tus Presupuestos para ver la lista al día.'
 
-interface BudgetBody {
+export interface BudgetBody {
   id: number | null
   category_id: number
   month: string
@@ -57,7 +57,7 @@ interface BudgetBody {
   exceeded: boolean
 }
 
-const toLine = (body: BudgetBody): BudgetLine => ({
+export const toLine = (body: BudgetBody): BudgetLine => ({
   id: body.id,
   categoryId: body.category_id,
   month: body.month,

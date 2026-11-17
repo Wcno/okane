@@ -59,6 +59,15 @@ class DecimalStringField(serializers.DecimalField):
         return super().to_internal_value(data)
 
 
+class StrictIntegerField(serializers.IntegerField):
+    """A JSON integer: not a string, a float or a boolean."""
+
+    def to_internal_value(self, data):
+        if isinstance(data, bool) or not isinstance(data, int):
+            self.fail("invalid")
+        return super().to_internal_value(data)
+
+
 TOO_LARGE_CODES = ("max_whole_digits",)
 DECIMAL_ERRORS = (
     "invalid", "required", "null", "max_digits", "max_decimal_places", "min_value", "max_value",
@@ -107,6 +116,7 @@ class AccountSerializer(serializers.ModelSerializer):
     )
     annual_interest_rate = rate_field()
     balance = serializers.SerializerMethodField()
+    net_contribution = serializers.SerializerMethodField()
     has_records = serializers.SerializerMethodField()
 
     class Meta:
@@ -119,6 +129,7 @@ class AccountSerializer(serializers.ModelSerializer):
             "opening_date",
             "annual_interest_rate",
             "balance",
+            "net_contribution",
             "has_records",
             "archived_at",
         ]
@@ -126,6 +137,11 @@ class AccountSerializer(serializers.ModelSerializer):
 
     def get_balance(self, account):
         return f"{self.context['balances'][account.id]:.2f}"
+
+    def get_net_contribution(self, account):
+        """Only an investment Account has one; the other types answer `null`."""
+        contribution = self.context["net_contributions"].get(account.id)
+        return None if contribution is None else f"{contribution:.2f}"
 
     def get_has_records(self, account):
         return account.id in self.context["with_records"]
