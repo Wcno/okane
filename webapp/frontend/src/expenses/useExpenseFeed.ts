@@ -55,7 +55,11 @@ export function useExpenseFeed() {
           ? previous
           : {
               ...previous,
-              expenses: [...previous.expenses, ...page.expenses],
+              // A registration between two pages shifts the offsets; never show a row twice.
+              expenses: [
+                ...previous.expenses,
+                ...page.expenses.filter((next) => !previous.expenses.some((shown) => shown.id === next.id)),
+              ],
               total: page.total,
               nextPage: page.nextPage,
               more: { status: 'idle' },

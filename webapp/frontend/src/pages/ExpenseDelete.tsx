@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import type { Account } from '../accounts/api'
 import { useSignedInUser } from '../auth/context'
 import { primaryButtonClassName, secondaryButtonClassName } from '../components/buttons'
@@ -9,17 +9,15 @@ import { FormAlert } from '../components/FormAlert'
 import { ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { categoryById } from '../data/categories'
 import { deleteExpense, type Expense } from '../expenses/api'
-import { announceExpenseChange } from '../expenses/changes'
-import { currentAccount, savedNotice } from '../expenses/notices'
-import { formatAmount, type ExpensesNotice } from '../expenses/presentation'
+import { expensesBack, formatAmount } from '../expenses/presentation'
+import { useAfterExpenseChange } from '../expenses/useAfterChange'
 import { formatDay } from '../accounts/form'
-import { sumAmounts } from '../lib/decimal'
 import { useWrite } from '../lib/useWrite'
 
 function Confirmation({ expense, accounts }: { expense: Expense; accounts: Account[] }) {
   const { csrfToken } = useSignedInUser()
   const write = useWrite()
-  const navigate = useNavigate()
+  const afterChange = useAfterExpenseChange()
   const [failure, setFailure] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -36,15 +34,12 @@ function Confirmation({ expense, accounts }: { expense: Expense; accounts: Accou
       setFailure(outcome.errors.form?.join(' ') ?? 'No pudimos eliminar el gasto. Inténtalo de nuevo.')
       return
     }
-    const after = await currentAccount(expense.accountId)
-    announceExpenseChange()
-    const notice: ExpensesNotice = { notice: savedNotice('Eliminaste', expense, after) }
-    navigate('/expenses', { state: notice })
+    await afterChange('Eliminaste', expense)
   }
 
   return (
     <>
-      <ScreenHeader title="Eliminar gasto" back={{ to: '/expenses', label: 'Gastos' }} />
+      <ScreenHeader title="Eliminar gasto" back={expensesBack} />
 
       <section className={`${cardClassName} max-w-[34rem]`}>
         <div className="flex items-center gap-3.5 rounded-2xl bg-surface-2 p-3.5">
@@ -63,8 +58,7 @@ function Confirmation({ expense, accounts }: { expense: Expense; accounts: Accou
           {account && (
             <>
               {' '}
-              El Saldo de {account.name} pasará de {formatAmount(account.balance)} a{' '}
-              {formatAmount(sumAmounts([account.balance, expense.amount]))}.
+              El Saldo de {account.name} subirá {formatAmount(expense.amount)}.
             </>
           )}
         </p>

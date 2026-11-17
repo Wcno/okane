@@ -60,7 +60,7 @@ class ExpenseSerializer(serializers.Serializer):
         max_length=DESCRIPTION_MAX_LENGTH,
         required=False,
         allow_blank=True,
-        error_messages={**messages(DESCRIPTION_TOO_LONG, "max_length"), "invalid": DESCRIPTION_TOO_LONG},
+        error_messages=messages(DESCRIPTION_TOO_LONG, "max_length", "invalid", "null"),
     )
 
     def validate_category_id(self, value):

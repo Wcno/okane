@@ -28,6 +28,8 @@ export interface ExpensePage {
 
 const LIST_FAILED = 'Okane no pudo consultar tus gastos. Espera un momento e inténtalo de nuevo.'
 const EXPENSE_GONE = 'Este gasto ya no existe. Vuelve a tus gastos para ver la lista al día.'
+const EXPENSE_OR_ACCOUNT_GONE =
+  'No encontramos este gasto o la Cuenta elegida. Vuelve a tus gastos para ver la lista al día.'
 
 export const PAGE_SIZE = 50
 
@@ -116,7 +118,7 @@ export function updateExpense(id: number, expense: ExpenseInput, csrfToken: stri
     csrfToken,
     body: toBody(expense),
     fields: FORM_FIELDS,
-    gone: EXPENSE_GONE,
+    gone: EXPENSE_OR_ACCOUNT_GONE,
     read: readExpense,
   })
 }

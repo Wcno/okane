@@ -48,3 +48,6 @@ export const isExpensesNotice = (state: unknown): state is ExpensesNotice =>
   typeof state === 'object' && state !== null && typeof (state as ExpensesNotice).notice === 'string'
 
 export const formatAmount = (amount: string) => formatMoney(amount)
+
+/** The way back to the list from the screens of one Expense. */
+export const expensesBack = { to: '/expenses', label: 'Gastos' }

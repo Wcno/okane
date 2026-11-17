@@ -1,5 +1,5 @@
 import { Wallet } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { listAccounts } from '../accounts/api'
 import { todayInPanama } from '../accounts/form'
 import { useSignedInUser } from '../auth/context'
@@ -7,18 +7,15 @@ import { smallSecondaryButtonClassName } from '../components/buttons'
 import { ExpenseEditor } from '../components/expenses/ExpenseEditor'
 import { Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { createExpense, lastUsedAccountId } from '../expenses/api'
-import { announceExpenseChange } from '../expenses/changes'
 import { chooseDefaultAccount } from '../expenses/form'
-import { currentAccount, savedNotice } from '../expenses/notices'
-import { offeredAccounts, type ExpensesNotice } from '../expenses/presentation'
+import { expensesBack, offeredAccounts } from '../expenses/presentation'
+import { useAfterExpenseChange } from '../expenses/useAfterChange'
 import { useLoaded } from '../lib/useLoaded'
-
-const BACK = { to: '/expenses', label: 'Gastos' }
 
 /** Registers an Expense: amount, Category and Account; the date starts as today, the Account as the last one used. */
 export function ExpenseCreate() {
   const { csrfToken } = useSignedInUser()
-  const navigate = useNavigate()
+  const afterChange = useAfterExpenseChange()
   const today = todayInPanama()
   const { state, retry } = useLoaded(async () => {
     const [accounts, lastUsed] = await Promise.all([listAccounts(), lastUsedAccountId()])
@@ -29,7 +26,7 @@ export function ExpenseCreate() {
     <>
       <ScreenHeader
         title="Nuevo gasto"
-        back={BACK}
+        back={expensesBack}
         intro="Anota lo que gastaste. Se descuenta del Saldo de la Cuenta, aunque la deje en negativo."
       />
       {state.status !== 'ready' ? (
@@ -60,12 +57,7 @@ export function ExpenseCreate() {
           accounts={state.value.accounts}
           today={today}
           save={(expense) => createExpense(expense, csrfToken)}
-          onSaved={async (expense) => {
-            const account = await currentAccount(expense.accountId)
-            announceExpenseChange()
-            const notice: ExpensesNotice = { notice: savedNotice('Registraste', expense, account) }
-            navigate('/expenses', { state: notice })
-          }}
+          onSaved={(expense) => afterChange('Registraste', expense)}
           submitLabel="Registrar gasto"
           submittingLabel="Registrando…"
           cancelTo="/expenses"

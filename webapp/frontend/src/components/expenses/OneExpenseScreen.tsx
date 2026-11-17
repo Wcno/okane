@@ -2,11 +2,10 @@ import type { ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { listAccounts, type Account } from '../../accounts/api'
 import { getExpense, type Expense } from '../../expenses/api'
+import { expensesBack } from '../../expenses/presentation'
 import { NotFoundError } from '../../lib/http'
 import { useLoaded } from '../../lib/useLoaded'
 import { NotHere, Pending, ScreenHeader } from '../screen/Screen'
-
-const BACK = { to: '/expenses', label: 'Gastos' }
 
 /**
  * Frame of the screens that act on one Expense, named by the `:id` of the
@@ -31,14 +30,14 @@ export function OneExpenseScreen({
       <NotHere
         title="No encontramos este gasto"
         text="Puede que lo hayas eliminado o que la dirección esté incompleta. Vuelve a tus gastos para elegirlo de la lista."
-        back={{ to: BACK.to, label: 'Volver a Gastos' }}
+        back={{ ...expensesBack, label: 'Volver a Gastos' }}
       />
     )
   }
   if (state.status !== 'ready') {
     return (
       <>
-        <ScreenHeader title={title} back={BACK} />
+        <ScreenHeader title={title} back={expensesBack} />
         <Pending state={state} retry={retry} loading="Cargando el gasto…" />
       </>
     )

@@ -1,26 +1,25 @@
 import { Trash2 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { todayInPanama } from '../accounts/form'
 import { useSignedInUser } from '../auth/context'
 import { ExpenseEditor } from '../components/expenses/ExpenseEditor'
 import { OneExpenseScreen } from '../components/expenses/OneExpenseScreen'
 import { ScreenHeader } from '../components/screen/Screen'
 import { updateExpense, type Expense } from '../expenses/api'
-import { announceExpenseChange } from '../expenses/changes'
-import { currentAccount, savedNotice } from '../expenses/notices'
-import { offeredAccounts, type ExpensesNotice } from '../expenses/presentation'
+import { expensesBack, offeredAccounts } from '../expenses/presentation'
+import { useAfterExpenseChange } from '../expenses/useAfterChange'
 import type { Account } from '../accounts/api'
 
 function EditForm({ expense, accounts }: { expense: Expense; accounts: Account[] }) {
   const { csrfToken } = useSignedInUser()
-  const navigate = useNavigate()
+  const afterChange = useAfterExpenseChange()
   const today = todayInPanama()
   const current = accounts.find((account) => account.id === expense.accountId)
   const isOnArchivedAccount = current !== undefined && current.archivedAt !== null
 
   return (
     <>
-      <ScreenHeader title="Editar gasto" back={{ to: '/expenses', label: 'Gastos' }} />
+      <ScreenHeader title="Editar gasto" back={expensesBack} />
       <ExpenseEditor
         idPrefix="expense"
         initial={{
@@ -33,12 +32,7 @@ function EditForm({ expense, accounts }: { expense: Expense; accounts: Account[]
         accounts={offeredAccounts(accounts, expense.accountId)}
         today={today}
         save={(input) => updateExpense(expense.id, input, csrfToken)}
-        onSaved={async (saved) => {
-          const account = await currentAccount(saved.accountId)
-          announceExpenseChange()
-          const notice: ExpensesNotice = { notice: savedNotice('Guardaste', saved, account) }
-          navigate('/expenses', { state: notice })
-        }}
+        onSaved={(saved) => afterChange('Guardaste', saved)}
         submitLabel="Guardar cambios"
         submittingLabel="Guardando…"
         cancelTo="/expenses"

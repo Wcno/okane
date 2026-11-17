@@ -65,7 +65,7 @@ for (const width of [390, 1440]) {
       await page.goto('/expenses')
       await page.getByRole('link', { name: 'Eliminar Supermercado, $20.00' }).click()
       await expect(page).toHaveURL(/\/expenses\/\d+\/delete$/)
-      await expect(page.getByText('El Saldo de Ahorro pasará de $480.00 a $500.00.')).toBeVisible()
+      await expect(page.getByText('El Saldo de Ahorro subirá $20.00.')).toBeVisible()
       expect(await noOverflow(page)).toBe(true)
       await page.getByRole('button', { name: 'Eliminar gasto' }).click()
 

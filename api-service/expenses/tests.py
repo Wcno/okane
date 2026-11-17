@@ -213,6 +213,15 @@ class ExpenseValidationTests(ExpenseApiTestCase):
         self.assert_rejected(self.register(account, description="x" * 141), "description")
         self.assertEqual(len(self.registered(account, description="x" * 140)["description"]), 140)
 
+    def test_rejects_a_description_that_is_not_text_with_a_message_in_spanish(self):
+        account = self.account()
+
+        for description in (None, ["a"], {"a": 1}, True):
+            with self.subTest(description=description):
+                response = self.register(account, description=description)
+                self.assert_rejected(response, "description")
+                self.assertIn("descripción", response.json()["errors"]["description"][0])
+
     def test_rejects_an_investment_account(self):
         broker = self.account(type="investment")
 
@@ -558,6 +567,16 @@ class DeleteExpenseTests(ExpenseApiTestCase):
         listed = self.call("GET", "/api/expenses").json()
         self.assertEqual([expense["id"] for expense in listed["results"]], [kept["id"]])
         self.assertEqual(self.call("GET", f"/api/expenses/{removed['id']}").status_code, 404)
+
+    def test_deleting_an_expense_leaves_the_balance_of_other_accounts_alone(self):
+        source = self.account(name="Origen", opening_balance="1000.00")
+        other = self.account(name="Otra", opening_balance="300.00")
+        removed = self.registered(source, amount="100.00")
+        self.registered(other, amount="40.00")
+
+        self.delete(removed)
+
+        self.assertEqual((self.balance(source), self.balance(other)), ("1000.00", "260.00"))
 
     def test_an_account_without_expenses_left_can_be_deleted_again(self):
         account = self.account()
