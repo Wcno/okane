@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Account } from '../accounts/api'
 import type { Expense } from './api'
-import { dayHeading, groupByDay, offeredAccounts } from './presentation'
+import { dayHeading, describeExpense, groupByDay, offeredAccounts } from './presentation'
 
 const expense = (id: number, date: string): Expense => ({
   id,
@@ -72,5 +72,24 @@ describe('offeredAccounts', () => {
     const archived = account(4, { archivedAt: '2026-11-10T00:00:00Z' })
 
     expect(offeredAccounts([account(1, {}), archived], 4).map((item) => item.id)).toEqual([1, 4])
+  })
+})
+
+describe('describeExpense', () => {
+  const described = { ...expense(1, '2026-11-10'), description: 'Supermercado' }
+
+  it('titles an Expense by its description and keeps the Category in the details', () => {
+    expect(describeExpense(described, 'Cuenta corriente')).toEqual({
+      title: 'Supermercado',
+      details: 'Alimentación · Cuenta corriente',
+    })
+  })
+
+  it('titles an Expense without description by its Category', () => {
+    expect(describeExpense(expense(1, '2026-11-10'), 'Ahorro')).toEqual({ title: 'Alimentación', details: 'Ahorro' })
+  })
+
+  it('adds the day on request and copes with an Account that is not known', () => {
+    expect(describeExpense(described, undefined, { withDate: true }).details).toBe('Alimentación · 10 nov 2026')
   })
 })

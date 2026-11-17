@@ -4,17 +4,26 @@ from rest_framework import serializers
 from rest_framework.exceptions import NotFound
 
 from accounts import clock
+from accounts.dates import spanish_day
 from accounts.models import Account
-from accounts.serializers import DECIMAL_ERRORS, DecimalStringField, StrictIntegerField, messages
+from accounts.serializers import (
+    AMOUNT_LIMIT,
+    DecimalStringField,
+    StrictIntegerField,
+    amount_messages,
+    messages,
+)
 from incomes.models import DESCRIPTION_MAX_LENGTH, Income
 
 AMOUNT_INVALID = "Escribe un monto mayor que cero, con dos decimales como máximo. Ejemplo: 12.50"
+AMOUNT_TOO_LARGE = f"El monto es demasiado grande. El máximo es ${AMOUNT_LIMIT}."
 ACCOUNT_REQUIRED = "Elige la Cuenta a la que entró el dinero."
 ACCOUNT_IS_INVESTMENT = "Una Cuenta de inversión no admite Ingresos. Elige una Cuenta de gastos o de ahorro."
 ACCOUNT_IS_ARCHIVED = "Esta Cuenta está archivada y no admite registros nuevos. Elige otra."
 DATE_INVALID = "Escribe la fecha del ingreso, por ejemplo 2026-11-16."
 DATE_IN_FUTURE = "La fecha no puede ser futura. Elige hoy o un día anterior."
 DATE_BEFORE_ACCOUNT = "La fecha no puede ser anterior al inicio del registro de la Cuenta ({opening_date})."
+DESCRIPTION_NOT_TEXT = "La descripción debe ser texto."
 DESCRIPTION_TOO_LONG = f"La descripción admite hasta {DESCRIPTION_MAX_LENGTH} caracteres."
 
 
@@ -31,7 +40,7 @@ class IncomeSerializer(serializers.Serializer):
         max_digits=14,
         decimal_places=2,
         min_value=Decimal("0.01"),
-        error_messages=messages(AMOUNT_INVALID, *DECIMAL_ERRORS),
+        error_messages=amount_messages(AMOUNT_INVALID, AMOUNT_TOO_LARGE),
     )
     account_id = StrictIntegerField(
         error_messages=messages(ACCOUNT_REQUIRED, "required", "null", "invalid"),
@@ -44,7 +53,10 @@ class IncomeSerializer(serializers.Serializer):
         max_length=DESCRIPTION_MAX_LENGTH,
         required=False,
         allow_blank=True,
-        error_messages=messages(DESCRIPTION_TOO_LONG, "max_length", "invalid", "null"),
+        error_messages={
+            **messages(DESCRIPTION_NOT_TEXT, "invalid", "null"),
+            "max_length": DESCRIPTION_TOO_LONG,
+        },
     )
 
     def validate_account_id(self, value):
@@ -76,7 +88,7 @@ class IncomeSerializer(serializers.Serializer):
         if data["date"] > clock.today():
             raise serializers.ValidationError({"date": [DATE_IN_FUTURE]})
         if data["date"] < account.opening_date:
-            message = DATE_BEFORE_ACCOUNT.format(opening_date=account.opening_date.isoformat())
+            message = DATE_BEFORE_ACCOUNT.format(opening_date=spanish_day(account.opening_date))
             raise serializers.ValidationError({"date": [message]})
         data["account"] = account
         return data

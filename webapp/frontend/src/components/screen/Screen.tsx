@@ -1,4 +1,4 @@
-import { ArrowLeft, CircleCheck } from 'lucide-react'
+import { ArrowLeft, CircleCheck, Plus, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Loaded } from '../../lib/useLoaded'
@@ -22,7 +22,7 @@ export function ScreenHeader({
       {back && (
         <Link
           to={back.to}
-          className="mb-2 inline-flex items-center gap-1.5 rounded-md text-[0.9rem] font-medium text-ink-2 transition-colors duration-150 hover:text-ink"
+          className="-mt-2 mb-0.5 inline-flex min-h-[44px] items-center gap-1.5 rounded-md text-[0.9rem] font-medium text-ink-2 transition-colors duration-150 hover:text-ink"
         >
           <ArrowLeft size={16} aria-hidden="true" />
           {back.label}
@@ -88,5 +88,35 @@ export function NoticeBanner({ notice, className = '' }: { notice: string | null
         </p>
       )}
     </div>
+  )
+}
+
+/** What a list shows before it has a first record; the same width on every list. */
+export function EmptyState({
+  icon: Icon,
+  title,
+  text,
+  action,
+}: {
+  icon: LucideIcon
+  title: string
+  text: string
+  action: { to: string; label: string }
+}) {
+  return (
+    <section className={`${cardClassName} max-w-[44rem] lg:p-8`}>
+      <span className="grid size-11 place-items-center rounded-xl bg-surface-2 text-ink-2">
+        <Icon size={20} aria-hidden="true" />
+      </span>
+      <h2 className="mt-4 text-[1.2rem] font-semibold tracking-[-0.01em]">{title}</h2>
+      <p className="mt-2 max-w-[60ch] text-ink-2">{text}</p>
+      <Link
+        to={action.to}
+        className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-primary pl-4 pr-5 text-[1rem] font-semibold text-on-primary transition-transform duration-150 hover:-translate-y-px active:scale-[0.98]"
+      >
+        <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
+        {action.label}
+      </Link>
+    </section>
   )
 }

@@ -133,6 +133,15 @@ los Saldos iniciales y el Rendimiento mensual está en el
   añade a la paginación `last_used_account_id`: la Cuenta del Gasto registrado
   más recientemente por el Usuario, según el orden de registro y no la fecha del
   Gasto, o `null` si no tiene Gastos. El registro rápido la propone al abrirse.
+- Un Gasto lleva monto, Categoría, Cuenta y fecha. La descripción es opcional y
+  admite hasta 140 caracteres. `PUT /api/expenses/{id}` reemplaza el Gasto
+  completo y exige la fecha: no asume hoy como `POST`. Un monto de más de 12
+  dígitos enteros se rechaza con un mensaje propio.
+- Corregir o eliminar un Gasto de una Cuenta archivada se permite mientras el
+  Gasto siga en esa Cuenta. Mover un Gasto a una Cuenta archivada o de inversión
+  se rechaza, igual que registrar uno nuevo en ella.
+- Un identificador de Gasto o de Cuenta que no es del Usuario responde `404`, y
+  ese `404` prevalece sobre la validación del resto de los campos.
 - `GET /api/incomes/{id}` devuelve un Ingreso del Usuario, para abrir sus
   pantallas de edición y eliminación desde un enlace; el identificador de otro
   Usuario responde `404`.
