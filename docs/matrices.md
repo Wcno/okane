@@ -227,7 +227,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar gastos | Sí | `GET /api/expenses` | `expenses` | api-service, api-db | A5 |
+| Consultar gastos | Sí | `GET /api/expenses`, `GET /api/expenses/{id}` | `expenses` | api-service, api-db | A5 |
 | Registrar gasto | Sí | `POST /api/expenses` | `expenses` | api-service, api-db | A5 |
 | Editar gasto | Sí | `PUT /api/expenses/{id}` | `expenses` | api-service, api-db | A5 |
 | Eliminar gasto | Sí | `DELETE /api/expenses/{id}` | `expenses` | api-service, api-db | A5 |
@@ -356,7 +356,9 @@ Estos casos conservan su nombre, ruta y endpoint, pero las decisiones de diseño
 | Crear cuenta | El saldo inicial se fija aquí. En una Cuenta de inversión cuenta como su primer Aporte. |
 | Editar cuenta | No permite cambiar el Saldo; este se corrige registrando o corrigiendo movimientos. |
 | Eliminar cuenta | Solo borra una Cuenta sin movimientos. Si los tiene, la archiva y conserva su historial. |
-| Registrar gasto | Exige monto, Categoría y Cuenta. Se acepta aunque exceda el Presupuesto o deje el Saldo en negativo. No se permite sobre una Cuenta de inversión. |
+| Registrar gasto | Exige monto, Categoría y Cuenta. La fecha empieza en hoy y la descripción es opcional, de hasta 140 caracteres. Se acepta aunque exceda el Presupuesto o deje el Saldo en negativo. No se permite sobre una Cuenta de inversión ni archivada. |
+| Editar gasto | Exige la fecha además de los campos de registrar. Se permite sobre una Cuenta archivada mientras el Gasto siga en ella; moverlo a una Cuenta archivada o de inversión se rechaza. Ambos Saldos se recalculan. |
+| Eliminar gasto | Se permite aunque su Cuenta esté archivada. El Saldo de la Cuenta se recalcula. |
 | Crear presupuesto | Solo puede existir un Presupuesto por Categoría y mes. |
 | Registrar compra de activos | Descuenta efectivo de una Cuenta de inversión. Se acepta sin efectivo suficiente, con un aviso. |
 | Registrar venta de activos | No puede superar las unidades que hay en la Posición. |

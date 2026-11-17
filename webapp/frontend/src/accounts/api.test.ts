@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { RequestError, SessionEndedError } from '../lib/http'
 import {
-  AccountsRequestError,
-  SessionEndedError,
   createAccount,
   deleteAccount,
   listAccounts,
@@ -69,12 +68,12 @@ describe('listAccounts', () => {
   it('explains a failure of api-service and a lost connection', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(502, { status: 'unavailable', service: 'api-service' })))
     await expect(listAccounts()).rejects.toEqual(
-      new AccountsRequestError('Okane no pudo consultar tus Cuentas. Espera un momento e inténtalo de nuevo.'),
+      new RequestError('Okane no pudo consultar tus Cuentas. Espera un momento e inténtalo de nuevo.'),
     )
 
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
     await expect(listAccounts()).rejects.toEqual(
-      new AccountsRequestError('No pudimos conectar con Okane. Revisa tu conexión e inténtalo de nuevo.'),
+      new RequestError('No pudimos conectar con Okane. Revisa tu conexión e inténtalo de nuevo.'),
     )
   })
 })

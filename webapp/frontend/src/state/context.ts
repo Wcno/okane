@@ -1,23 +1,23 @@
 import { createContext, useContext } from 'react'
 import type { DemoState } from '../data/sample'
 
-export interface NewExpense {
-  amount: number
+/** What the sample Panel still takes from a real Expense until Budgets exist (#9): amount and Category only. */
+export interface SampleSpend {
+  /** A decimal string, as the API returns it. */
+  amount: string
   category: string
-  accountId: string
 }
 
 export interface DataStore {
   state: DemoState
-  /** Default Account for the next Expense. */
-  lastAccountId: string
   /** Last Category changed, used to highlight the affected row. */
   recentCategory: string | null
   /** Expense count for restarting the row highlight on each entry. */
   registrationCount: number
   /** Confirmation of the last entry and its effect. */
   notice: string | null
-  register: (expense: NewExpense, notice: string) => void
+  /** TEMPORARY until #9: feeds the sample Budget spend and shows the notice. Sample Accounts are untouched. */
+  registerSampleSpend: (spend: SampleSpend, notice: string) => void
   dismissNotice: () => void
   isFormOpen: boolean
   openForm: () => void

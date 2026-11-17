@@ -6,7 +6,6 @@ import {
   initialState,
   netWorthHistory,
   netWorth,
-  recordExpense,
   remainingBudget,
   spendingAccountBalance,
   type DemoState,
@@ -16,12 +15,6 @@ const budgetLineFor = (state: DemoState, category: string) => {
   const line = state.budgets.find((candidate) => candidate.category === category)
   if (!line) throw new Error(`No budget line for ${category}`)
   return line
-}
-
-const accountBalanceFor = (state: DemoState, accountId: string) => {
-  const account = state.accounts.find((candidate) => candidate.id === accountId)
-  if (!account) throw new Error(`Unknown account ${accountId}`)
-  return account.balance
 }
 
 describe('Available funds', () => {
@@ -63,34 +56,8 @@ describe('Remaining Budget', () => {
   })
 })
 
-describe('recording an Expense', () => {
-  const expense = { amount: 12.5, category: 'Alimentación', accountId: 'checking' }
-  const after = recordExpense(initialState, expense)
-
-  it('reduces the selected Account balance and preserves the others', () => {
-    expect(accountBalanceFor(after, 'checking')).toBe(1272.1)
-    expect(accountBalanceFor(after, 'credit-card')).toBe(accountBalanceFor(initialState, 'credit-card'))
-    expect(accountBalanceFor(after, 'savings')).toBe(accountBalanceFor(initialState, 'savings'))
-  })
-
-  it('reduces available funds and the Category remaining amount equally', () => {
-    expect(disponible(after)).toBe(759.4)
-    expect(remainingBudget(budgetLineFor(after, 'Alimentación'))).toBe(93.15)
-    expect(remainingBudget(budgetLineFor(after, 'Transporte'))).toBe(4.3)
-  })
-
-  it('accepts an Expense that exceeds the Budget or creates a negative balance', () => {
-    const largeExpense = recordExpense(initialState, { ...expense, amount: 2000 })
-    expect(remainingBudget(budgetLineFor(largeExpense, 'Alimentación'))).toBe(-1894.35)
-    expect(accountBalanceFor(largeExpense, 'checking')).toBe(-715.4)
-  })
-
-  it('preserves the previous state', () => {
-    expect(accountBalanceFor(initialState, 'checking')).toBe(1284.6)
-    expect(budgetLineFor(initialState, 'Alimentación').spent).toBe(214.35)
-  })
-
-  it('excludes investment Accounts from Expense entry', () => {
+describe('Expense entry', () => {
+  it('excludes investment Accounts', () => {
     expect(expenseAccounts(initialState).map((account) => account.type)).not.toContain('investment')
   })
 })
@@ -106,15 +73,5 @@ describe('Net Worth', () => {
       const change = series[index].netWorth - series[index - 1].netWorth
       expect(series[index].netSavings + series[index].investmentReturn).toBeCloseTo(change, 2)
     }
-  })
-
-  it('an Expense reduces monthly Net Savings without changing Investment Return', () => {
-    const before = netWorthHistory(initialState).at(-1)!
-    const after = netWorthHistory(
-      recordExpense(initialState, { amount: 40, category: 'Salud', accountId: 'checking' }),
-    ).at(-1)!
-    expect(after.netSavings).toBeCloseTo(before.netSavings - 40, 2)
-    expect(after.investmentReturn).toBeCloseTo(before.investmentReturn, 2)
-    expect(after.netWorth).toBeCloseTo(before.netWorth - 40, 2)
   })
 })
