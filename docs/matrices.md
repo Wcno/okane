@@ -199,7 +199,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar cuentas | Sí | `GET /api/accounts` | `accounts` | api-service, api-db | A5 |
+| Consultar cuentas | Sí | `GET /api/accounts` | `accounts`, `transfers` | api-service, api-db | A5 |
 | Crear cuenta | Sí | `POST /api/accounts` | `accounts` | api-service, api-db | A5 |
 | Editar cuenta | Sí | `PUT /api/accounts/{id}` | `accounts` | api-service, api-db | A5 |
 | Eliminar cuenta | Sí | `DELETE /api/accounts/{id}` | `accounts` | api-service, api-db | A5 |
@@ -245,7 +245,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar transferencias | Sí | `GET /api/transfers` | `transfers` | api-service, api-db | N2 |
+| Consultar transferencias | Sí | `GET /api/transfers`, `GET /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |
 | Registrar transferencia | Sí | `POST /api/transfers` | `transfers` | api-service, api-db | N2 |
 | Editar transferencia | Sí | `PUT /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |
 | Eliminar transferencia | Sí | `DELETE /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |
@@ -278,7 +278,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar dashboard de inversiones | Sí | `GET /api/investments/dashboard` | `investment_transactions` | api-service, api-db | A5 |
+| Consultar dashboard de inversiones | Sí | `GET /api/investments/dashboard` | `accounts`, `investment_transactions`, `transfers`, `asset_prices` | api-service, api-db | A5 |
 | Registrar compra de activos | Sí | `POST /api/investments/transactions/buy` | `investment_transactions` | api-service, api-db | A5 |
 | Registrar venta de activos | Sí | `POST /api/investments/transactions/sell` | `investment_transactions` | api-service, api-db | A5 |
 | Registrar dividendo | Sí | `POST /api/investments/transactions/dividend` | `investment_transactions` | api-service, api-db | N3 |
@@ -286,8 +286,9 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 | Consultar transacciones de inversión | Sí | `GET /api/investments/transactions` | `investment_transactions` | api-service, api-db | A5 |
 | Editar transacción de inversión | Sí | `PUT /api/investments/transactions/{id}` | `investment_transactions` | api-service, api-db | A5 |
 | Eliminar transacción de inversión | Sí | `DELETE /api/investments/transactions/{id}` | `investment_transactions` | api-service, api-db | A5 |
-| Consultar rendimiento del portafolio | Sí | `GET /api/investments/performance` | `investment_transactions` | api-service, api-db | A5 |
+| Consultar rendimiento del portafolio | Sí | `GET /api/investments/performance` | `accounts`, `investment_transactions`, `transfers`, `asset_prices` | api-service, api-db | A5 |
 | Corregir precio de referencia | Sí | `PUT /api/investments/assets/{id}/price` | `asset_prices` | api-service, api-db | N2 |
+| Consultar el precio de referencia de un Activo (lectura previa a corregirlo) | Sí | `GET /api/investments/assets/{id}/price` | `asset_prices`, `investment_transactions` | api-service, api-db | N2 |
 
 ### Movimientos, Configuración e integraciones
 

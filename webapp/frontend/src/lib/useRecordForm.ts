@@ -15,11 +15,14 @@ export type Validated<Input, Field extends string> =
 export function useRecordForm<Draft extends object, Field extends string, Input, Saved>({
   initial,
   validate,
+  dateDependsOn,
   save,
   onSaved,
 }: {
   initial: Draft
   validate: (draft: Draft) => Validated<Input, Field>
+  /** The draft fields whose change re-judges the date: the Accounts, whose start the date may not precede. */
+  dateDependsOn: ReadonlyArray<keyof Draft>
   save: (input: Input) => Promise<Outcome<Saved, Field>>
   onSaved: (saved: Saved) => void | Promise<void>
 }) {
@@ -41,9 +44,9 @@ export function useRecordForm<Draft extends object, Field extends string, Input,
 
   const change = (patch: Partial<Draft>) => {
     setDraft((previous) => ({ ...previous, ...patch }))
-    // The date is checked against the Account's start, so changing the Account clears it too.
     const fields = Object.keys(patch) as Field[]
-    clearErrors(...('accountId' in patch ? [...fields, 'date' as Field] : fields))
+    const changesTheDate = dateDependsOn.some((key) => key in patch)
+    clearErrors(...(changesTheDate ? [...fields, 'date' as Field] : fields))
   }
 
   const submit = async (event: FormEvent) => {

@@ -12,7 +12,7 @@ async function csrfToken(request: APIRequestContext) {
   return (await session.json()).csrf_token as string
 }
 
-async function send(request: APIRequestContext, method: 'POST' | 'DELETE', path: string, data?: unknown) {
+async function send(request: APIRequestContext, method: 'POST' | 'PUT' | 'DELETE', path: string, data?: unknown) {
   return request.fetch(path, {
     method,
     data,
@@ -72,6 +72,20 @@ export async function createIncome(request: APIRequestContext, fields: IncomeFie
   return (await response.json()) as { id: number }
 }
 
+interface TransferFields {
+  source_account_id: number
+  destination_account_id: number
+  amount?: string
+  date?: string
+  description?: string
+}
+
+export async function createTransfer(request: APIRequestContext, fields: TransferFields) {
+  const response = await send(request, 'POST', '/api/transfers', { amount: '100.00', ...fields })
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number }
+}
+
 /** Archives an Account that has records, as deleting it in the screen does. */
 export async function archiveAccount(request: APIRequestContext, accountId: number) {
   const response = await send(request, 'DELETE', `/api/accounts/${accountId}`)
@@ -95,6 +109,26 @@ export async function createRecurringPayment(request: APIRequestContext, fields:
     day_of_month: 1,
     ...fields,
   })
+/** The first Asset the search finds for a query; the stack serves the sample catalog. */
+export async function findAsset(request: APIRequestContext, query: string, market?: string) {
+  const response = await request.get(`/api/investments/assets/search?q=${encodeURIComponent(query)}`)
+  expect(response.status()).toBe(200)
+  const { results } = (await response.json()) as { results: { id: number; market: string }[] }
+  const asset = results.find((item) => market === undefined || item.market === market)
+  expect(asset, `no ${query} in the catalog`).toBeTruthy()
+  return asset!
+}
+
+interface TradeFields {
+  account_id: number
+  asset_id: number
+  units: string
+  unit_price: string
+  date?: string
+}
+
+export async function recordTrade(request: APIRequestContext, kind: 'buy' | 'sell', fields: TradeFields) {
+  const response = await send(request, 'POST', `/api/investments/transactions/${kind}`, fields)
   expect(response.status()).toBe(201)
   return (await response.json()) as { id: number }
 }
@@ -113,5 +147,8 @@ export async function listOccurrenceIds(request: APIRequestContext, ruleId: numb
 /** Cancels an occurrence behind the screen's back, as another tab would. */
 export async function cancelOccurrence(request: APIRequestContext, occurrenceId: number) {
   const response = await send(request, 'POST', `/api/recurring-payments/occurrences/${occurrenceId}/cancel`)
+/** Sets the User's own Reference Price of an Asset for a day, as the price screen does. */
+export async function setReferencePrice(request: APIRequestContext, assetId: number, value: string, date?: string) {
+  const response = await send(request, 'PUT', `/api/investments/assets/${assetId}/price`, { value, date })
   expect(response.status()).toBe(200)
 }

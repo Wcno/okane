@@ -29,8 +29,17 @@ import { RecurringPaymentCreate } from './pages/RecurringPaymentCreate'
 import { RecurringPaymentDelete } from './pages/RecurringPaymentDelete'
 import { RecurringPaymentEdit } from './pages/RecurringPaymentEdit'
 import { RecurringPayments } from './pages/RecurringPayments'
+import { AssetPrice } from './pages/AssetPrice'
+import { InvestmentsDashboard } from './pages/InvestmentsDashboard'
+import { InvestmentsPerformance } from './pages/InvestmentsPerformance'
+import { Positions } from './pages/Positions'
 import { Register } from './pages/Register'
 import { ResetPassword } from './pages/ResetPassword'
+import { Trade } from './pages/Trade'
+import { TransferCreate } from './pages/TransferCreate'
+import { TransferDelete } from './pages/TransferDelete'
+import { TransferEdit } from './pages/TransferEdit'
+import { Transfers } from './pages/Transfers'
 import { UnderConstruction } from './pages/UnderConstruction'
 
 export default function App() {
@@ -68,6 +77,16 @@ export default function App() {
             <Route path="/recurring-payments/occurrences/:id/cancel" element={<OccurrenceCancel />} />
             <Route path="/recurring-payments/:id/edit" element={<RecurringPaymentEdit />} />
             <Route path="/recurring-payments/:id/delete" element={<RecurringPaymentDelete />} />
+            <Route path="/investments/dashboard" element={<InvestmentsDashboard />} />
+            <Route path="/investments/performance" element={<InvestmentsPerformance />} />
+            <Route path="/investments/assets/:id/price" element={<AssetPrice />} />
+            <Route path="/investments/positions" element={<Positions />} />
+            <Route path="/investments/transactions/buy" element={<Trade kind="buy" />} />
+            <Route path="/investments/transactions/sell" element={<Trade kind="sell" />} />
+            <Route path="/transfers" element={<Transfers />} />
+            <Route path="/transfers/create" element={<TransferCreate />} />
+            <Route path="/transfers/:id/edit" element={<TransferEdit />} />
+            <Route path="/transfers/:id/delete" element={<TransferDelete />} />
             <Route path="/incomes" element={<Incomes />} />
             <Route path="/incomes/create" element={<IncomeCreate />} />
             <Route path="/incomes/:id/edit" element={<IncomeEdit />} />

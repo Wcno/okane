@@ -5,6 +5,8 @@ from budgets import views as budgets
 from dashboard import views as dashboard
 from expenses import views as expenses
 from health.views import health
+from investments import views as investments
+from transfers import views as transfers
 from incomes import views as incomes
 from recurring_payments import views as recurring_payments
 
@@ -32,6 +34,15 @@ urlpatterns = [
         "api/recurring-payments/occurrences/<int:occurrence_id>/cancel",
         recurring_payments.occurrence_cancel,
     ),
+    path("api/investments/assets/search", investments.asset_search),
+    path("api/investments/transactions/buy", investments.buy),
+    path("api/investments/transactions/sell", investments.sell),
+    path("api/investments/positions", investments.positions),
+    path("api/investments/dashboard", investments.dashboard),
+    path("api/investments/performance", investments.performance),
+    path("api/investments/assets/<int:asset_id>/price", investments.asset_price),
+    path("api/transfers", transfers.transfer_collection),
+    path("api/transfers/<int:transfer_id>", transfers.transfer_detail),
     path("api/incomes", incomes.income_collection),
     path("api/incomes/<int:income_id>", incomes.income_detail),
 ]

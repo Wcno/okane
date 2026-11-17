@@ -5,28 +5,29 @@ import type { RecordChange } from './recordChange'
 
 /**
  * What every change of a record of money on a full screen ends with: tell the
- * other screens, then go back to the list with a notice that names the new Balance.
+ * other screens, then go back to the list with a notice that names the new
+ * Balance of each Account the record touches: one, or two for a Transfer.
  * The caller brings the Account loader, so this shared layer stays free of features.
  */
-export function useAfterRecordChange<Entry extends { accountId: number }, Account>({
+export function useAfterRecordChange<Entry, Account>({
   listPath,
   announce,
-  loadAccount,
+  loadAccounts,
   notice,
 }: {
   listPath: string
   announce: () => void
-  loadAccount: (accountId: number) => Promise<Account | undefined>
-  notice: (change: RecordChange, record: Entry, account: Account | undefined) => string
+  loadAccounts: (entry: Entry) => Promise<Array<Account | undefined>>
+  notice: (change: RecordChange, entry: Entry, accounts: Array<Account | undefined>) => string
 }) {
   const navigate = useNavigate()
   return useCallback(
-    async (change: RecordChange, record: Entry) => {
-      const account = await loadAccount(record.accountId)
+    async (change: RecordChange, entry: Entry) => {
+      const accounts = await loadAccounts(entry)
       announce()
-      const state: ScreenNotice = { notice: notice(change, record, account) }
+      const state: ScreenNotice = { notice: notice(change, entry, accounts) }
       navigate(listPath, { state })
     },
-    [navigate, listPath, announce, loadAccount, notice],
+    [navigate, listPath, announce, loadAccounts, notice],
   )
 }

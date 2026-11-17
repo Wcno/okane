@@ -83,7 +83,7 @@ for route in /auth/unknown /api/../health /assets/missing.js; do
 done
 pass "backend routes and missing files are never answered with the frontend"
 
-for name in api-service webapp-db api-db; do
+for name in api-service webapp-db api-db price-refresher; do
   ports=$(docker port "$(docker compose ps --quiet "$name")")
   [ -z "$ports" ] || fail "$name publishes a port: $ports"
 done
