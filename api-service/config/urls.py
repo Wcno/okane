@@ -2,6 +2,7 @@ from django.urls import path
 
 from accounts import movements
 from accounts import views as accounts
+from erasure import views as erasure
 from expenses import views as expenses
 from health.views import health
 from investments import views as investments
@@ -9,7 +10,9 @@ from transfers import views as transfers
 from incomes import views as incomes
 
 # Paths match the ones webapp exposes, so forwarding never rewrites them.
+# Internal calls from webapp that no browser route reaches (docs/contratos.md).
 urlpatterns = [
+    path("internal/users/me", erasure.erase_current_user),
     path("api/health", health),
     path("api/accounts", accounts.account_collection),
     path("api/accounts/<int:account_id>", accounts.account_detail),
