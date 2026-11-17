@@ -338,6 +338,26 @@ class TransferIsolationTests(TransferApiTestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_not_found_wins_over_the_validation_of_the_other_fields(self):
+        mine, theirs = self.account(user=1), self.account(user=2)
+
+        responses = [
+            self.transfer(mine, theirs, amount="0"),
+            self.transfer(theirs, mine, date="2026-11-17"),
+            self.call("POST", "/api/transfers", {"source_account_id": theirs["id"]}),
+            self.transfer(mine, mine, destination_account_id=theirs["id"], description="x" * 141),
+        ]
+
+        self.assertEqual([response.status_code for response in responses], [404] * 4)
+
+    def test_rejects_an_amount_past_twelve_whole_digits_with_its_own_message(self):
+        source, destination = self.account(), self.account(name="Otra")
+
+        response = self.transfer(source, destination, amount="1000000000000.00")
+
+        self.assert_rejected(response, "amount")
+        self.assertIn("demasiado grande", response.json()["errors"]["amount"][0])
+
     def test_the_owner_comes_from_webapp_and_never_from_the_body(self):
         source, destination = self.account(user=1), self.account(user=1, name="Otra")
 
