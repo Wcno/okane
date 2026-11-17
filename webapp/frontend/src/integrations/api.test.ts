@@ -46,7 +46,7 @@ describe('tokens api', () => {
 
     expect(outcome.ok && outcome.value.secret).toBe('okt_a1b2c3d4_secret')
     const [path, init] = fetchMock.mock.calls[0]
-    expect(path).toBe('/users/me/tokens')
+    expect(path).toBe('/api/settings/tokens')
     expect(init.headers['X-CSRFToken']).toBe('csrf')
     expect(JSON.parse(init.body)).toEqual({ name: 'Google Sheets', scopes: ['finance:read'] })
   })
@@ -66,7 +66,7 @@ describe('tokens api', () => {
     const outcome = await revokeToken(3, 'csrf')
 
     expect(outcome.ok).toBe(true)
-    expect(fetchMock.mock.calls[0][0]).toBe('/users/me/tokens/3')
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/settings/tokens/3')
     expect(fetchMock.mock.calls[0][1].method).toBe('DELETE')
   })
 })

@@ -27,6 +27,9 @@ async function createTokenInScreen(page: import('@playwright/test').Page, name: 
   await page.getByRole('button', { name: 'Crear token' }).click()
   const secret = page.getByTestId('token-secret')
   await expect(secret).toBeVisible()
+  // The one-time secret takes the focus and is in view, also on a phone where it renders below the form.
+  await expect(page.getByRole('region', { name: 'Token nuevo' })).toBeFocused()
+  await expect(secret).toBeInViewport()
   return (await secret.textContent())!
 }
 

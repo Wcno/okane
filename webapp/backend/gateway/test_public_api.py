@@ -69,6 +69,25 @@ class AuthenticationTests(PublicApiTestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(self.api_service.received, [])
 
+    def test_a_token_is_not_a_session_on_the_application_routes(self):
+        _, secret = self.token()
+        headers = {"Authorization": f"Bearer {secret}"}
+        # Without CSRF enforcement, so the answer shown is the one of authentication.
+        client = Client()
+
+        for method, path in (
+            ("get", "/api/accounts"),
+            ("post", "/api/expenses"),
+            ("get", "/api/settings/tokens"),
+            ("post", "/api/settings/tokens"),
+            ("delete", "/api/settings/tokens/1"),
+        ):
+            with self.subTest(path=path, method=method):
+                response = getattr(client, method)(path, headers=headers)
+
+                self.assertEqual(response.status_code, 401)
+        self.assertEqual(self.api_service.received, [])
+
     def test_revoking_cuts_the_very_next_request(self):
         token, secret = self.token()
         self.assertEqual(self.get("/api/v1/accounts", secret).status_code, 200)
