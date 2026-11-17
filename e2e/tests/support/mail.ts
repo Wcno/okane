@@ -9,6 +9,7 @@ function printedMail() {
   return execFileSync('docker', ['compose', 'logs', '--no-color', '--no-log-prefix', '--since', '5m', 'webapp'], {
     cwd: repositoryRoot,
     encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
   })
 }
 

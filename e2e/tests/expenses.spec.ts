@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, expectScreenQuality, test } from './support/qa.js'
 import { archiveAccount, createAccount, createExpense } from './support/ledger.js'
 import { signUp } from './support/session.js'
 
@@ -19,68 +20,66 @@ const submitButton = (page: Page) => page.getByRole('main').getByRole('button', 
 const accountRow = (page: Page, name: string) => page.getByRole('listitem').filter({ hasText: name })
 
 /** The row of an Expense in the list: one link to its edit screen. */
-const expenseRow = (page: Page, title: string) => page.getByRole('link', { name: new RegExp(`^Editar gasto ${title},`) })
+const expenseRow = (page: Page, title: string) => page.getByRole('link', { name: new RegExp(`^${title}.*Editar gasto$`) })
 
 const panamaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Panama' }).format(new Date())
 
-for (const width of [390, 1440]) {
-  for (const colorScheme of ['light', 'dark'] as const) {
-    test(`expenses lifecycle at ${width}px in ${colorScheme}`, async ({ page }) => {
-      forbidBrowserDialogs(page)
-      await page.setViewportSize({ width, height: 900 })
-      await page.emulateMedia({ colorScheme })
-      await signUp(page.request)
-      await createAccount(page.request, { name: 'Cuenta corriente', opening_balance: '1000.00' })
-      await createAccount(page.request, { name: 'Ahorro', type: 'savings', opening_balance: '500.00' })
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`expenses lifecycle in ${colorScheme}`, async ({ page }) => {
+    forbidBrowserDialogs(page)
+    await page.emulateMedia({ colorScheme })
+    await signUp(page.request)
+    await createAccount(page.request, { name: 'Cuenta corriente', opening_balance: '1000.00' })
+    await createAccount(page.request, { name: 'Ahorro', type: 'savings', opening_balance: '500.00' })
 
-      await page.goto('/expenses')
-      await expect(page.getByRole('heading', { name: 'Aún no registras gastos' })).toBeVisible()
-      await page.getByRole('link', { name: 'Registrar tu primer gasto' }).click()
+    await page.goto('/expenses')
+    await expect(page.getByRole('heading', { name: 'Aún no registras gastos' })).toBeVisible()
+    await expectScreenQuality(page, `expenses-empty-${colorScheme}`)
+    await page.getByRole('link', { name: 'Registrar tu primer gasto' }).click()
 
-      await expect(page).toHaveURL(/\/expenses\/create$/)
-      await expect(page.getByLabel('Fecha')).toHaveValue(panamaToday())
-      await page.getByLabel('Monto').fill('12.50')
-      await page.getByText('Alimentación', { exact: true }).click()
-      await page.getByLabel('Descripción').fill('Supermercado')
-      expect(await noOverflow(page)).toBe(true)
-      await submitButton(page).click()
+    await expect(page).toHaveURL(/\/expenses\/create$/)
+    await expect(page.getByLabel('Fecha')).toHaveValue(panamaToday())
+    await page.getByLabel('Monto').fill('12.50')
+    await page.getByText('Alimentación', { exact: true }).click()
+    await page.getByLabel('Descripción').fill('Supermercado')
+    await expectScreenQuality(page, `expenses-create-filled-${colorScheme}`)
+    await submitButton(page).click()
 
-      await expect(page).toHaveURL(/\/expenses$/)
-      await expect(page.getByRole('status').filter({ hasText: 'Registraste' })).toHaveText(
-        'Registraste un gasto de $12.50 en Alimentación. Saldo de Cuenta corriente: $987.50.',
-      )
-      await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
-      await expect(expenseRow(page, 'Supermercado')).toBeVisible()
-      expect(await noOverflow(page)).toBe(true)
+    await expect(page).toHaveURL(/\/expenses$/)
+    await expect(page.getByRole('status').filter({ hasText: 'Registraste' })).toHaveText(
+      'Registraste un gasto de $12.50 en Alimentación. Saldo de Cuenta corriente: $987.50.',
+    )
+    await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
+    await expect(expenseRow(page, 'Supermercado')).toBeVisible()
+    await expectScreenQuality(page, `expenses-list-${colorScheme}`)
 
-      // Correcting the amount and moving the Expense to another Account updates both Balances.
-      await expenseRow(page, 'Supermercado').click()
-      await expect(page.getByLabel('Monto')).toHaveValue('12.50')
-      await page.getByLabel('Monto').fill('20')
-      await page.getByLabel('Cuenta', { exact: true }).selectOption({ label: 'Ahorro' })
-      expect(await noOverflow(page)).toBe(true)
-      await page.getByRole('button', { name: 'Guardar cambios' }).click()
-      await expect(page.getByRole('status').filter({ hasText: 'Guardaste' })).toHaveText(
-        'Guardaste un gasto de $20.00 en Alimentación. Saldo de Ahorro: $480.00.',
-      )
-      await page.goto('/accounts')
-      await expect(accountRow(page, 'Cuenta corriente')).toContainText('$1,000.00')
-      await expect(accountRow(page, 'Ahorro')).toContainText('$480.00')
+    // Correcting the amount and moving the Expense to another Account updates both Balances.
+    await expenseRow(page, 'Supermercado').click()
+    await expect(page.getByLabel('Monto')).toHaveValue('12.50')
+    await page.getByLabel('Monto').fill('20')
+    await page.getByLabel('Cuenta', { exact: true }).selectOption({ label: 'Ahorro' })
+    await expectScreenQuality(page, `expenses-edit-${colorScheme}`)
+    await page.getByRole('button', { name: 'Guardar cambios' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Guardaste' })).toHaveText(
+      'Guardaste un gasto de $20.00 en Alimentación. Saldo de Ahorro: $480.00.',
+    )
+    await page.goto('/accounts')
+    await expect(accountRow(page, 'Cuenta corriente')).toContainText('$1,000.00')
+    await expect(accountRow(page, 'Ahorro')).toContainText('$480.00')
 
-      await page.goto('/expenses')
-      await expenseRow(page, 'Supermercado').click()
-      await page.getByRole('link', { name: 'Eliminar este gasto' }).click()
-      await expect(page).toHaveURL(/\/expenses\/\d+\/delete$/)
-      await expect(page.getByText('El Saldo de Ahorro subirá $20.00.')).toBeVisible()
-      expect(await noOverflow(page)).toBe(true)
-      await page.getByRole('button', { name: 'Eliminar gasto' }).click()
+    await page.goto('/expenses')
+    await expenseRow(page, 'Supermercado').click()
+    await page.getByRole('link', { name: 'Eliminar este gasto' }).click()
+    await expect(page).toHaveURL(/\/expenses\/\d+\/delete$/)
+    await expect(page.getByText('El Saldo de Ahorro subirá $20.00.')).toBeVisible()
+    await expectScreenQuality(page, `expenses-delete-${colorScheme}`)
+    await page.getByRole('button', { name: 'Eliminar gasto' }).click()
 
-      await expect(page.getByRole('status').filter({ hasText: 'Eliminaste' })).toHaveText(
-        'Eliminaste un gasto de $20.00 en Alimentación. Saldo de Ahorro: $500.00.',
-      )
-      await expect(page.getByRole('heading', { name: 'Aún no registras gastos' })).toBeVisible()
-    })
-  }
+    await expect(page.getByRole('status').filter({ hasText: 'Eliminaste' })).toHaveText(
+      'Eliminaste un gasto de $20.00 en Alimentación. Saldo de Ahorro: $500.00.',
+    )
+    await expect(page.getByRole('heading', { name: 'Aún no registras gastos' })).toBeVisible()
+  })
 }
 
 test('the quick form proposes the last Account used, saves for real and lowers its Balance', async ({ page }) => {
@@ -116,7 +115,9 @@ test('the quick form proposes the last Account used, saves for real and lowers i
   await expect(page.getByRole('dialog')).toBeHidden()
 })
 
-test('the quick form shows what is wrong without losing what was typed', async ({ page }) => {
+test('the quick form shows what is wrong without losing what was typed', async ({ page, expectedProblems }) => {
+  // The archived Account is refused with a 4xx that the browser logs.
+  expectedProblems.push(/status of 4\d\d/)
   forbidBrowserDialogs(page)
   await signUp(page.request)
   const account = await createAccount(page.request, { name: 'Cuenta vieja' })
@@ -130,6 +131,7 @@ test('the quick form shows what is wrong without losing what was typed', async (
   await expect(sheet.getByText('Escribe un monto mayor que cero')).toBeVisible()
   await expect(sheet.getByText('Elige la Categoría del gasto.')).toBeVisible()
   await expect(sheet.getByLabel('Monto')).toBeFocused()
+  await expectScreenQuality(page, 'expenses-quick-sheet-errors')
 
   // The Account is archived elsewhere while the sheet is open: api-service refuses and the draft stays.
   await sheet.getByLabel('Cuenta', { exact: true }).selectOption({ label: 'Cuenta vieja' })
@@ -142,7 +144,9 @@ test('the quick form shows what is wrong without losing what was typed', async (
   await expect(sheet.getByLabel('Cuenta', { exact: true })).toBeFocused()
 })
 
-test('registering rejects a future date and keeps the typed values', async ({ page }) => {
+test('registering rejects a future date and keeps the typed values', async ({ page, expectedProblems }) => {
+  // The future date is refused with a 400 that the browser logs.
+  expectedProblems.push(/status of 400/)
   forbidBrowserDialogs(page)
   await signUp(page.request)
   await createAccount(page.request)
@@ -155,6 +159,7 @@ test('registering rejects a future date and keeps the typed values', async ({ pa
 
   await expect(page.getByText('La fecha no puede ser futura')).toBeVisible()
   await expect(page.getByLabel('Fecha')).toBeFocused()
+  await expectScreenQuality(page, 'expenses-create-future-date')
   await expect(page.getByLabel('Monto')).toHaveValue('8')
 })
 
@@ -164,14 +169,18 @@ test('without a spending or savings Account the screens say what to do first', a
 
   await page.goto('/expenses')
   await expect(page.getByRole('link', { name: 'Crear tu primera cuenta' })).toBeVisible()
+  await expectScreenQuality(page, 'expenses-list-needs-account')
   await page.goto('/expenses/create')
   await expect(page.getByRole('heading', { name: 'Primero necesitas una Cuenta' })).toBeVisible()
+  await expectScreenQuality(page, 'expenses-create-needs-account')
   await page.goto('/dashboard')
   await openQuickForm(page)
   await expect(page.getByRole('dialog').getByRole('link', { name: 'Crear cuenta' })).toBeVisible()
 })
 
-test('the list shows loading, explains a failure and recovers on retry', async ({ page }) => {
+test('the list shows loading, explains a failure and recovers on retry', async ({ page, expectedProblems }) => {
+  // The test aborts the first list request on purpose.
+  expectedProblems.push(/net::ERR_FAILED/)
   await signUp(page.request)
   const account = await createAccount(page.request)
   await createExpense(page.request, { account_id: account.id, description: 'Taxi' })
@@ -190,11 +199,14 @@ test('the list shows loading, explains a failure and recovers on retry', async (
 
   await expect(page.getByText('Cargando tus gastos…')).toBeVisible()
   await expect(page.getByRole('alert')).toContainText('No pudimos conectar con Okane')
+  await expectScreenQuality(page, 'expenses-list-load-failed')
   await page.getByRole('button', { name: 'Reintentar' }).click()
   await expect(expenseRow(page, 'Taxi')).toBeVisible()
 })
 
-test('a save that fails offline is explained and can be repeated', async ({ page }) => {
+test('a save that fails offline is explained and can be repeated', async ({ page, expectedProblems }) => {
+  // The test aborts the save on purpose.
+  expectedProblems.push(/net::ERR_FAILED/)
   await signUp(page.request)
   await createAccount(page.request)
   await page.goto('/expenses/create')
@@ -211,7 +223,9 @@ test('a save that fails offline is explained and can be repeated', async ({ page
   await expect(page).toHaveURL(/\/expenses$/)
 })
 
-test('an Expense that is not the User\'s, or does not exist, is not found', async ({ page, browser }) => {
+test('an Expense that is not the User\'s, or does not exist, is not found', async ({ page, browser, expectedProblems }) => {
+  // Foreign and unknown ids are answered with 404s that the browser logs.
+  expectedProblems.push(/status of 404/)
   await signUp(page.request)
   const other = await browser.newContext()
   await signUp(other.request)
@@ -346,7 +360,9 @@ test.describe('on a phone', () => {
     await expect(sheet.getByText('Elige la Categoría del gasto.')).toHaveCount(0)
   })
 
-  test('the full-page form clears a field error on change too', async ({ page }) => {
+  test('the full-page form clears a field error on change too', async ({ page, expectedProblems }) => {
+  // The future date is refused with a 400 that the browser logs.
+  expectedProblems.push(/status of 400/)
     await signUp(page.request)
     await createAccount(page.request, { opening_date: '2026-11-10' })
     await page.goto('/expenses/create')
@@ -375,12 +391,12 @@ test.describe('on a phone', () => {
     const row = expenseRow(page, 'Supermercado de la esquina grande')
     await expect(row).toContainText('Supermercado de la esquina grande')
     await expect(row).toContainText('Alimentación · Cuenta corriente del hogar')
-    await expect(row).toHaveAttribute('aria-label', /^Editar gasto .*\$1,234\.50, Cuenta corriente del hogar$/)
+    await expect(row).toHaveAccessibleName(/^Supermercado de la esquina grande .*Cuenta corriente del hogar .*\$1,234\.50 \. Editar gasto$/)
     await expect(page.getByRole('main').getByRole('button')).toHaveCount(0)
     expect((await row.boundingBox())?.height).toBeGreaterThanOrEqual(44)
     // The details wrap instead of being cut: every line of text fits its box.
     const clipped = await row.evaluate((link) =>
-      [...link.querySelectorAll('span')].some((span) => span.scrollWidth > span.clientWidth + 1),
+      [...link.querySelectorAll('span:not(.sr-only)')].some((span) => span.scrollWidth > span.clientWidth + 1),
     )
     expect(clipped).toBe(false)
     expect(await noOverflow(page)).toBe(true)
@@ -431,7 +447,9 @@ test.describe('on a phone', () => {
     expect((await page.getByRole('button', { name: 'Mostrar más' }).boundingBox())?.height).toBeGreaterThanOrEqual(44)
   })
 
-  test('a date before the Account started names the day the way the app writes dates', async ({ page }) => {
+  test('a date before the Account started names the day the way the app writes dates', async ({ page, expectedProblems }) => {
+  // The early date is refused with a 400 that the browser logs.
+  expectedProblems.push(/status of 400/)
     await signUp(page.request)
     await createAccount(page.request, { opening_date: '2026-11-10' })
     await page.goto('/expenses/create')
@@ -446,7 +464,9 @@ test.describe('on a phone', () => {
   })
 })
 
-test('an amount past twelve digits says it is too large', async ({ page }) => {
+test('an amount past twelve digits says it is too large', async ({ page, expectedProblems }) => {
+  // The oversized amount is refused with a 400 that the browser logs.
+  expectedProblems.push(/status of 400/)
   await signUp(page.request)
   await createAccount(page.request)
   await page.goto('/expenses/create')

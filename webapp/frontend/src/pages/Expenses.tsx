@@ -12,7 +12,6 @@ import type { Expense } from '../expenses/api'
 import { NEEDS_AN_ACCOUNT, dayHeading, describeExpense, groupByDay, offeredAccounts } from '../expenses/presentation'
 import { useExpenseFeed, type ExpenseFeed } from '../expenses/useExpenseFeed'
 import { todayInPanama } from '../lib/dates'
-import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
 
 const rowId = (expense: Expense) => `expense-${expense.id}`
@@ -24,7 +23,7 @@ function Row({ expense, accountName }: { expense: Expense; accountName: string }
     <RecordRow
       id={rowId(expense)}
       to={`/expenses/${expense.id}/edit`}
-      label={`Editar gasto ${title}, ${formatMoney(expense.amount)}${accountName && `, ${accountName}`}`}
+      action="Editar gasto"
       icon={<CategoryChip categoryId={expense.categoryId} />}
       title={title}
       details={details}
