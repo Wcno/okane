@@ -52,14 +52,22 @@ No other PR is open.
   Ask before deleting.
 - Branch protection on `main` is not enabled and needs a repository admin.
 
+## Run plan (user, 2026-11-16 evening)
+
+Full app tonight, about 2.5 hours. Sonnet for builds and judgment work, Haiku for mechanical fixes, restacks and the spec review axis.
+New gates: CI, Playwright QA (1440/390, console/overflow/axe, screenshots read by `screenshot-qa`), two-axis review and the orchestrator's read on every PR. Chrome `ui-qa` every 3 cleared PRs and on the last PR of a slice. Pipelining allowed.
+One final UI review by the user at the end.
+
+Dependency graph of open tickets:
+- Budgets lane: #8 -> #17 -> #9 -> #20 -> #25; #18 needs #15 and #9.
+- Investments lane: #11 -> #12; #13 needs #16 and #11; #10 and #23 need #13; #22 needs #13 and #12; #24 needs #23, #22 and #18.
+- Late: #21 (#16 #15 #12 #8), #30 (#22 #16 #15 #12 #8), #31 (#14 #18 #30), #32 (#14 #30 #9), #19 last (#32 #31 #10 #13 #18).
+- Multi-blocker tickets base on one blocker's branch and merge the others in.
+
 ## Next step
 
-1. PR #47 round 2 at `22dc77b`: gate a CI pass; gate b ui-qa PASS with findings; gate c review (Sonnet axes) found spec gaps and leftover duplication.
-   ui-qa could not resize Chrome; it framed the app at 1440/390 through a throwaway same-origin proxy on :8002 (stopped). Recommendation adopted: no list-level "Nuevo gasto" button.
-2. A fresh Sonnet `ticket-worker` is applying 23 numbered fixes in `.claude/worktrees/feat-8-expenses` (same branch, stack :8001):
-   UI (clear errors on change, sticky submit in the 390 quick sheet, rows become one link with delete on the edit screen for Expenses and Accounts, 44px targets, focus after "Mostrar más", chip fit, Spanish date in the opening-date error, Balance in the quick-sheet toast, matching empty-state widths),
-   spec (real Expense stops mutating sample Accounts, too-large amount message, one shared amount parser, today at submit time, PR body citations),
-   docs (user-approved: archived-Account edit rule, 140 chars, date required on PUT, 404 precedence in contratos/matrices),
-   standards (shared submit/confirm piece, lib/dates.ts, change kind instead of verb strings, renames, duplicate copy).
-3. When it reports: rerun gates a-d (ui-qa again since the UI changed), comment "Gate results, round 2", `gh pr ready 47`.
-4. Then build #15 on base `feat/8-expenses-fixed-categories` (Sonnet), and continue #17, #9, #18 the same way. Stop for the user's final UI review after #18 clears, with port 8000 rebuilt from the top of the stack.
+In flight (all Sonnet):
+- #47 round-2 fixes in `.claude/worktrees/feat-8-expenses`.
+- Chore PR `chore/playwright-qa-gate` (on #47): QA fixture, seed script, `screenshot-qa` agent, ticket-loop update.
+- #15, #16, #11 and #14 on base #47, doing backend first. Each merges the updated #47 and the chore branch before its UI work.
+When #47's worker and the chore land, message the four workers to merge them. Gate each PR as it reports. Then start #17, then #12.
