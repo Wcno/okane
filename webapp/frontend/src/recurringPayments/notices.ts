@@ -1,5 +1,5 @@
 import type { Account } from '../accounts/api'
-import { balanceSentence } from '../expenses/notices'
+import { balanceSentence } from '../accounts/presentation'
 import { formatMoney } from '../lib/money'
 
 export type RuleChange = 'created' | 'updated' | 'deleted'

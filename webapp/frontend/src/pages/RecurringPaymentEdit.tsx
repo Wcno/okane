@@ -4,7 +4,7 @@ import { OneRecurringPaymentScreen } from '../components/recurringPayments/OneRe
 import { RecurringPaymentEditor } from '../components/recurringPayments/RecurringPaymentEditor'
 import { DeleteLink } from '../components/screen/DeleteLink'
 import { ScreenHeader } from '../components/screen/Screen'
-import { offeredAccounts } from '../expenses/presentation'
+import { offeredAccounts } from '../accounts/presentation'
 import { updateRecurringPayment, type RecurringPayment } from '../recurringPayments/api'
 import { recurringPaymentsBack, ruleTitle } from '../recurringPayments/presentation'
 import { useAfterRecurringPaymentChange } from '../recurringPayments/useAfterRecurringPaymentChange'
@@ -37,7 +37,6 @@ function EditForm({ rule, accounts }: { rule: RecurringPayment; accounts: Accoun
         onSaved={(saved) => afterRuleChange('updated', ruleTitle(saved), saved.amount)}
         submitLabel="Guardar cambios"
         submittingLabel="Guardando…"
-        cancelTo="/recurring-payments"
         accountNote={
           isOnArchivedAccount
             ? 'Esta Cuenta está archivada. Elige otra Cuenta para que el pago siga reservándose.'

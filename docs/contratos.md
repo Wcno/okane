@@ -142,6 +142,9 @@ los Saldos iniciales y el Rendimiento mensual está en el
   se rechaza, igual que registrar uno nuevo en ella.
 - Un identificador de Gasto o de Cuenta que no es del Usuario responde `404`, y
   ese `404` prevalece sobre la validación del resto de los campos.
+- `GET /api/incomes/{id}` devuelve un Ingreso del Usuario, para abrir sus
+  pantallas de edición y eliminación desde un enlace; el identificador de otro
+  Usuario responde `404`.
 
 ## Pagos recurrentes
 

@@ -50,6 +50,11 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(ruleLink(page, 'Internet')).toContainText('Día 31 de cada mes')
     await expectScreenQuality(page, `recurring-list-rules-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
 
+    // A populated list keeps its create action at the top right.
+    await page.getByRole('link', { name: 'Nuevo pago recurrente' }).click()
+    await expect(page).toHaveURL(/\/recurring-payments\/create$/)
+    await page.goBack()
+
     await ruleLink(page, 'Internet').click()
     await expect(page.getByLabel('Monto')).toHaveValue('45.00')
     await page.getByLabel('Monto').fill('50')
@@ -101,7 +106,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await reviewLink(page, 'Luz').click()
     await expect(page).toHaveURL(/\/recurring-payments\/occurrences\/\d+\/confirm$/)
     await expect(page.getByLabel('Monto')).toHaveValue('100.00')
-    await expect(page.getByLabel('Fecha del pago')).toHaveValue(panamaDay())
+    await expect(page.getByLabel('Fecha')).toHaveValue(panamaDay())
     await expect(page.getByText('Se registrará un gasto de $100.00 en Servicios desde Cuenta corriente.')).toBeVisible()
     await page.getByLabel('Monto').fill('120')
     await expectScreenQuality(page, `recurring-confirm-${colorScheme}`)
@@ -168,18 +173,18 @@ test('confirming rejects a bad date and keeps what was typed; a resolved reserva
   const [occurrenceId] = await listOccurrenceIds(page.request, rule.id)
 
   await page.goto(`/recurring-payments/occurrences/${occurrenceId}/confirm`)
-  await page.getByLabel('Fecha del pago').fill('2999-01-01')
+  await page.getByLabel('Fecha').fill('2999-01-01')
   await page.getByRole('button', { name: 'Confirmar pago' }).click()
   await expect(page.getByText('La fecha no puede ser futura')).toBeVisible()
-  await expect(page.getByLabel('Fecha del pago')).toBeFocused()
+  await expect(page.getByLabel('Fecha')).toBeFocused()
   await expectScreenQuality(page, 'recurring-confirm-future-date')
 
-  await page.getByLabel('Fecha del pago').fill(new Date(Date.parse(`${firstOfThisMonth()}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10))
+  await page.getByLabel('Fecha').fill(new Date(Date.parse(`${firstOfThisMonth()}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10))
   await page.getByRole('button', { name: 'Confirmar pago' }).click()
   await expect(page.getByText('La fecha no puede ser anterior a la reserva')).toBeVisible()
 
   // Another tab cancels the reservation: the stale form is refused and says why.
-  await page.getByLabel('Fecha del pago').fill(panamaDay())
+  await page.getByLabel('Fecha').fill(panamaDay())
   await page.getByLabel('Monto').fill('90')
   await cancelOccurrence(page.request, occurrenceId)
   await page.getByRole('button', { name: 'Confirmar pago' }).click()
@@ -193,6 +198,20 @@ test('confirming rejects a bad date and keeps what was typed; a resolved reserva
   await page.goto(`/recurring-payments/occurrences/${occurrenceId}/cancel`)
   await expect(page.getByText('Esta reserva ya estaba cancelada.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Cancelar reserva' })).toBeHidden()
+})
+
+test('an Account with rules or pending reservations cannot be archived and says why', async ({ page, expectedProblems }) => {
+  // api-service refuses the archive with a 409 that the browser logs.
+  expectedProblems.push(/status of 409/)
+  await signUp(page.request)
+  const account = await createAccount(page.request, { name: 'Cuenta corriente' })
+  await createRecurringPayment(page.request, { account_id: account.id, start_date: firstOfThisMonth(), description: 'Luz' })
+
+  await page.goto(`/accounts/${account.id}/delete`)
+  await page.getByRole('button', { name: 'Archivar cuenta' }).click()
+  await expect(page.getByRole('alert')).toContainText('Mueve o elimina los pagos recurrentes de esta Cuenta antes de archivarla.')
+  await expect(page.getByRole('alert')).toContainText('Confirma o cancela los pagos recurrentes pendientes')
+  await expectScreenQuality(page, 'recurring-account-archive-blocked')
 })
 
 test('creating a rule shows what is wrong without losing what was typed', async ({ page }) => {
