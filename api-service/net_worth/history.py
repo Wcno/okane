@@ -86,7 +86,7 @@ def history_of(user_id):
                 "opening_balances_added": str(incorporations),
                 "net_savings": str(net_savings),
                 "return": str(final["cumulative_return"] - opening["cumulative_return"]),
-                "estimated": opening["estimated"] or final["estimated"],
+                "estimated": final["estimated"],
             }
         )
         month = schedule.month_end(month) + datetime.timedelta(days=1)

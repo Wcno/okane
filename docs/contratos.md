@@ -296,7 +296,10 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `days_left`: días desde hoy hasta el último del mes, incluido hoy.
   `per_day`: `available` entre `days_left`, truncado a centavos hacia cero; el
   último día divide entre uno y un `available` negativo da un importe negativo.
-- `net_worth`: suma de los Saldos de todas las Cuentas, archivadas incluidas.
+- `net_worth`: el Patrimonio al cierre de hoy, el de la serie de
+  `GET /api/net-worth/history`: Saldos de las Cuentas que no son de inversión
+  más el valor de las de inversión, archivadas incluidas; puede apoyarse en
+  un precio estimado.
 - `income`, `expenses` y `net_savings`: Ingresos y Gastos con fecha del mes y su
   diferencia (Ingresos − Gastos).
 - `budgets`: una fila por Presupuesto del mes, con la forma de `GET /api/budgets`
@@ -458,8 +461,8 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Patrimonio al cierre = Saldos de las Cuentas que no son de inversión + valor
   de las Cuentas de inversión (efectivo y Posiciones al precio de referencia de
   ese cierre). Una Transferencia no lo cambia. `estimated` es `true` si algún
-  precio de los dos cortes del período sale de la última Transacción de
-  inversión; nunca se usa un precio posterior al corte ni se valora en cero.
+  precio del cierre del período sale de la última Transacción de inversión (el
+  cierre inicial se juzga en el período anterior); nunca se usa un precio posterior al corte ni se valora en cero.
 - `net_worth` de `GET /api/dashboard` es el Patrimonio al cierre de hoy de esa
   serie, con inversiones.
 

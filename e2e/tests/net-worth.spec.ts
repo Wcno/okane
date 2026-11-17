@@ -52,23 +52,42 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(card(page)).toContainText('Ahorro neto$0.00')
     await expect(card(page).getByText('Saldos iniciales incorporados')).toBeHidden()
 
-    const chart = card(page).getByRole('img', { name: /Evolución mensual del Patrimonio/ })
+    const chart = card(page).getByRole('group', { name: /Evolución mensual del Patrimonio/ })
     await expect(chart).toBeVisible()
-    await expect(card(page)).toContainText('Punto vacío: algún precio de ese mes es estimado.')
+    await expect(card(page)).toContainText('Punto vacío: el cierre de ese mes usa un precio estimado.')
     await expectScreenQuality(page, `net-worth-chart-${colorScheme}`)
 
+    // The arrow keys walk the months; the tag beside the point and a live region name the month.
+    await chart.focus()
+    await page.keyboard.press('ArrowLeft')
+    await expect(card(page).locator('p[aria-live="polite"]')).toHaveText(/\$1,700\.00$/)
+    await expect(chart).toContainText('estimado')
+    await expectScreenQuality(page, `net-worth-chart-focused-${colorScheme}`)
+    await page.keyboard.press('Home')
+    await expect(card(page).locator('p[aria-live="polite"]')).toHaveText(/\$1,500\.00$/)
+
     await card(page).getByRole('button', { name: 'Tabla' }).click()
-    const table = card(page).getByRole('table')
-    await expect(table.getByRole('row')).toHaveCount(4)
-    const current = table.getByRole('row').nth(1)
-    await expect(current).toContainText('$1,750.00')
-    await expect(current).toContainText('+$50.00')
-    const lastMonth = table.getByRole('row').nth(2)
-    await expect(lastMonth).toContainText('(estimado)')
-    await expect(lastMonth).toContainText('$1,700.00')
-    await expect(lastMonth).toContainText('$200.00')
-    const firstMonth = table.getByRole('row').nth(3)
-    await expect(firstMonth).toContainText('+$1,500.00')
+    const table = card(page).getByRole('region', { name: 'Evolución mensual del Patrimonio en tabla' })
+    const months = table.getByRole('listitem')
+    await expect(months).toHaveCount(3)
+    await expect(months.nth(0)).toContainText('$1,750.00')
+    await expect(months.nth(0)).toContainText('Rendimiento+$50.00')
+    await expect(months.nth(0)).not.toContainText('(estimado)')
+    await expect(months.nth(1)).toContainText('(estimado)')
+    await expect(months.nth(1)).toContainText('Patrimonio$1,700.00')
+    await expect(months.nth(1)).toContainText('Ahorro neto$200.00')
+    await expect(months.nth(2)).toContainText('Saldos iniciales+$1,500.00')
+
+    // Every label and amount sits inside the card, with nothing cut off or scrolling sideways.
+    const bounds = await table.evaluate((region) => {
+      const box = region.getBoundingClientRect()
+      const cut = [...region.querySelectorAll('dt, dd, h4')].filter((element) => {
+        const rect = element.getBoundingClientRect()
+        return rect.left < box.left - 0.5 || rect.right > box.right + 0.5 || element.scrollWidth > element.clientWidth
+      })
+      return { cut: cut.length, scrolls: region.scrollWidth > region.clientWidth }
+    })
+    expect(bounds).toEqual({ cut: 0, scrolls: false })
     await expectScreenQuality(page, `net-worth-table-${colorScheme}`)
   })
 }

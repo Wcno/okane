@@ -194,7 +194,7 @@ class PriceTests(NetWorthApiTestCase):
         self.assertTrue(months["2026-10"]["estimated"])
         self.assertEqual(months["2026-11"]["net_worth"], "1300.00")
         self.assertEqual(months["2026-11"]["return"], "300.00")
-        self.assertTrue(months["2026-11"]["estimated"])  # its opening cut still rests on the estimate
+        self.assertFalse(months["2026-11"]["estimated"])  # its own close has a known price
 
         self.set_price(asset, "50", date="2026-10-31")
         months = self.months()
