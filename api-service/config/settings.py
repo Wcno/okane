@@ -30,6 +30,7 @@ INTERNAL_SERVICE_KEY = env("INTERNAL_SERVICE_KEY")
 INSTALLED_APPS = [
     "rest_framework",
     "health",
+    "categories",
     "accounts",
     "expenses",
     "budgets",
