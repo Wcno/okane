@@ -189,7 +189,7 @@ El navegador y los clientes externos solo se comunican con `webapp`, que autenti
 | Restablecer contraseña | Sí | `POST /auth/reset-password` | `users` | webapp, webapp-db | A5 |
 | Cambiar contraseña | Sí | `PUT /auth/password` | `users` | webapp, webapp-db | A5 |
 | Cerrar sesión | Sí | `POST /auth/logout` | `sessions` | webapp, webapp-db | A5 |
-| Eliminar usuario | Sí | `DELETE /users/me` | `users` | webapp, webapp-db | A5 |
+| Eliminar usuario | Sí | `DELETE /users/me`; interno: `DELETE /internal/users/me` | `users` y los datos financieros del Usuario | webapp, webapp-db, api-service, api-db | A5 |
 
 Las pantallas de esta sección consultan además `GET /auth/session`, que no es un caso de uso propio.
 Devuelve quién inició sesión (o `null` si nadie) y el token CSRF que el navegador envía en cada escritura, porque la cookie CSRF es HttpOnly.
@@ -199,7 +199,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar cuentas | Sí | `GET /api/accounts` | `accounts` | api-service, api-db | A5 |
+| Consultar cuentas | Sí | `GET /api/accounts` | `accounts`, `transfers` | api-service, api-db | A5 |
 | Crear cuenta | Sí | `POST /api/accounts` | `accounts` | api-service, api-db | A5 |
 | Editar cuenta | Sí | `PUT /api/accounts/{id}` | `accounts` | api-service, api-db | A5 |
 | Eliminar cuenta | Sí | `DELETE /api/accounts/{id}` | `accounts` | api-service, api-db | A5 |
@@ -213,12 +213,13 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 | Crear categoría | Sí | `POST /api/categories` | `categories` | api-service, api-db | N3 |
 | Editar categoría | Sí | `PUT /api/categories/{id}` | `categories` | api-service, api-db | N3 |
 | Archivar categoría | Sí | `POST /api/categories/{id}/archive` | `categories` | api-service, api-db | N3 |
+| Eliminar categoría (archiva si tiene registros) | Sí | `DELETE /api/categories/{id}` | `categories` | api-service, api-db | N3 |
 
 ### Gestión de presupuestos
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar presupuestos | Sí | `GET /api/budgets` | `budgets` | api-service, api-db | A5 |
+| Consultar presupuestos | Sí | `GET /api/budgets`, `GET /api/budgets/{id}` | `budgets` | api-service, api-db | A5 |
 | Crear presupuesto | Sí | `POST /api/budgets` | `budgets` | api-service, api-db | A5 |
 | Editar presupuesto | Sí | `PUT /api/budgets/{id}` | `budgets` | api-service, api-db | A5 |
 | Eliminar presupuesto | Sí | `DELETE /api/budgets/{id}` | `budgets` | api-service, api-db | A5 |
@@ -245,7 +246,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar transferencias | Sí | `GET /api/transfers` | `transfers` | api-service, api-db | N2 |
+| Consultar transferencias | Sí | `GET /api/transfers`, `GET /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |
 | Registrar transferencia | Sí | `POST /api/transfers` | `transfers` | api-service, api-db | N2 |
 | Editar transferencia | Sí | `PUT /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |
 | Eliminar transferencia | Sí | `DELETE /api/transfers/{id}` | `transfers` | api-service, api-db | N2 |
@@ -254,7 +255,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar pagos recurrentes | Sí | `GET /api/recurring-payments` | `recurring_payments` | api-service, api-db | N2 |
+| Consultar pagos recurrentes | Sí | `GET /api/recurring-payments`, `GET /api/recurring-payments/{id}`, `GET /api/recurring-payments/occurrences/{id}` | `recurring_payments` | api-service, api-db | N2 |
 | Crear pago recurrente | Sí | `POST /api/recurring-payments` | `recurring_payments` | api-service, api-db | N2 |
 | Editar pago recurrente | Sí | `PUT /api/recurring-payments/{id}` | `recurring_payments` | api-service, api-db | N2 |
 | Eliminar pago recurrente | Sí | `DELETE /api/recurring-payments/{id}` | `recurring_payments` | api-service, api-db | N2 |
@@ -329,7 +330,7 @@ tipados, permisos y respuestas se detallan en [contratos.md](contratos.md).
 
 No existen tablas de saldos ni de posiciones: ambos se calculan a partir de lo registrado ([ADR 0002](adr/0002-el-saldo-se-deriva-de-los-movimientos.md)). Por eso varios casos originales leen más tablas que la que lista su fila; la columna "BD" conserva la tabla principal, como en la Asignación 5.
 
-Mientras `categories` no exista (nivel 3), las Categorías son un catálogo fijo definido por el sistema.
+Cada Usuario tiene sus propias Categorías en `categories`: parte de una copia del catálogo inicial de ocho (Vivienda, Alimentación, Transporte, Servicios, Salud, Entretenimiento, Educación y Otros) y puede renombrar, archivar o eliminar cualquiera de ellas, además de crear las suyas. Las Categorías se identifican por un `id` propio de cada Usuario, nunca por un número compartido. Eliminar una Categoría sin Gastos, Presupuestos ni Pagos recurrentes la borra; si tiene registros, se archiva y conserva su historial.
 
 Los Precios de referencia manuales son propios de cada Usuario; la identidad
 de un Activo distingue proveedor y mercado además del símbolo. Las Cuentas
@@ -357,8 +358,8 @@ Estos casos conservan su nombre, ruta y endpoint, pero las decisiones de diseño
 | Editar cuenta | No permite cambiar el Saldo; este se corrige registrando o corrigiendo movimientos. |
 | Eliminar cuenta | Solo borra una Cuenta sin movimientos. Si los tiene, la archiva y conserva su historial. |
 | Registrar gasto | Exige monto, Categoría y Cuenta. La fecha empieza en hoy y la descripción es opcional, de hasta 140 caracteres. Se acepta aunque exceda el Presupuesto o deje el Saldo en negativo. No se permite sobre una Cuenta de inversión ni archivada. |
-| Editar gasto | Exige la fecha además de los campos de registrar. Se permite sobre una Cuenta archivada mientras el Gasto siga en ella; moverlo a una Cuenta archivada o de inversión se rechaza. Ambos Saldos se recalculan. |
-| Eliminar gasto | Se permite aunque su Cuenta esté archivada. El Saldo de la Cuenta se recalcula. |
+| Editar gasto | Exige la fecha además de los campos de registrar. Se permite sobre una Cuenta archivada mientras el Gasto siga en ella; moverlo a una Cuenta archivada o de inversión se rechaza. Ambos Saldos se recalculan. Si el Gasto nació de un pago recurrente confirmado, la pantalla lo advierte: la reserva no se reabre. |
+| Eliminar gasto | Se permite aunque su Cuenta esté archivada. El Saldo de la Cuenta se recalcula. Si el Gasto nació de un pago recurrente confirmado, la pantalla lo advierte y el vínculo de la reserva se conserva. |
 | Crear presupuesto | Solo puede existir un Presupuesto por Categoría y mes. |
 | Registrar compra de activos | Descuenta efectivo de una Cuenta de inversión. Se acepta sin efectivo suficiente, con un aviso. |
 | Registrar venta de activos | No puede superar las unidades que hay en la Posición. |

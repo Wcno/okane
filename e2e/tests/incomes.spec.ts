@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { expect, expectScreenQuality, knownAxeRules, test } from './support/qa.js'
+import { expect, expectScreenQuality, test } from './support/qa.js'
 import { archiveAccount, createAccount, createIncome } from './support/ledger.js'
 import { signUp } from './support/session.js'
 
@@ -15,7 +15,7 @@ const submitButton = (page: Page) => page.getByRole('main').getByRole('button', 
 const accountRow = (page: Page, name: string) => page.getByRole('listitem').filter({ hasText: name })
 
 /** The row of an Income in the list: one link to its edit screen. */
-const incomeRow = (page: Page, title: string) => page.getByRole('link', { name: new RegExp(`^Editar ingreso ${title},`) })
+const incomeRow = (page: Page, title: string) => page.getByRole('link', { name: new RegExp(`^${title}.*Editar ingreso$`) })
 
 const panamaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Panama' }).format(new Date())
 
@@ -40,7 +40,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page).toHaveURL(/\/incomes\/create$/)
     await expect(page.getByLabel('Fecha')).toHaveValue(panamaToday())
     // An Income has no Category.
-    await expect(page.getByText('Categoría')).toHaveCount(0)
+    await expect(page.getByText('Categoría', { exact: true })).toHaveCount(0)
     await page.getByLabel('Monto').fill('250')
     await page.getByLabel('Descripción').fill('Salario')
     await expectScreenQuality(page, `incomes-create-filled-${colorScheme}`)
@@ -52,7 +52,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     )
     await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
     await expect(incomeRow(page, 'Salario')).toBeVisible()
-    await expectScreenQuality(page, `incomes-list-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
+    await expectScreenQuality(page, `incomes-list-${colorScheme}`)
 
     // Correcting the amount and moving the Income to another Account updates both Balances.
     await incomeRow(page, 'Salario').click()
@@ -272,7 +272,7 @@ test('the list pages on request, keeps day headings and the keyboard where it wa
   await expect(page.getByRole('button', { name: 'Mostrar más' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'mar 10 nov' })).toBeVisible()
-  await expectScreenQuality(page, 'incomes-list-all-pages', { skipAxeRules: knownAxeRules.recordRowLabel })
+  await expectScreenQuality(page, 'incomes-list-all-pages')
 })
 
 test('a row is one link that keeps the whole name and Account, and nothing else to tap', async ({ page }) => {
@@ -287,10 +287,10 @@ test('a row is one link that keeps the whole name and Account, and nothing else 
 
   const row = incomeRow(page, 'Pago de la consultoría de noviembre')
   await expect(row).toContainText('Cuenta corriente del hogar')
-  await expect(row).toHaveAttribute('aria-label', /^Editar ingreso .*\$1,234\.50, Cuenta corriente del hogar$/)
+  await expect(row).toHaveAccessibleName(/^Pago de la consultoría de noviembre .*Cuenta corriente del hogar .*\$1,234\.50 \. Editar ingreso$/)
   await expect(page.getByRole('main').getByRole('button')).toHaveCount(0)
   const clipped = await row.evaluate((link) =>
-    [...link.querySelectorAll('span')].some((span) => span.scrollWidth > span.clientWidth + 1),
+    [...link.querySelectorAll('span:not(.sr-only)')].some((span) => span.scrollWidth > span.clientWidth + 1),
   )
   expect(clipped).toBe(false)
 
@@ -307,9 +307,9 @@ test('the populated list keeps a register action that opens the form', async ({ 
   await createIncome(page.request, { account_id: account.id, description: 'Intereses' })
 
   await page.goto('/incomes')
-  const register = page.getByRole('main').getByRole('link', { name: 'Registrar ingreso' })
+  const register = page.getByRole('main').getByRole('link', { name: /Registrar ingreso|Ingreso/ })
   await expect(register).toBeVisible()
-  await expectScreenQuality(page, 'incomes-list-with-register-action', { skipAxeRules: knownAxeRules.recordRowLabel })
+  await expectScreenQuality(page, 'incomes-list-with-register-action')
   if (isPhone()) expect(await heightOf(register)).toBeGreaterThanOrEqual(44)
   await register.click()
   await expect(page).toHaveURL(/\/incomes\/create$/)

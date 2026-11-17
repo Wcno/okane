@@ -13,6 +13,7 @@ from config.rest import paginate
 def represent_all(accounts):
     context = {
         "balances": ledger.balances(accounts),
+        "net_contributions": ledger.net_contributions(accounts),
         "with_records": ledger.accounts_with_records(accounts),
     }
     return AccountSerializer(accounts, many=True, context=context).data
@@ -59,6 +60,9 @@ def account_detail(request, account_id):
         account.delete()
         return Response(status=204)
     if account.archived_at is None:
+        blockers = ledger.archive_blockers(account)
+        if blockers:
+            return Response({"errors": {"form": blockers}}, status=409)
         account.archived_at = timezone.now()
         account.save(update_fields=["archived_at"])
     return Response(represent(account))

@@ -5,6 +5,14 @@ import { AccountCreate } from './pages/AccountCreate'
 import { AccountDelete } from './pages/AccountDelete'
 import { AccountEdit } from './pages/AccountEdit'
 import { Accounts } from './pages/Accounts'
+import { BudgetCreate } from './pages/BudgetCreate'
+import { BudgetDelete } from './pages/BudgetDelete'
+import { BudgetEdit } from './pages/BudgetEdit'
+import { Budgets } from './pages/Budgets'
+import { Categories } from './pages/Categories'
+import { CategoryArchive } from './pages/CategoryArchive'
+import { CategoryCreate } from './pages/CategoryCreate'
+import { CategoryEdit } from './pages/CategoryEdit'
 import { ChangePassword } from './pages/ChangePassword'
 import { Dashboard } from './pages/Dashboard'
 import { ExpenseCreate } from './pages/ExpenseCreate'
@@ -19,14 +27,25 @@ import { ForgotPassword } from './pages/ForgotPassword'
 import { Login } from './pages/Login'
 import { Logout } from './pages/Logout'
 import { Menu } from './pages/Menu'
+import { OccurrenceCancel } from './pages/OccurrenceCancel'
+import { OccurrenceConfirm } from './pages/OccurrenceConfirm'
+import { RecurringPaymentCreate } from './pages/RecurringPaymentCreate'
+import { RecurringPaymentDelete } from './pages/RecurringPaymentDelete'
+import { RecurringPaymentEdit } from './pages/RecurringPaymentEdit'
+import { RecurringPayments } from './pages/RecurringPayments'
 import { Positions } from './pages/Positions'
 import { Register } from './pages/Register'
 import { ResetPassword } from './pages/ResetPassword'
+import { TransferCreate } from './pages/TransferCreate'
+import { TransferDelete } from './pages/TransferDelete'
+import { TransferEdit } from './pages/TransferEdit'
+import { Transfers } from './pages/Transfers'
 import { Trade } from './pages/Trade'
 import { TransactionDelete } from './pages/TransactionDelete'
 import { TransactionEdit } from './pages/TransactionEdit'
 import { Transactions } from './pages/Transactions'
 import { UnderConstruction } from './pages/UnderConstruction'
+import { UserDelete } from './pages/UserDelete'
 
 export default function App() {
   return (
@@ -53,6 +72,24 @@ export default function App() {
             <Route path="/expenses/create" element={<ExpenseCreate />} />
             <Route path="/expenses/:id/edit" element={<ExpenseEdit />} />
             <Route path="/expenses/:id/delete" element={<ExpenseDelete />} />
+            <Route path="/budgets" element={<Budgets />} />
+            <Route path="/budgets/create" element={<BudgetCreate />} />
+            <Route path="/budgets/:id/edit" element={<BudgetEdit />} />
+            <Route path="/budgets/:id/delete" element={<BudgetDelete />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/categories/create" element={<CategoryCreate />} />
+            <Route path="/categories/:id/edit" element={<CategoryEdit />} />
+            <Route path="/categories/:id/archive" element={<CategoryArchive />} />
+            <Route path="/recurring-payments" element={<RecurringPayments />} />
+            <Route path="/recurring-payments/create" element={<RecurringPaymentCreate />} />
+            <Route path="/recurring-payments/occurrences/:id/confirm" element={<OccurrenceConfirm />} />
+            <Route path="/recurring-payments/occurrences/:id/cancel" element={<OccurrenceCancel />} />
+            <Route path="/recurring-payments/:id/edit" element={<RecurringPaymentEdit />} />
+            <Route path="/recurring-payments/:id/delete" element={<RecurringPaymentDelete />} />
+            <Route path="/transfers" element={<Transfers />} />
+            <Route path="/transfers/create" element={<TransferCreate />} />
+            <Route path="/transfers/:id/edit" element={<TransferEdit />} />
+            <Route path="/transfers/:id/delete" element={<TransferDelete />} />
             <Route path="/investments/positions" element={<Positions />} />
             <Route path="/investments/transactions/buy" element={<Trade kind="buy" />} />
             <Route path="/investments/transactions/sell" element={<Trade kind="sell" />} />
@@ -64,6 +101,7 @@ export default function App() {
             <Route path="/incomes/:id/edit" element={<IncomeEdit />} />
             <Route path="/incomes/:id/delete" element={<IncomeDelete />} />
             <Route path="/profile/change-password" element={<ChangePassword />} />
+            <Route path="/profile/delete" element={<UserDelete />} />
             <Route path="*" element={<UnderConstruction />} />
           </Route>
         </Route>

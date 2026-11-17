@@ -35,16 +35,23 @@ TWELVE_DATA_API_KEY = os.environ.get("TWELVE_DATA_API_KEY", "")
 INSTALLED_APPS = [
     "rest_framework",
     "health",
+    "categories",
     "accounts",
     "expenses",
+    "budgets",
+    "recurring_payments",
+    "transfers",
     "investments",
     "incomes",
+    "dashboard",
+    "erasure",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
     "service_access.middleware.ServiceCredentialMiddleware",
+    "erasure.middleware.ErasedUserWritesMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

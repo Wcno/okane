@@ -133,15 +133,22 @@ los Saldos iniciales y el Rendimiento mensual está en el
   añade a la paginación `last_used_account_id`: la Cuenta del Gasto registrado
   más recientemente por el Usuario, según el orden de registro y no la fecha del
   Gasto, o `null` si no tiene Gastos. El registro rápido la propone al abrirse.
+- `GET /api/transfers/{id}` devuelve una Transferencia del Usuario, con la misma
+  forma que el listado, para abrir sus pantallas de edición y eliminación desde
+  un enlace; la de otro Usuario responde `404`.
+- Cada Cuenta de `GET /api/accounts` incluye `net_contribution`: en una Cuenta de
+  inversión, su Saldo inicial más las Transferencias que entran menos las que
+  salen; en las demás, `null`. Una Transferencia entre dos Cuentas de inversión
+  no cambia la suma de sus Aportes netos.
 - Un Gasto lleva monto, Categoría, Cuenta y fecha. La descripción es opcional y
   admite hasta 140 caracteres. `PUT /api/expenses/{id}` reemplaza el Gasto
   completo y exige la fecha: no asume hoy como `POST`. Un monto de más de 12
   dígitos enteros se rechaza con un mensaje propio.
-- Corregir o eliminar un Gasto de una Cuenta archivada se permite mientras el
-  Gasto siga en esa Cuenta. Mover un Gasto a una Cuenta archivada o de inversión
-  se rechaza, igual que registrar uno nuevo en ella.
-- Un identificador de Gasto o de Cuenta que no es del Usuario responde `404`, y
-  ese `404` prevalece sobre la validación del resto de los campos.
+- Corregir o eliminar un Gasto o un Ingreso de una Cuenta archivada se permite
+  mientras el registro siga en esa Cuenta. Mover un Gasto a una Cuenta archivada o
+  de inversión se rechaza, igual que registrar uno nuevo en ella.
+- Un identificador de Gasto, de Ingreso o de Cuenta que no es del Usuario responde
+  `404`, y ese `404` prevalece sobre la validación del resto de los campos.
 - `GET /api/incomes/{id}` devuelve un Ingreso del Usuario, para abrir sus
   pantallas de edición y eliminación desde un enlace; el identificador de otro
   Usuario responde `404`.
@@ -199,13 +206,75 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Editar o borrar el Gasto confirmado aplica las reglas de Gastos sin reabrir la
   reserva ni borrar su resolución original. La interfaz advierte este efecto y
   conserva el vínculo de auditoría incluso tras el borrado del Gasto.
+- Cada Gasto del API de Gastos (lista, lectura y respuestas de escritura) lleva
+  `recurring_payment_occurrence_id`: la ocurrencia confirmada de la que nació,
+  o `null` si se registró a mano. Es de solo lectura y se ignora al enviarlo.
+  Las pantallas de editar y eliminar ese Gasto muestran el aviso: "Este gasto
+  viene de un pago recurrente confirmado. Cambiarlo (o Eliminarlo) no reabre la
+  reserva ni cambia su resolución."
+- `GET /api/recurring-payments` pagina las reglas y las devuelve con
+  `id`, `description`, `amount`, `account_id`, `category_id`, `day_of_month`,
+  `start_date`, `status` (`active`, o `deleted` si una regla eliminada aún tiene
+  pendientes) y `occurrences`: las ocurrencias pendientes o vencidas de la regla
+  y las de este mes, la más reciente primero. Una ocurrencia lleva `id`,
+  `recurring_payment_id`, `due_date`, `status` (`pending`, `overdue` si es una
+  pendiente vencida, `confirmed`, `cancelled`), `amount`, `account_id`,
+  `category_id`, `description`, `reserved_from`, `entered_on` (fecha del Gasto;
+  `null` hasta confirmar), `resolved_on`, `resolved_at` y `expense_id`.
+  `GET /api/recurring-payments/{id}` y
+  `GET /api/recurring-payments/occurrences/{id}` devuelven una regla o una
+  ocurrencia del Usuario para abrir sus pantallas desde un enlace. Confirmar
+  acepta `amount`, `account_id` y `date`, todos opcionales; cancelar no lleva cuerpo.
+  Ambas responden con la ocurrencia.
 - Saldo o Disponible negativos se informan, sin bloquear un Gasto válido. No
   existe una opción de Configuración para activar cobros automáticos o bloqueos.
+
+## Categorías
+
+- Cada Usuario tiene sus propias Categorías; sus ids son suyos y no se comparten.
+  Parte de una copia del catálogo inicial (Vivienda, Alimentación, Transporte,
+  Servicios, Salud, Entretenimiento, Educación y Otros) que api-service crea la
+  primera vez que necesita sus Categorías, porque no tiene un evento de registro.
+  Una marca por Usuario evita que el catálogo reaparezca si las elimina todas.
+  La migración que introdujo el modelo copió el catálogo para cada Usuario con
+  registros y reasignó sus Gastos, Presupuestos, reglas y ocurrencias a su copia.
+- `GET /api/categories` devuelve `{results}` sin paginar, archivadas incluidas:
+  `id`, `name`, `key`, `has_records` y `archived_at`. `key` nombra la inicial de
+  la que es copia (`housing`, `food`, `transport`, `utilities`, `health`,
+  `entertainment`, `education`, `other`; fija su icono y tono) y es `null` en las
+  creadas por el Usuario. `GET /api/categories/{id}` devuelve una; la de otro
+  Usuario es `404`.
+- `POST /api/categories` y `PUT /api/categories/{id}` reciben `name` (hasta 40
+  caracteres, único entre las Categorías activas del Usuario sin distinguir
+  mayúsculas); cualquiera puede renombrarse.
+- `DELETE /api/categories/{id}` responde `204` y borra una Categoría sin Gastos,
+  Presupuestos, reglas ni ocurrencias; con registros la archiva y responde `200`
+  con la Categoría, igual que las Cuentas. `POST /api/categories/{id}/archive`
+  archiva sin borrar y es idempotente.
+- Archivar devuelve `409` mientras la Categoría tenga Pagos recurrentes vigentes
+  o reservas pendientes. Las Categorías archivadas se rechazan en Gastos,
+  Presupuestos y Pagos recurrentes nuevos, pero se conservan en los registros
+  que ya las usan, que pueden corregirse sin cambiar de Categoría.
+- `GET /api/budgets` incluye una fila por Categoría activa y por cada archivada
+  que tenga Presupuesto, Gastos o reservas en el mes.
 
 ## Presupuestos y Proyección
 
 - La unicidad del Presupuesto es por Usuario, Categoría y mes. Las Categorías
   ajenas o archivadas no se admiten en un Presupuesto nuevo.
+- `GET /api/budgets?month=YYYY-MM` (por omisión, el mes actual) devuelve
+  `{month, results}` con una fila por Categoría del catálogo, tenga o no
+  Presupuesto, sin paginar: `id` (`null` sin Presupuesto), `category_id`, `month`,
+  `amount` (`null` sin Presupuesto), `spent` (Gastos del mes), `committed`
+  (reservas al corte del mes), `carried_over` (la parte de `committed` que viene
+  de meses anteriores), `remaining` (`null` sin Presupuesto, nunca `"0.00"`) y
+  `exceeded` (Restante negativo). `GET /api/budgets/{id}` devuelve la misma fila
+  de un Presupuesto del Usuario. `POST /api/budgets` y `PUT /api/budgets/{id}`
+  reciben `amount` (mayor que cero), `category_id` y `month`; `PUT` reemplaza
+  el Presupuesto completo. Un segundo Presupuesto para la misma Categoría y mes
+  devuelve `409`. El registro rápido de Gastos lee el Restante de la Categoría
+  en la fila del mes de la fecha del Gasto y calcula la consecuencia
+  (`remaining` menos el monto); sin Presupuesto en esa fila, no hay Restante.
 - La copia mensual se ejecuta una vez por Usuario y mes actual, en una
   transacción, y solo copia desde el mes calendario inmediatamente anterior
   si el mes actual aún no tiene Presupuestos. Un mes ya personalizado se marca
@@ -214,6 +283,11 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - La inicialización se registra incluso si no hay nada para copiar. Eliminar
   todos los Presupuestos de un mes no vuelve a disparar la copia. Reintentos y
   consultas simultáneas no duplican filas; archivar Categorías las excluye.
+  No hay endpoint propio ni cambia la forma de `GET /api/budgets`: la copia
+  ocurre al listar el mes actual (`month` omitido o igual al mes en America/Panama)
+  o al crear en él un Presupuesto, que lo marca sin copiar. Listar, leer, editar
+  o eliminar otros meses no la dispara. Se copian los montos exactos de las
+  Categorías no archivadas, como filas independientes.
 - La Proyección usa una tasa anual nominal: tasa mensual = anual / 12.
   El aporte hipotético se incorpora al final de cada mes, después del interés.
   Los meses son enteros positivos y el aporte es no negativo. Se redondean solo
@@ -236,6 +310,33 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - El importe diario del Disponible divide entre los días desde hoy hasta el
   último del mes, incluido hoy. El último día divide entre uno; un Disponible
   negativo permanece negativo y nunca causa una división entre cero.
+
+## Panel
+
+- `GET /api/dashboard` devuelve, para el mes actual en America/Panama y solo
+  del Usuario de la sesión, las cifras que muestra el Panel. Las cantidades son
+  cadenas decimales. Al consultarlo se materializan las reservas debidas sin
+  crear Gastos ni cambiar Saldos.
+- `available`: Saldo de las Cuentas de gastos menos `committed`. Puede ser
+  negativo. `spending_balance` es esa suma de Saldos.
+- `committed`: suma de las reservas pendientes de Cuentas de gastos, las
+  vencidas y arrastradas incluidas; las de Cuentas de ahorro no cuentan.
+  `committed_count` es cuántas son.
+- `days_left`: días desde hoy hasta el último del mes, incluido hoy.
+  `per_day`: `available` entre `days_left`, truncado a centavos hacia cero; el
+  último día divide entre uno y un `available` negativo da un importe negativo.
+- `net_worth`: suma de los Saldos de todas las Cuentas, archivadas incluidas.
+- `income`, `expenses` y `net_savings`: Ingresos y Gastos con fecha del mes y su
+  diferencia (Ingresos − Gastos).
+- `budgets`: una fila por Presupuesto del mes, con la forma de `GET /api/budgets`
+  (mismo Restante); las Categorías sin Presupuesto no aparecen.
+- `overdue` y `upcoming`: las reservas pendientes de cualquier Cuenta, con la
+  forma de una ocurrencia de pago recurrente, ordenadas por vencimiento.
+  `overdue` son las de vencimiento anterior a hoy; `upcoming`, las demás.
+- `accounts`: `id`, `name`, `type`, `balance` y `archived` de cada Cuenta. Una
+  Cuenta archivada se lista solo si su Saldo no es cero.
+- No incluye Rendimiento ni evolución del Patrimonio; `GET /api/net-worth/history`
+  las ofrece cuando exista.
 
 ## Vista de Movimientos y preferencias
 
@@ -355,6 +456,17 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Solo al completar el borrado se elimina el Usuario, se invalidan sus sesiones
   y sus tokens, se borran preferencias e idempotencia, y se libera su correo.
   Cada nuevo módulo incorpora sus datos a este contrato.
+- El borrado interno es `DELETE /internal/users/me` en `api-service`, fuera de
+  `/api/`: `webapp` nunca lo reenvía desde el navegador y lo llama solo con la
+  credencial y el `X-Okane-User-Id` del Usuario autenticado. Responde `204`
+  también al repetirse. Borra los datos del Usuario y registra su identificador
+  en la misma transacción, bajo un candado por Usuario que espera a las
+  escrituras en curso. Desde entonces toda escritura de ese Usuario en `/api/`
+  responde `409` y no crea nada, y las lecturas devuelven vacío.
+- `webapp` solo elimina al Usuario tras recibir `204`. Si `api-service` no
+  responde o contesta otra cosa, repite la llamada una vez (es idempotente);
+  si sigue sin confirmar, responde `502`, conserva al Usuario y su sesión, y la
+  pantalla permite reintentar.
 
 ## Ejemplos para las pruebas HTTP
 

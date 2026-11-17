@@ -20,7 +20,7 @@ function Row({ account }: { account: Account }) {
   return (
     <RecordRow
       to={`/accounts/${account.id}/edit`}
-      label={`Editar cuenta ${account.name}, ${formatMoney(account.balance)}`}
+      action="Editar cuenta"
       icon={<AccountIcon account={account} />}
       title={account.name}
       details={details.join(' · ')}
@@ -60,16 +60,14 @@ function Total({ accounts }: { accounts: Account[] }) {
       <h2 id="accounts-total-title" className="text-[1rem] font-medium text-ink-2">
         Saldo total
       </h2>
-      <p
-        className="mt-2 text-[3.2rem] font-semibold leading-none tracking-[-0.035em] lg:text-[4.25rem]"
-        aria-label={formatMoney(total)}
-      >
+      <p className="mt-2 text-[3.2rem] font-semibold leading-none tracking-[-0.035em] lg:text-[4.25rem]">
         <span aria-hidden="true">
           {sign}
           <span className="mr-0.5 text-[0.62em] font-medium text-ink-3">$</span>
           {integer}
           <span className="text-[0.5em] font-medium tracking-[-0.01em] text-ink-2">.{cents}</span>
         </span>
+        <span className="sr-only">{formatMoney(total)}</span>
       </p>
       <p className="mt-3.5 max-w-[52ch] text-ink-2">
         {accounts.length === 1 ? 'Es el Saldo de tu única Cuenta.' : `Es la suma de tus ${accounts.length} Cuentas.`}{' '}

@@ -4,15 +4,17 @@ import { RequestError, readJson, write, type FieldErrors, type Outcome } from '.
 export interface Expense {
   id: number
   amount: string
-  /** One of the fixed Categories, 1 to 8 (data/categories.ts). */
+  /** One of the User's Categories (categories/api.ts); its id belongs to that User. */
   categoryId: number
   accountId: number
   date: string
   description: string
+  /** The confirmed reservation this Expense came from; null for an Expense registered by hand. Never sent. */
+  recurringPaymentOccurrenceId: number | null
 }
 
 /** What registering or correcting an Expense sends: every field, the date included. */
-export type ExpenseInput = Omit<Expense, 'id'>
+export type ExpenseInput = Omit<Expense, 'id' | 'recurringPaymentOccurrenceId'>
 
 export type ExpenseField = 'amount' | 'categoryId' | 'accountId' | 'date' | 'description'
 export type ExpenseErrors = FieldErrors<ExpenseField>
@@ -39,6 +41,7 @@ interface ExpenseBody {
   account_id: number
   date: string
   description: string
+  recurring_payment_occurrence_id: number | null
 }
 
 const toExpense = (body: ExpenseBody): Expense => ({
@@ -48,6 +51,7 @@ const toExpense = (body: ExpenseBody): Expense => ({
   accountId: body.account_id,
   date: body.date,
   description: body.description,
+  recurringPaymentOccurrenceId: body.recurring_payment_occurrence_id,
 })
 
 const toBody = (expense: ExpenseInput) => ({

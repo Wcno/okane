@@ -1,63 +1,48 @@
-import type { CSSProperties } from 'react'
-import { categoryByName } from '../../data/categories'
-import { committed, today, upcomingPayments } from '../../data/sample'
+import type { Dashboard } from '../../dashboard/api'
 import { formatMoney } from '../../lib/money'
+import { sumAmounts } from '../../lib/decimal'
+import type { RecurringPaymentOccurrence } from '../../recurringPayments/api'
+import { dueText, occurrenceTitle } from '../../recurringPayments/presentation'
+import { CategoryChip } from '../expenses/CategoryChip'
+import { RecordRow } from '../screen/RecordRow'
 import { Card } from './Card'
 
-const dueIn = (day: number) => {
-  const days = day - today.day
-  return days === 1 ? 'Mañana' : `En ${days} días`
+function Group({ title, occurrences }: { title: string; occurrences: RecurringPaymentOccurrence[] }) {
+  if (occurrences.length === 0) return null
+  return (
+    <div className="mt-4 first:mt-3">
+      <h3 className="flex items-baseline justify-between gap-3 text-[0.9rem] font-medium text-ink-2">
+        <span>{title}</span>
+        <span className="tabular-nums">{formatMoney(sumAmounts(occurrences.map((item) => item.amount)))}</span>
+      </h3>
+      <ul className="mt-1 divide-y divide-line">
+        {occurrences.map((occurrence) => (
+          <RecordRow
+            key={occurrence.id}
+            to={`/recurring-payments/occurrences/${occurrence.id}/confirm`}
+            action="Revisar pago"
+            icon={<CategoryChip categoryId={occurrence.categoryId} />}
+            title={occurrenceTitle(occurrence)}
+            details={dueText(occurrence)}
+            amount={occurrence.amount}
+          />
+        ))}
+      </ul>
+    </div>
+  )
 }
 
-/** Upcoming monthly Recurring Payments make up the committed amount. */
-export function UpcomingPaymentsCard() {
+/** What is still committed: payments overdue from earlier, apart from the ones of this month. */
+export function UpcomingPaymentsCard({ overdue, upcoming }: Pick<Dashboard, 'overdue' | 'upcoming'>) {
   return (
-    <Card
-      id="payments"
-      title="Pagos recurrentes por vencer"
-      link={{ to: '/recurring-payments', text: 'Ver todos' }}
-    >
-      <p className="mt-1 text-[0.95rem] text-ink-3">
-        Comprometido {formatMoney(committed)} hasta fin de mes
-      </p>
-
-      {upcomingPayments.length === 0 ? (
-        <p className="mt-4 text-ink-2">
-          No queda ningún Pago recurrente por vencer este mes. Todo el Saldo de tus Cuentas de
-          gastos está disponible.
-        </p>
+    <Card id="committed" title="Comprometido" link={{ to: '/recurring-payments', text: 'Pagos recurrentes' }}>
+      {overdue.length + upcoming.length === 0 ? (
+        <p className="mt-2 max-w-[52ch] text-ink-2">No tienes pagos pendientes de confirmar.</p>
       ) : (
-        <ul className="mt-3 divide-y divide-line">
-          {upcomingPayments.map((payment) => {
-            const category = categoryByName(payment.category)
-            return (
-              <li
-                key={payment.id}
-                style={{ '--tone': category.tone } as CSSProperties}
-                className="flex items-center gap-3.5 py-3 first:pt-1 last:pb-0"
-              >
-                <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-surface-2 text-center leading-none">
-                  <div>
-                    <div className="text-[1.05rem] font-semibold tabular-nums">{payment.day}</div>
-                    <div className="mt-0.5 text-[0.72rem] text-ink-3">{today.shortMonth}</div>
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-[1rem] font-medium">{payment.name}</h3>
-                  <p className="mt-0.5 flex items-center gap-1.5 text-[0.87rem] text-ink-3">
-                    <span className="size-2 shrink-0 rounded-full bg-(--tone)" aria-hidden="true" />
-                    <span className="truncate">
-                      {payment.category} · {dueIn(payment.day)}
-                    </span>
-                  </p>
-                </div>
-                <span className="shrink-0 text-[1rem] font-semibold tabular-nums">
-                  {formatMoney(payment.amount)}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
+        <>
+          <Group title="Vencidos" occurrences={overdue} />
+          <Group title="Del mes" occurrences={upcoming} />
+        </>
       )}
     </Card>
   )
