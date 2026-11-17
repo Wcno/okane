@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Account } from '../../accounts/api'
-import type { Expense, ExpenseInput, Outcome } from '../../expenses/api'
+import type { Expense, ExpenseField, ExpenseInput } from '../../expenses/api'
 import type { ExpenseDraft } from '../../expenses/form'
+import type { Outcome } from '../../lib/http'
 import { useExpenseForm } from '../../expenses/useExpenseForm'
 import { primaryButtonClassName, secondaryButtonClassName } from '../buttons'
 import { FormAlert } from '../FormAlert'
@@ -14,7 +15,6 @@ export function ExpenseEditor({
   idPrefix,
   initial,
   accounts,
-  today,
   save,
   onSaved,
   submitLabel,
@@ -26,8 +26,7 @@ export function ExpenseEditor({
   idPrefix: string
   initial: ExpenseDraft
   accounts: Account[]
-  today: string
-  save: (expense: ExpenseInput) => Promise<Outcome<Expense>>
+  save: (expense: ExpenseInput) => Promise<Outcome<Expense, ExpenseField>>
   onSaved: (expense: Expense) => void | Promise<void>
   submitLabel: string
   submittingLabel: string
@@ -39,7 +38,6 @@ export function ExpenseEditor({
   const { form, draft, change, errors, isSubmitting, submit } = useExpenseForm({
     initial,
     accounts,
-    today,
     save,
     onSaved,
   })
@@ -55,7 +53,6 @@ export function ExpenseEditor({
           onChange={change}
           errors={errors}
           accounts={accounts}
-          today={today}
           accountNote={accountNote}
         />
 

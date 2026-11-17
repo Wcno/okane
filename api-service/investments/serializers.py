@@ -4,11 +4,12 @@ from rest_framework import serializers
 from rest_framework.exceptions import NotFound
 
 from accounts import clock
+from accounts.dates import spanish_day
 from accounts.models import Account
 from accounts.serializers import (
-    DECIMAL_ERRORS,
     DecimalStringField,
     StrictIntegerField,
+    amount_messages,
     messages,
 )
 from investments.holdings import exact, sellable_units
@@ -22,6 +23,8 @@ UNITS_INVALID = "Escribe las unidades mayores que cero, con ocho decimales como 
 UNIT_PRICE_INVALID = (
     "Escribe el precio por unidad mayor que cero, con ocho decimales como máximo. Ejemplo: 187.35"
 )
+UNITS_TOO_LARGE = "Las unidades son demasiado grandes. El máximo es 999,999,999,999."
+UNIT_PRICE_TOO_LARGE = "El precio por unidad es demasiado grande. El máximo es $999,999,999,999."
 ACCOUNT_REQUIRED = "Elige la Cuenta de inversión de la operación."
 ASSET_REQUIRED = "Elige el Activo de la operación."
 ACCOUNT_NOT_INVESTMENT = "Una compra o venta se registra en una Cuenta de inversión. Elige una."
@@ -47,12 +50,12 @@ def trimmed(units):
     return text.rstrip("0").rstrip(".") if "." in text else text
 
 
-def quantity_field(message, minimum=SMALLEST_QUANTITY):
+def quantity_field(invalid, too_large):
     return DecimalStringField(
         max_digits=20,
         decimal_places=8,
-        min_value=minimum,
-        error_messages=messages(message, *DECIMAL_ERRORS),
+        min_value=SMALLEST_QUANTITY,
+        error_messages=amount_messages(invalid, too_large),
     )
 
 
@@ -78,8 +81,8 @@ class InvestmentTransactionSerializer(serializers.Serializer):
     asset_id = StrictIntegerField(
         error_messages=messages(ASSET_REQUIRED, "required", "null", "invalid"),
     )
-    units = quantity_field(UNITS_INVALID)
-    unit_price = quantity_field(UNIT_PRICE_INVALID)
+    units = quantity_field(UNITS_INVALID, UNITS_TOO_LARGE)
+    unit_price = quantity_field(UNIT_PRICE_INVALID, UNIT_PRICE_TOO_LARGE)
     cash_amount = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
     date = serializers.DateField(
         required=False,
@@ -115,7 +118,7 @@ class InvestmentTransactionSerializer(serializers.Serializer):
         if data["date"] > clock.today():
             raise serializers.ValidationError({"date": [DATE_IN_FUTURE]})
         if data["date"] < account.opening_date:
-            message = DATE_BEFORE_ACCOUNT.format(opening_date=account.opening_date.isoformat())
+            message = DATE_BEFORE_ACCOUNT.format(opening_date=spanish_day(account.opening_date))
             raise serializers.ValidationError({"date": [message]})
 
         cash = cash_for(data["units"], data["unit_price"])

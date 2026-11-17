@@ -1,19 +1,18 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import { initialState, recordExpense } from '../data/sample'
-import { DataContext, type NewExpense } from './context'
+import { initialState } from '../data/sample'
+import { recordSampleSpend } from '../data/sampleRemaining'
+import { DataContext, type SampleSpend } from './context'
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState(initialState)
-  const [lastAccountId, setLastAccountId] = useState('checking')
   const [recentCategory, setRecentCategory] = useState<string | null>(null)
   const [registrationCount, setRegistrationCount] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
 
-  const register = useCallback((expense: NewExpense, message: string) => {
-    setState((previous) => recordExpense(previous, expense))
-    setLastAccountId(expense.accountId)
-    setRecentCategory(expense.category)
+  const registerSampleSpend = useCallback((spend: SampleSpend, message: string) => {
+    setState((previous) => recordSampleSpend(previous, spend.category, spend.amount))
+    setRecentCategory(spend.category)
     setRegistrationCount((count) => count + 1)
     setNotice(message)
   }, [])
@@ -25,11 +24,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       state,
-      lastAccountId,
       recentCategory,
       registrationCount,
       notice,
-      register,
+      registerSampleSpend,
       dismissNotice,
       isFormOpen,
       openForm,
@@ -37,11 +35,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
-      lastAccountId,
       recentCategory,
       registrationCount,
       notice,
-      register,
+      registerSampleSpend,
       dismissNotice,
       isFormOpen,
       openForm,

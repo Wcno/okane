@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  formatDay,
   parseOpeningBalance,
   percentToRatio,
   ratioToPercent,
-  todayInPanama,
   validateAccountChanges,
   validateNewAccount,
   type AccountDraft,
@@ -21,23 +19,30 @@ const draft: AccountDraft = {
 
 describe('parseOpeningBalance', () => {
   it('normalizes what the User typed to two decimals', () => {
-    expect(parseOpeningBalance('1250.5', false)).toBe('1250.50')
-    expect(parseOpeningBalance(' 1250,5 ', false)).toBe('1250.50')
-    expect(parseOpeningBalance('0', false)).toBe('0.00')
-    expect(parseOpeningBalance('-312.45', false)).toBe('-312.45')
-    expect(parseOpeningBalance('−312.45', false)).toBe('-312.45')
+    expect(parseOpeningBalance('1250.5', false)).toEqual({ amount: '1250.50' })
+    expect(parseOpeningBalance(' 1250,5 ', false)).toEqual({ amount: '1250.50' })
+    expect(parseOpeningBalance('0', false)).toEqual({ amount: '0.00' })
+    expect(parseOpeningBalance('-312.45', false)).toEqual({ amount: '-312.45' })
+    expect(parseOpeningBalance('−312.45', false)).toEqual({ amount: '-312.45' })
   })
 
   it('makes a debt negative whichever way it was typed', () => {
-    expect(parseOpeningBalance('312.45', true)).toBe('-312.45')
-    expect(parseOpeningBalance('-312.45', true)).toBe('-312.45')
-    expect(parseOpeningBalance('0', true)).toBe('0.00')
+    expect(parseOpeningBalance('312.45', true)).toEqual({ amount: '-312.45' })
+    expect(parseOpeningBalance('-312.45', true)).toEqual({ amount: '-312.45' })
+    expect(parseOpeningBalance('0', true)).toEqual({ amount: '0.00' })
   })
 
   it('refuses text that is not an amount in cents', () => {
     for (const text of ['', 'abc', '12.345', '1,250.50', '--5', '1e3']) {
-      expect(parseOpeningBalance(text, false)).toBeNull()
+      expect(parseOpeningBalance(text, false)).toEqual({ error: 'invalid' })
     }
+  })
+})
+
+describe('an opening balance past twelve digits', () => {
+  it('is too large, which is not the same as invalid', () => {
+    expect(parseOpeningBalance('1000000000000', false)).toEqual({ error: 'too-large' })
+    expect(parseOpeningBalance('1000000000000', true)).toEqual({ error: 'too-large' })
   })
 })
 
@@ -109,6 +114,12 @@ describe('validateNewAccount', () => {
     expect(outcome.ok ? [] : Object.keys(outcome.errors)).toEqual(['name', 'type', 'openingBalance', 'openingDate'])
   })
 
+  it('says an opening balance past twelve digits is too large', () => {
+    const outcome = validateNewAccount({ ...draft, openingBalance: '1000000000000' }, '2026-11-16')
+
+    expect(outcome.ok ? [] : outcome.errors.openingBalance).toEqual([expect.stringContaining('demasiado grande')])
+  })
+
   it('refuses a start date after today and a wrong rate', () => {
     const outcome = validateNewAccount(
       { ...draft, type: 'savings', openingDate: '2026-11-17', annualRatePercent: '-2' },
@@ -142,17 +153,5 @@ describe('validateAccountChanges', () => {
     const outcome = validateAccountChanges({ name: '', annualRatePercent: '' }, 'savings')
 
     expect(outcome.ok ? [] : Object.keys(outcome.errors)).toEqual(['name'])
-  })
-})
-
-describe('calendar days', () => {
-  it('reads today in Panama, not in the browser time zone', () => {
-    // 03:30 UTC on the 17th is still 22:30 of the 16th in Panama.
-    expect(todayInPanama(new Date('2026-11-17T03:30:00Z'))).toBe('2026-11-16')
-    expect(todayInPanama(new Date('2026-11-17T05:00:00Z'))).toBe('2026-11-17')
-  })
-
-  it('writes a day in Spanish', () => {
-    expect(formatDay('2026-11-01')).toBe('1 nov 2026')
   })
 })
