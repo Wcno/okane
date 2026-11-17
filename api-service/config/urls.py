@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.decorators.http import require_safe
 
 from accounts import movements
 from accounts import views as accounts
@@ -9,6 +10,7 @@ from health.views import health
 from investments import views as investments
 from transfers import views as transfers
 from incomes import views as incomes
+from public_api import views as public_api
 from recurring_payments import views as recurring_payments
 
 # Paths match the ones webapp exposes, so forwarding never rewrites them.
@@ -19,6 +21,10 @@ urlpatterns = [
     path("api/accounts", accounts.account_collection),
     path("api/accounts/<int:account_id>", accounts.account_detail),
     path("api/movements", movements.movement_collection),
+    # The public API (`/api/v1`): webapp lets only the calls of docs/contratos.md through.
+    path("api/v1/accounts", require_safe(accounts.account_collection)),
+    path("api/v1/budgets", require_safe(budgets.budget_collection)),
+    path("api/v1/movements", public_api.movement_collection),
     path("api/expenses", expenses.expense_collection),
     path("api/expenses/<int:expense_id>", expenses.expense_detail),
     path("api/investments/assets/search", investments.asset_search),

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "budgets",
     "recurring_payments",
     "incomes",
+    "public_api",
     "erasure",
 ]
 

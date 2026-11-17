@@ -42,6 +42,7 @@ class AccessAttempt(models.Model):
     class Action(models.TextChoices):
         LOGIN = "login"
         PASSWORD_RECOVERY = "password_recovery"
+        INVALID_TOKEN = "invalid_token"
 
     class Scope(models.TextChoices):
         EMAIL = "email"
@@ -59,3 +60,38 @@ class AccessAttempt(models.Model):
                 fields=["action", "scope", "key", "attempted_at"], name="access_attempts_recent"
             )
         ]
+
+
+class PersonalToken(models.Model):
+    """A revocable credential for scripts, limited to the permissions chosen at creation.
+
+    Only the hash of the secret is stored. The prefix is public: it tells the
+    User which token is which and finds the row to compare against.
+    """
+
+    class Scope(models.TextChoices):
+        FINANCE_READ = "finance:read"
+        MOVEMENTS_CREATE = "movements:create"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="personal_tokens")
+    name = models.CharField(max_length=60)
+    prefix = models.CharField(max_length=8, unique=True)
+    secret_hash = models.CharField(max_length=64)
+    scopes = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "personal_tokens"
+        ordering = ["-created_at", "-id"]
+
+
+class TokenRequest(models.Model):
+    """One request a token made to `/api/v1`, counted for its per-minute limit."""
+
+    token = models.ForeignKey(PersonalToken, on_delete=models.CASCADE, related_name="requests")
+    requested_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "token_requests"
+        indexes = [models.Index(fields=["token", "requested_at"], name="token_requests_recent")]

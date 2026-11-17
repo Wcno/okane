@@ -18,6 +18,7 @@ import { Expenses } from './pages/Expenses'
 import { IncomeCreate } from './pages/IncomeCreate'
 import { IncomeDelete } from './pages/IncomeDelete'
 import { IncomeEdit } from './pages/IncomeEdit'
+import { Integrations } from './pages/Integrations'
 import { Incomes } from './pages/Incomes'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { Login } from './pages/Login'
@@ -101,6 +102,7 @@ export default function App() {
             <Route path="/incomes/create" element={<IncomeCreate />} />
             <Route path="/incomes/:id/edit" element={<IncomeEdit />} />
             <Route path="/incomes/:id/delete" element={<IncomeDelete />} />
+            <Route path="/settings/integrations" element={<Integrations />} />
             <Route path="/profile/change-password" element={<ChangePassword />} />
             <Route path="/profile/delete" element={<UserDelete />} />
             <Route path="*" element={<UnderConstruction />} />

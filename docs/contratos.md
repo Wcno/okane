@@ -354,6 +354,8 @@ los Saldos iniciales y el Rendimiento mensual está en el
   ausente: `400`; referencia ajena: `404`. El cuerpo identifica tipo e ID del
   registro. El contrato OpenAPI que entregue el ticket documentará los seis
   esquemas, filtros, paginación, permisos y respuestas con ejemplos verificables.
+- El contrato OpenAPI se publica sin token en `GET /api/v1/openapi.json` y el
+  ejemplo está en `docs/examples/google-apps-script/okane.gs`.
 - El ejemplo de Google Apps Script usa un token guardado en propiedades del
   script y conserva la misma clave para reintentar una operación. No se entrega
   OAuth, sincronización automática, edición/borrado externo ni gestión de reglas.

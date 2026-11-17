@@ -1,0 +1,1315 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API pública de Okane",
+    "version": "1.0.0",
+    "description": "Lectura financiera y creación de registros para scripts personales. Se autentica con un token personal (`Authorization: Bearer okt_...`) creado en `/settings/integrations`; ninguna cookie lo sustituye. Los montos son cadenas decimales. No hay OAuth, edición ni borrado externo, ni administración de Cuentas, reglas o Presupuestos. Un Gasto creado aquí no confirma automáticamente una reserva.\n\nLímites: 120 peticiones por minuto por token (`429` con `Retry-After`). Los listados devuelven 50 elementos por defecto y hasta 200; un tamaño o página fuera de rango devuelve `400`."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "El mismo origen de la aplicación web."
+    }
+  ],
+  "security": [
+    {
+      "personalToken": []
+    }
+  ],
+  "paths": {
+    "/api/v1/accounts": {
+      "get": {
+        "operationId": "listAccounts",
+        "summary": "Cuentas con su Saldo",
+        "description": "Requiere `finance:read`.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "50 por defecto, hasta 200. Un valor fuera de rango devuelve 400.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Una página de Cuentas del Usuario, con su Saldo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "results",
+                    "total",
+                    "page",
+                    "page_size",
+                    "next_page"
+                  ],
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Account"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "page_size": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 200
+                    },
+                    "next_page": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "description": "Número de la página siguiente, o null en la última."
+                    }
+                  }
+                },
+                "example": {
+                  "results": [
+                    {
+                      "id": 1,
+                      "name": "Cuenta corriente",
+                      "type": "spending",
+                      "opening_balance": "1000.00",
+                      "opening_date": "2026-11-01",
+                      "annual_interest_rate": null,
+                      "balance": "987.50",
+                      "net_contribution": null,
+                      "has_records": true,
+                      "archived_at": null
+                    }
+                  ],
+                  "total": 1,
+                  "page": 1,
+                  "page_size": 50,
+                  "next_page": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Página o tamaño fuera de rango.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                },
+                "example": {
+                  "errors": {
+                    "page_size": [
+                      "El máximo es 200."
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente, inválido o revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Detail"
+                },
+                "example": {
+                  "detail": "authentication_required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El token no tiene el permiso necesario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Detail"
+                },
+                "example": {
+                  "detail": "forbidden",
+                  "required_scope": "finance:read"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Más de 120 peticiones por minuto con este token, o demasiados tokens inválidos desde este origen. No consume claves de idempotencia.",
+            "headers": {
+              "Retry-After": {
+                "description": "Segundos que debe esperar el cliente.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                },
+                "example": {
+                  "errors": {
+                    "form": [
+                      "Este token superó las 120 peticiones por minuto. Espera y vuelve a intentarlo."
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/budgets": {
+      "get": {
+        "operationId": "listBudgets",
+        "summary": "Presupuestos de un mes con gastado, Comprometido y Restante",
+        "description": "Requiere `finance:read`. Una fila por Categoría, con o sin Presupuesto.",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "description": "Mes en formato AAAA-MM; por defecto el actual.",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$"
+            },
+            "example": "2026-11"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Las filas del mes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "month",
+                    "results"
+                  ],
+                  "properties": {
+                    "month": {
+                      "type": "string"
+                    },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BudgetRow"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "month": "2026-11",
+                  "results": [
+                    {
+                      "id": 4,
+                      "category_id": 2,
+                      "month": "2026-11",
+                      "amount": "300.00",
+                      "spent": "12.50",
+                      "committed": "50.00",
+                      "carried_over": "0.00",
+                      "remaining": "237.50",
+                      "exceeded": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mes inválido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                },
+                "example": {
+                  "errors": {
+                    "month": [
+                      "Escribe el mes con el formato AAAA-MM."
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente, inválido o revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Detail"
+                },
+                "example": {
+                  "detail": "authentication_required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El token no tiene el permiso necesario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Detail"
+                },
+                "example": {
+                  "detail": "forbidden",
+                  "required_scope": "finance:read"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Más de 120 peticiones por minuto con este token, o demasiados tokens inválidos desde este origen. No consume claves de idempotencia.",
+            "headers": {
+              "Retry-After": {
+                "description": "Segundos que debe esperar el cliente.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                },
+                "example": {
+                  "errors": {
+                    "form": [
+                      "Este token superó las 120 peticiones por minuto. Espera y vuelve a intentarlo."
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/movements": {
+      "get": {
+        "operationId": "listMovements",
+        "summary": "Movimientos de los seis tipos",
+        "description": "Requiere `finance:read`. El más reciente primero.",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Repetible: `type=expense&type=income`. Sin él, todos los tipos.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "income",
+                  "expense",
+                  "transfer",
+                  "buy",
+                  "sell",
+                  "dividend"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "account_id",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Una Cuenta ajena devuelve 404."
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "50 por defecto, hasta 200. Un valor fuera de rango devuelve 400.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Una página de Movimientos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "results",
+                    "total",
+                    "page",
+                    "page_size",
+                    "next_page"
+                  ],
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Movement"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "page_size": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 200
+                    },
+                    "next_page": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "description": "Número de la página siguiente, o null en la última."
+                    }
+                  }
+                },
+                "example": {
+                  "results": [
+                    {
+                      "type": "expense",
+                      "id": 12,
+                      "date": "2026-11-16",
+                      "amount": "12.50",
+                      "account_id": 1,
+                      "destination_account_id": null,
+                      "category_id": 2,
+                      "description": "Almuerzo",
+                      "asset": null,
+                      "units": null,
+                      "unit_price": null,
+                      "commission": null
+                    }
+                  ],
+                  "total": 1,
+                  "page": 1,
+                  "page_size": 50,
+                  "next_page": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtro, página o tamaño inválidos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                },
+                "example": {
+                  "errors": {
+                    "type": [
+                      "Elige un tipo de movimiento de la lista."
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La Cuenta del filtro no es del Usuario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Detail"
+                },
+                "example": {
+                  "detail": "not_found"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente, inválido o revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Detail"
+                },
+                "example": {
+                  "detail": "authentication_required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El token no tiene el permiso necesario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Detail"
+                },
+                "example": {
+                  "detail": "forbidden",
+                  "required_scope": "finance:read"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Más de 120 peticiones por minuto con este token, o demasiados tokens inválidos desde este origen. No consume claves de idempotencia.",
+            "headers": {
+              "Retry-After": {
+                "description": "Segundos que debe esperar el cliente.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                },
+                "example": {
+                  "errors": {
+                    "form": [
+                      "Este token superó las 120 peticiones por minuto. Espera y vuelve a intentarlo."
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createMovement",
+        "summary": "Crear un registro de uno de los seis tipos",
+        "description": "Requiere `movements:create`. Usa las mismas reglas financieras que la aplicación: Cuentas y Activos existentes, fechas, Cuenta de inversión cerrada y unidades vendibles. No crea Cuentas ni Activos. `description` aplica a income, expense y transfer; buy, sell y dividend la rechazan con `400`.\n\n`Idempotency-Key` es obligatoria y pertenece al Usuario y a esta operación (se comparte entre sus tokens). La primera creación devuelve `201`; repetir la misma clave con el mismo contenido devuelve `200` con el resultado original, incluso tras borrar el registro; otro contenido con esa clave devuelve `409`. Un error de validación no consume la clave.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "De 1 a 255 caracteres ASCII visibles, sin espacios. Reutilízala al reintentar la misma operación.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "example": "2026-11-16-almuerzo-1"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/NewIncome"
+                  },
+                  {
+                    "$ref": "#/components/schemas/NewExpense"
+                  },
+                  {
+                    "$ref": "#/components/schemas/NewTransfer"
+                  },
+                  {
+                    "$ref": "#/components/schemas/NewBuy"
+                  },
+                  {
+                    "$ref": "#/components/schemas/NewSell"
+                  },
+                  {
+                    "$ref": "#/components/schemas/NewDividend"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "income": "#/components/schemas/NewIncome",
+                    "expense": "#/components/schemas/NewExpense",
+                    "transfer": "#/components/schemas/NewTransfer",
+                    "buy": "#/components/schemas/NewBuy",
+                    "sell": "#/components/schemas/NewSell",
+                    "dividend": "#/components/schemas/NewDividend"
+                  }
+                }
+              },
+              "examples": {
+                "income": {
+                  "summary": "income",
+                  "value": {
+                    "type": "income",
+                    "account_id": 1,
+                    "amount": "1500.00",
+                    "date": "2026-11-15",
+                    "description": "Quincena"
+                  }
+                },
+                "expense": {
+                  "summary": "expense",
+                  "value": {
+                    "type": "expense",
+                    "account_id": 1,
+                    "category_id": 2,
+                    "amount": "12.50",
+                    "date": "2026-11-16",
+                    "description": "Almuerzo"
+                  }
+                },
+                "transfer": {
+                  "summary": "transfer",
+                  "value": {
+                    "type": "transfer",
+                    "source_account_id": 1,
+                    "destination_account_id": 2,
+                    "amount": "200.00"
+                  }
+                },
+                "buy": {
+                  "summary": "buy",
+                  "value": {
+                    "type": "buy",
+                    "account_id": 3,
+                    "asset_id": 7,
+                    "units": "2.5",
+                    "unit_price": "187.35",
+                    "commission": "1.00"
+                  }
+                },
+                "sell": {
+                  "summary": "sell",
+                  "value": {
+                    "type": "sell",
+                    "account_id": 3,
+                    "asset_id": 7,
+                    "units": "1",
+                    "unit_price": "190.10"
+                  }
+                },
+                "dividend": {
+                  "summary": "dividend",
+                  "value": {
+                    "type": "dividend",
+                    "account_id": 3,
+                    "asset_id": 7,
+                    "amount": "4.20"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Registro creado. El cuerpo identifica su tipo e ID y lleva sus campos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                },
+                "example": {
+                  "id": 12,
+                  "type": "expense",
+                  "amount": "12.50",
+                  "account_id": 1,
+                  "category_id": 2,
+                  "date": "2026-11-16",
+                  "description": "Almuerzo"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Reintento con la misma clave y el mismo contenido: el resultado original, sin crear otro registro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dato inválido o `Idempotency-Key` ausente o mal formada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                },
+                "example": {
+                  "errors": {
+                    "idempotency_key": [
+                      "Envía la cabecera Idempotency-Key con una clave única para esta operación."
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Una referencia (Cuenta, Activo) no es del Usuario o no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Detail"
+                },
+                "example": {
+                  "detail": "not_found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La clave ya se usó con otro contenido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                },
+                "example": {
+                  "errors": {
+                    "idempotency_key": [
+                      "Esta clave ya se usó con otro contenido. Usa una clave nueva para una operación nueva."
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente, inválido o revocado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Detail"
+                },
+                "example": {
+                  "detail": "authentication_required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El token no tiene el permiso necesario.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Detail"
+                },
+                "example": {
+                  "detail": "forbidden",
+                  "required_scope": "finance:read"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Más de 120 peticiones por minuto con este token, o demasiados tokens inválidos desde este origen. No consume claves de idempotencia.",
+            "headers": {
+              "Retry-After": {
+                "description": "Segundos que debe esperar el cliente.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Errors"
+                },
+                "example": {
+                  "errors": {
+                    "form": [
+                      "Este token superó las 120 peticiones por minuto. Espera y vuelve a intentarlo."
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "personalToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Token personal con permisos `finance:read` y/o `movements:create`. Se muestra una sola vez al crearlo."
+      }
+    },
+    "schemas": {
+      "Errors": {
+        "type": "object",
+        "required": [
+          "errors"
+        ],
+        "properties": {
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Mensajes por campo; `form` agrupa lo que no es de un campo."
+          }
+        }
+      },
+      "Detail": {
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "required_scope": {
+            "type": "string"
+          }
+        }
+      },
+      "Account": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "spending",
+              "savings",
+              "investment"
+            ]
+          },
+          "opening_balance": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Decimal como cadena."
+          },
+          "opening_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "annual_interest_rate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "balance": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Saldo derivado de los registros."
+          },
+          "net_contribution": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Solo en Cuentas de inversión."
+          },
+          "has_records": {
+            "type": "boolean"
+          },
+          "archived_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "BudgetRow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "null si la Categoría no tiene Presupuesto este mes."
+          },
+          "category_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "month": {
+            "type": "string"
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "spent": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Gastado."
+          },
+          "committed": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Comprometido por pagos recurrentes pendientes."
+          },
+          "carried_over": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Decimal como cadena."
+          },
+          "remaining": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Restante = Presupuesto - gastado - Comprometido."
+          },
+          "exceeded": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Movement": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense",
+              "transfer",
+              "buy",
+              "sell",
+              "dividend"
+            ]
+          },
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Decimal como cadena."
+          },
+          "account_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "En una transferencia, la Cuenta de la que salió el dinero."
+          },
+          "destination_account_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "category_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "asset": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "units": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unit_price": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "commission": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Created": {
+        "type": "object",
+        "required": [
+          "id",
+          "type"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense",
+              "transfer",
+              "buy",
+              "sell",
+              "dividend"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "NewIncome": {
+        "type": "object",
+        "required": [
+          "type",
+          "account_id",
+          "amount"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "income"
+            ]
+          },
+          "account_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,2})?$",
+            "description": "Importe positivo con dos decimales como máximo.",
+            "example": "1500.00"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Día del registro. Si se omite, hoy en Panamá; no puede ser futuro ni anterior al inicio de la Cuenta.",
+            "example": "2026-11-16"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 140,
+            "description": "Texto libre opcional.",
+            "example": "Almuerzo"
+          }
+        },
+        "description": "Ingreso en una Cuenta de gastos o de ahorro."
+      },
+      "NewExpense": {
+        "type": "object",
+        "required": [
+          "type",
+          "account_id",
+          "category_id",
+          "amount"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "expense"
+            ]
+          },
+          "account_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "category_id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8,
+            "description": "Categoría del catálogo (consúltala en la aplicación)."
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,2})?$",
+            "description": "Importe positivo con dos decimales como máximo.",
+            "example": "12.50"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Día del registro. Si se omite, hoy en Panamá; no puede ser futuro ni anterior al inicio de la Cuenta.",
+            "example": "2026-11-16"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 140,
+            "description": "Texto libre opcional.",
+            "example": "Almuerzo"
+          }
+        },
+        "description": "Gasto de una Cuenta de gastos o de ahorro."
+      },
+      "NewTransfer": {
+        "type": "object",
+        "required": [
+          "type",
+          "source_account_id",
+          "destination_account_id",
+          "amount"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "transfer"
+            ]
+          },
+          "source_account_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "destination_account_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,2})?$",
+            "description": "Importe positivo con dos decimales como máximo.",
+            "example": "200.00"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Día del registro. Si se omite, hoy en Panamá; no puede ser futuro ni anterior al inicio de la Cuenta.",
+            "example": "2026-11-16"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 140,
+            "description": "Texto libre opcional.",
+            "example": "Almuerzo"
+          }
+        },
+        "description": "Mueve dinero entre dos Cuentas distintas del Usuario."
+      },
+      "NewBuy": {
+        "type": "object",
+        "required": [
+          "type",
+          "account_id",
+          "asset_id",
+          "units",
+          "unit_price"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "buy"
+            ]
+          },
+          "account_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "asset_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "units": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,8})?$",
+            "description": "Unidades, hasta ocho decimales.",
+            "example": "2.5"
+          },
+          "unit_price": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,8})?$",
+            "description": "Precio por unidad, hasta ocho decimales.",
+            "example": "187.35"
+          },
+          "commission": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,2})?$",
+            "description": "Comisión opcional, cero o más.",
+            "example": "1.00"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Día del registro. Si se omite, hoy en Panamá; no puede ser futuro ni anterior al inicio de la Cuenta.",
+            "example": "2026-11-16"
+          }
+        },
+        "description": "Compra en una Cuenta de inversión abierta."
+      },
+      "NewSell": {
+        "type": "object",
+        "required": [
+          "type",
+          "account_id",
+          "asset_id",
+          "units",
+          "unit_price"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "sell"
+            ]
+          },
+          "account_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "asset_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "units": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,8})?$",
+            "description": "Unidades; no puede superar las de la Posición.",
+            "example": "1"
+          },
+          "unit_price": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,8})?$",
+            "description": "Precio por unidad.",
+            "example": "190.10"
+          },
+          "commission": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,2})?$",
+            "description": "Comisión opcional.",
+            "example": "1.00"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Día del registro. Si se omite, hoy en Panamá; no puede ser futuro ni anterior al inicio de la Cuenta.",
+            "example": "2026-11-16"
+          }
+        },
+        "description": "Venta de unidades que la Posición tiene."
+      },
+      "NewDividend": {
+        "type": "object",
+        "required": [
+          "type",
+          "account_id",
+          "asset_id",
+          "amount"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "dividend"
+            ]
+          },
+          "account_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "asset_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,2})?$",
+            "description": "Importe del Dividendo.",
+            "example": "4.20"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Día del registro. Si se omite, hoy en Panamá; no puede ser futuro ni anterior al inicio de la Cuenta.",
+            "example": "2026-11-16"
+          }
+        },
+        "description": "Dividendo de un Activo que la Cuenta tenía ese día."
+      }
+    }
+  }
+}
