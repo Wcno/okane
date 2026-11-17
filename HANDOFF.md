@@ -80,16 +80,15 @@ Target 10-20 min per ticket: workers skip self-review; split backend and fronten
 
 ## Next step
 
-Cleared (ready): #47 #49 #48 #52 #50 #51 #53 #54 #56 #55 #57 #59 #58 (tickets #8 #14 #15 #11 #16 #17 #9 #13 #12 #23 #18 #10).
-In progress:
-- #61 (#20): per-User Categories pushed (f21c3e2), re-gating.
-- #63 (#25): re-merging #61.
-- #60 (#22): fixes in; CI red only on `conventions` (wip:/merge: commit subjects).
-- #62 (#21): CI running; conventions red too (inherits #60's commits).
-- #64 (#24): gate fixes (contract line, 390 table, chart per DESIGN.md).
-- #65 (#30): finishing per-type routes and nav.
-- #31, #32: building on #65.
-Then #19, then one seeded Chrome polish pass, then the user's UI review.
+All 21 tickets built. Cleared and ready: #47 #49 #48 #52 #50 #51 #53 #54 #56 #55 #57 #59 #58 #60 #62 #61 #63 #64 #65 #67.
+#68 (#19) is the integrated top of the stack: full e2e 355 passed. Gate fix pushed (scoped console opt-out). CI pending.
+#66 (#31): its CI e2e failures are cross-feature and pass on #68; clear it together with #68.
+Final Chrome polish pass: PASS (53 tool calls, desktop only; 390 covered by Playwright). A Sonnet worker is applying its 10 polish findings on #68, rerunning the full e2e and re-seeding stack :8001.
+Then: clear #66 and #68, rebuild port 8000 from feat/19-e2e-journeys, seed it, stop for the user's final UI review.
 
-Known merge issue for the user: `conventions` rejects `wip:` and `merge:` subjects in #53, #60 and branches that merged them. Options: reword via an interactive-free rebase of the chain before merging, or relax the check. Decide at the final review.
-Docs needing the user's OK: docs/spec.md:175, 181, 231 still describe the fixed catalog and sample data.
+Open decisions for the user at review:
+- `conventions` CI fails on `wip:`/`merge:` commit subjects in #53, #57, #58, #60, #61, #63 and branches that merged them: reword the stack before merging, or relax the check.
+- docs/spec.md:175, 181, 231, 246 still describe the fixed catalog and sample data.
+- docs/contratos.md lists `description` as a common public-API field, but investment writes have none (400).
+- Twelve Data needs TWELVE_DATA_API_KEY for real prices; compose now defaults QUOTES_PROVIDER to sample.
+- The stack merges bottom-up; several PRs say "needs #N" for sibling branches merged in.
