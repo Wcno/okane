@@ -40,3 +40,16 @@ def accounts_with_records(accounts):
     for source in _sources:
         found |= set(source.accounts_with_records(ids))
     return found & ids
+
+
+def archive_blockers(account):
+    """Messages for what must be resolved before `account` can be archived.
+
+    A source may define `archive_blockers(account)`; sources without it never block.
+    """
+    blockers = []
+    for source in _sources:
+        check = getattr(source, "archive_blockers", None)
+        if check is not None:
+            blockers.extend(check(account))
+    return blockers
