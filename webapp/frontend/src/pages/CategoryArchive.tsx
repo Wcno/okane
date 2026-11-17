@@ -5,12 +5,7 @@ import { useAfterCategoryChange } from '../categories/useAfterCategoryChange'
 import { OneCategoryScreen } from '../components/categories/OneCategoryScreen'
 import { CategoryChip } from '../components/expenses/CategoryChip'
 import { ConfirmCard, RecordSummary } from '../components/screen/ConfirmCard'
-import { NotHere, ScreenHeader } from '../components/screen/Screen'
-
-const alreadyArchived = {
-  title: 'Esta Categoría ya está archivada',
-  text: 'Ya no se ofrece para registrar nada nuevo. Sus Gastos y Presupuestos pasados se conservan y se siguen viendo.',
-}
+import { ScreenHeader } from '../components/screen/Screen'
 
 function Confirmation({ category }: { category: Category }) {
   const { csrfToken } = useSignedInUser()
@@ -44,16 +39,5 @@ function Confirmation({ category }: { category: Category }) {
 
 /** Delete screen of a Category: removes one without records, archives one that has them. */
 export function CategoryArchive() {
-  return (
-    <OneCategoryScreen title="Eliminar Categoría">
-      {(category) =>
-        // An archived Category keeps its records; only an unused one can still be deleted.
-        category.archivedAt !== null && category.hasRecords ? (
-          <NotHere {...alreadyArchived} back={categoriesBack} />
-        ) : (
-          <Confirmation category={category} />
-        )
-      }
-    </OneCategoryScreen>
-  )
+  return <OneCategoryScreen title="Eliminar Categoría">{(category) => <Confirmation category={category} />}</OneCategoryScreen>
 }

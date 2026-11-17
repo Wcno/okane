@@ -1,9 +1,6 @@
 import type { Page } from '@playwright/test'
 import {
-  archiveCategory,
   createAccount,
-  createCategory,
-  createExpense,
   findAsset,
   recordTrade,
 } from './support/ledger.js'
@@ -124,31 +121,6 @@ test('the keyboard continues at the list of tokens after saving the secret and a
   await page.getByRole('button', { name: 'Sí, revocar Hoja de gastos' }).click()
   await expect(page.getByText(/Revocado el/)).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Tus tokens' })).toBeFocused()
-})
-
-test('an archived Category opens its screen, can be restored and is deleted only while unused', async ({ page }) => {
-  await signUp(page.request)
-  const account = await createAccount(page.request, { name: 'Cuenta corriente' })
-  const used = await createCategory(page.request, 'Con historial')
-  const unused = await createCategory(page.request, 'Sin historial')
-  await createExpense(page.request, { account_id: account.id, category_id: used.id, amount: '5.00', description: 'Prueba' })
-  await archiveCategory(page.request, used.id)
-  await archiveCategory(page.request, unused.id)
-
-  await page.goto('/categories')
-  await page.getByRole('link', { name: /^Con historial.*Restaurar/ }).click()
-  await expect(page.getByRole('heading', { name: 'Categoría archivada', level: 1 })).toBeVisible()
-  // With history it can only come back; deleting it would rewrite the past.
-  await expect(page.getByRole('link', { name: 'Eliminar esta Categoría' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Restaurar' }).click()
-  await expect(page.getByRole('status').filter({ hasText: 'Restauraste' })).toContainText('Con historial')
-  await expect(page.getByRole('link', { name: /^Con historial.*Editar Categoría$/ })).toBeVisible()
-
-  await page.getByRole('link', { name: /^Sin historial.*Restaurar/ }).click()
-  await page.getByRole('link', { name: 'Eliminar esta Categoría' }).click()
-  await page.getByRole('button', { name: 'Eliminar Categoría' }).click()
-  await expect(page.getByRole('status').filter({ hasText: 'Eliminaste' })).toContainText('Sin historial')
-  await expect(page.getByText('Sin historial', { exact: true })).toHaveCount(0)
 })
 
 test('the quick sheet does not move when the Restante hint appears', async ({ page }, testInfo) => {

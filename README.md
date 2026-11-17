@@ -153,7 +153,7 @@ request after the smoke test, on a fresh database, and keeps the screenshots
 and the report when one fails.
 
 ```shell
-docker compose up --build --detach --wait
+docker compose up --build --detach --wait --scale price-refresher=0
 cd e2e
 npm ci
 npx playwright install chromium
@@ -161,6 +161,10 @@ npm test
 ```
 
 Set `E2E_BASE_URL` to test a stack on another port.
+The journeys price Positions from the last transaction, so run them on a stack
+whose `price-refresher` is off (`--scale price-refresher=0`, as CI does) and
+that never stored a quoted price; the buy and sell lifecycle alone reads the
+Reference Price from the API and passes either way.
 
 ### Parallel stacks in worktrees
 
