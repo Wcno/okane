@@ -1,3 +1,5 @@
+import type { Account } from '../accounts/api'
+import { currentAccount } from '../accounts/api'
 import { useAfterRecordChange } from '../lib/useAfterRecordChange'
 import type { Expense } from './api'
 import { savedNotice } from './notices'
@@ -8,8 +10,9 @@ import { announceExpenseRevision } from './revision'
  * screens, then go back to the list with a notice that names the new Balance.
  */
 export const useAfterExpenseChange = () =>
-  useAfterRecordChange<Pick<Expense, 'amount' | 'categoryId' | 'accountId'>>({
+  useAfterRecordChange<Pick<Expense, 'amount' | 'categoryId' | 'accountId'>, Account>({
     listPath: '/expenses',
     announce: announceExpenseRevision,
-    notice: savedNotice,
+    loadAccounts: async (expense) => [await currentAccount(expense.accountId)],
+    notice: (change, expense, [account]) => savedNotice(change, expense, account),
   })

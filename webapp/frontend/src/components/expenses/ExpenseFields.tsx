@@ -61,7 +61,7 @@ export function ExpenseFields({
                 />
                 <CategoryChip categoryId={option.id} size={36} />
                 <span
-                  className={`min-w-0 break-words text-[0.9rem] leading-tight ${selected ? 'font-semibold text-ink' : 'font-medium text-ink-2'}`}
+                  className={`min-w-0 hyphens-auto break-words text-[0.9rem] leading-tight ${selected ? 'font-semibold text-ink' : 'font-medium text-ink-2'}`}
                 >
                   {option.name}
                 </span>

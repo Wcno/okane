@@ -42,7 +42,11 @@ export function Incomes() {
 
   return (
     <>
-      <ScreenHeader title="Ingresos" intro="El dinero que ha entrado a tus Cuentas, del más reciente al más antiguo." />
+      <ScreenHeader
+        title="Ingresos"
+        intro="El dinero que ha entrado a tus Cuentas, del más reciente al más antiguo."
+        action={canRegister ? { to: '/incomes/create', label: 'Registrar ingreso' } : undefined}
+      />
 
       <NoticeBanner notice={notice} className="max-w-[44rem]" />
 

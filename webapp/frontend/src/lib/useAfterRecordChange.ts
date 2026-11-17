@@ -1,30 +1,33 @@
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { currentAccount } from '../accounts/api'
 import type { ScreenNotice } from './notice'
 import type { RecordChange } from './recordChange'
 
 /**
  * What every change of a record of money on a full screen ends with: tell the
- * other screens, then go back to the list with a notice that names the new Balance.
+ * other screens, then go back to the list with a notice that names the new
+ * Balance of each Account the record touches: one, or two for a Transfer.
+ * The caller brings the Account loader, so this shared layer stays free of features.
  */
-export function useAfterRecordChange<Record extends { accountId: number }>({
+export function useAfterRecordChange<Entry, Account>({
   listPath,
   announce,
+  loadAccounts,
   notice,
 }: {
   listPath: string
   announce: () => void
-  notice: (change: RecordChange, record: Record, account: Awaited<ReturnType<typeof currentAccount>>) => string
+  loadAccounts: (entry: Entry) => Promise<Array<Account | undefined>>
+  notice: (change: RecordChange, entry: Entry, accounts: Array<Account | undefined>) => string
 }) {
   const navigate = useNavigate()
   return useCallback(
-    async (change: RecordChange, record: Record) => {
-      const account = await currentAccount(record.accountId)
+    async (change: RecordChange, entry: Entry) => {
+      const accounts = await loadAccounts(entry)
       announce()
-      const state: ScreenNotice = { notice: notice(change, record, account) }
+      const state: ScreenNotice = { notice: notice(change, entry, accounts) }
       navigate(listPath, { state })
     },
-    [navigate, listPath, announce, notice],
+    [navigate, listPath, announce, loadAccounts, notice],
   )
 }

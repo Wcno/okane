@@ -7,7 +7,7 @@ import { DayFeed } from '../components/record/DayFeed'
 import { RecordRow } from '../components/screen/RecordRow'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader } from '../components/screen/Screen'
 import type { Expense } from '../expenses/api'
-import { NEEDS_AN_ACCOUNT, describeExpense } from '../expenses/presentation'
+import { NEEDS_AN_ACCOUNT_FOR_EXPENSE, describeExpense } from '../expenses/presentation'
 import { useExpenseFeed } from '../expenses/useExpenseFeed'
 import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
@@ -55,7 +55,7 @@ export function Expenses() {
           text={
             canRegister
               ? 'Anota el último que hiciste: el monto, su Categoría y la Cuenta de la que salió. El Saldo de esa Cuenta baja al instante.'
-              : NEEDS_AN_ACCOUNT
+              : NEEDS_AN_ACCOUNT_FOR_EXPENSE
           }
           action={
             canRegister
