@@ -7,6 +7,10 @@ import { AccountEdit } from './pages/AccountEdit'
 import { Accounts } from './pages/Accounts'
 import { ChangePassword } from './pages/ChangePassword'
 import { Dashboard } from './pages/Dashboard'
+import { ExpenseCreate } from './pages/ExpenseCreate'
+import { ExpenseDelete } from './pages/ExpenseDelete'
+import { ExpenseEdit } from './pages/ExpenseEdit'
+import { Expenses } from './pages/Expenses'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { Login } from './pages/Login'
 import { Logout } from './pages/Logout'
@@ -36,6 +40,10 @@ export default function App() {
             <Route path="/accounts/create" element={<AccountCreate />} />
             <Route path="/accounts/:id/edit" element={<AccountEdit />} />
             <Route path="/accounts/:id/delete" element={<AccountDelete />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/expenses/create" element={<ExpenseCreate />} />
+            <Route path="/expenses/:id/edit" element={<ExpenseEdit />} />
+            <Route path="/expenses/:id/delete" element={<ExpenseDelete />} />
             <Route path="/profile/change-password" element={<ChangePassword />} />
             <Route path="*" element={<UnderConstruction />} />
           </Route>
