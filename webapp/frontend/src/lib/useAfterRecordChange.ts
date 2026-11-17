@@ -2,9 +2,7 @@ import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { currentAccount } from '../accounts/api'
 import type { ScreenNotice } from './notice'
-
-/** What happened to a record; the notice says it in Spanish. */
-export type RecordChange = 'created' | 'updated' | 'deleted'
+import type { RecordChange } from './recordChange'
 
 /**
  * What every change of a record of money on a full screen ends with: tell the
