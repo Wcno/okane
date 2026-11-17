@@ -1,5 +1,5 @@
 import { Coins } from 'lucide-react'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Account } from '../accounts/api'
 import { offeredAccounts } from '../accounts/presentation'
@@ -16,8 +16,6 @@ import { TransferChip } from '../components/transfers/TransferChip'
 import { isCalendarDay, todayInPanama } from '../lib/dates'
 import { noticeFrom } from '../lib/notice'
 import { useRecordFeed } from '../lib/useRecordFeed'
-import { NEEDS_AN_ACCOUNT_FOR_EXPENSE } from '../expenses/presentation'
-import { NEEDS_AN_ACCOUNT_FOR_INCOME } from '../incomes/presentation'
 import {
   MOVEMENT_TYPES,
   isMovementType,
@@ -31,8 +29,8 @@ import { describeMovement, movementTypeFilterNames } from '../movements/presenta
 import { INITIAL_PREFERENCES, movementFilterOf, type Preferences } from '../preferences/api'
 import { usePreferences } from '../preferences/usePreferences'
 import { useMovementsRevision } from '../movements/revision'
-import { movementViews, sameTypes, type MovementViewName } from '../movements/views'
-import { NEEDS_TWO_ACCOUNTS, transferAccounts } from '../transfers/presentation'
+import { movementViews, sameTypes, type Create, type MovementViewName, type Need } from '../movements/views'
+import { transferAccounts } from '../transfers/presentation'
 
 const rowId = (movement: Movement) => `movement-${movementKey(movement)}`
 
@@ -66,7 +64,8 @@ function Row({ movement, accounts }: { movement: Movement; accounts: Map<number,
 
 const dayParam = (text: string | null) => (text !== null && isCalendarDay(text) ? text : '')
 
-function readFilter(params: URLSearchParams, preset: MovementType[]): MovementFilter {
+function readFilter(search: string, preset: MovementType[]): MovementFilter {
+  const params = new URLSearchParams(search)
   const account = params.get('account')
   const named = params.getAll('type').filter(isMovementType)
   return {
@@ -86,6 +85,8 @@ function writeFilter(filter: MovementFilter): URLSearchParams {
   return params
 }
 
+const isReversed = (filter: MovementFilter) => filter.from !== '' && filter.to !== '' && filter.from > filter.to
+
 const EMPTY_PAGE = { records: [], total: 0, nextPage: null }
 
 const FILTER_PARAMS = ['type', 'account', 'from', 'to']
@@ -99,64 +100,6 @@ function groupByType(movements: Movement[]): FeedGroup<Movement>[] {
   })).filter((group) => group.records.length > 0)
 }
 
-interface Create {
-  to: string
-  label: string
-  shortLabel?: string
-}
-
-interface CanRegister {
-  money: boolean
-  transfer: boolean
-}
-
-/** What each address offers to register: its own kind of record, or every kind from the general view. */
-function creates(view: MovementViewName, can: CanRegister) {
-  const expense: Create = { to: '/expenses/create', label: 'Registrar gasto', shortLabel: 'Gasto' }
-  const income: Create = { to: '/incomes/create', label: 'Registrar ingreso', shortLabel: 'Ingreso' }
-  const transfer: Create = { to: '/transfers/create', label: 'Registrar transferencia', shortLabel: 'Nueva' }
-  const purchase: Create = { to: '/investments/transactions/buy', label: 'Registrar compra', shortLabel: 'Comprar' }
-  const dividend: Create = { to: '/investments/transactions/dividend', label: 'Registrar dividendo' }
-  switch (view) {
-    case 'expense':
-      return { primary: can.money ? expense : undefined, others: [] }
-    case 'income':
-      return { primary: can.money ? income : undefined, others: [] }
-    case 'transfer':
-      return { primary: can.transfer ? transfer : undefined, others: [] }
-    case 'investments':
-      return { primary: purchase, others: [dividend] }
-    default:
-      return {
-        primary: can.money ? expense : undefined,
-        others: [...(can.money ? [income] : []), ...(can.transfer ? [transfer] : []), purchase, dividend],
-      }
-  }
-}
-
-/** What an address with nothing registered asks for first: a record, or the Account it needs. */
-function firstRecord(view: MovementViewName, can: CanRegister): { to: string; label: string; note?: string } {
-  const accountFirst = { to: '/accounts/create', label: 'Crear tu primera cuenta' }
-  switch (view) {
-    case 'expense':
-      return can.money
-        ? { to: '/expenses/create', label: 'Registrar tu primer gasto' }
-        : { ...accountFirst, note: NEEDS_AN_ACCOUNT_FOR_EXPENSE }
-    case 'income':
-      return can.money
-        ? { to: '/incomes/create', label: 'Registrar tu primer ingreso' }
-        : { ...accountFirst, note: NEEDS_AN_ACCOUNT_FOR_INCOME }
-    case 'transfer':
-      return can.transfer
-        ? { to: '/transfers/create', label: 'Registrar tu primera transferencia' }
-        : { to: '/accounts/create', label: 'Crear una cuenta', note: NEEDS_TWO_ACCOUNTS }
-    case 'investments':
-      return { to: '/investments/transactions/buy', label: 'Registrar tu primera compra' }
-    default:
-      return can.money ? { to: '/expenses/create', label: 'Registrar un gasto' } : accountFirst
-  }
-}
-
 /**
  * Every record of the User, whatever its kind, newest first. `/movements` shows
  * them all; the older route of each kind shows the same screen with its type
@@ -166,30 +109,30 @@ function MovementsView({ view, preferences }: { view: MovementViewName; preferen
   const preset = movementViews[view]
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
+  const search = params.toString()
   const hasAddressFilter = FILTER_PARAMS.some((name) => params.has(name))
   // Only the general view starts from the preferences; the older routes of each kind keep their own type.
   const usesPreferences = view === 'all' && !hasAddressFilter
-  const filter = usesPreferences ? movementFilterOf(preferences, todayInPanama()) : readFilter(params, preset.types)
-  const filterKey = writeFilter(filter).toString()
-  const periodReversed = filter.from !== '' && filter.to !== '' && filter.from > filter.to
+  const filter = useMemo(
+    () => (usesPreferences ? movementFilterOf(preferences, todayInPanama()) : readFilter(search, preset.types)),
+    [usesPreferences, preferences, search, preset],
+  )
   const load = useCallback(
-    (page: number) => (periodReversed ? Promise.resolve(EMPTY_PAGE) : listMovements(filter, page)),
-    // `filterKey` is every part of `filter` that matters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filterKey, periodReversed],
+    (page: number) => (isReversed(filter) ? Promise.resolve(EMPTY_PAGE) : listMovements(filter, page)),
+    [filter],
   )
   const revision = useMovementsRevision()
-  const { state, retry, showMore } = useRecordFeed(load, `${filterKey}#${revision}`, movementKey)
+  const { state, retry, showMore } = useRecordFeed(load, `${search}#${revision}`, movementKey)
   const accounts = useAccounts()
   const notice = noticeFrom(useLocation().state)
   const known = accounts.state.status === 'ready' ? accounts.state.value : []
   const byId = new Map(known.map((account) => [account.id, account]))
   const loading = accounts.state.status !== 'ready'
-  const can = {
+  const can: Record<Need, boolean> = {
     money: loading || offeredAccounts(known).length > 0,
-    transfer: loading || transferAccounts(known).length >= 2,
+    transfers: loading || transferAccounts(known).length >= 2,
   }
-  const { primary, others } = creates(view, can)
+  const allowed = (create: Create) => create.needs === undefined || can[create.needs]
   const hasRecords = state.status === 'ready' && state.value.records.length > 0
   const asksForEverything =
     sameTypes(filter.types, preset.types) && filter.accountId === null && filter.from === '' && filter.to === ''
@@ -201,9 +144,13 @@ function MovementsView({ view, preferences }: { view: MovementViewName; preferen
   const atRest = asksForEverything || onlyThisMonth
   // Going back leaves the address filters; the preferences then set the view again.
   const canClear = view === 'all' ? hasAddressFilter : !atRest
-  const first = firstRecord(view, can)
+  const first = allowed(preset.first.create)
+    ? preset.first.create
+    : (preset.first.withoutAccount ?? preset.first.create)
+  const note = 'note' in first ? first.note : undefined
   // With nothing registered, the empty state already asks for the first record.
-  const headerAction = view === 'all' || view === 'expense' || view === 'income' || hasRecords ? primary : undefined
+  const headerAction = preset.create && allowed(preset.create) && hasRecords ? preset.create : undefined
+  const others = preset.others.filter(allowed)
 
   const change = (next: MovementFilter) => {
     // Another type is another screen: the older routes only open their own kind.
@@ -255,7 +202,7 @@ function MovementsView({ view, preferences }: { view: MovementViewName; preferen
             onlyThisMonth
               ? 'Tu vista empieza en el mes actual. Cambia el período aquí o en tus preferencias para ver otros meses.'
               : asksForEverything
-                ? (first.note ?? preset.empty.text)
+                ? (note ?? preset.empty.text)
                 : 'Prueba con otro tipo, otra Cuenta u otro período.'
           }
           action={{ to: first.to, label: first.label }}
