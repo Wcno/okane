@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 from budgets.tests import BudgetApiTestCase
-from expenses.tests import FOOD, HOUSING
 
 DASHBOARD = "/api/dashboard"
 
@@ -116,27 +115,27 @@ class PerDayTests(DashboardApiTestCase):
 class RemainingTests(DashboardApiTestCase):
     def test_remaining_discounts_what_was_spent_and_what_is_committed(self):
         checking = self.account()
-        self.budget(amount="300.00", category_id=FOOD)
-        self.budget(amount="650.00", category_id=HOUSING)
-        self.registered(checking, amount="40.00", category_id=FOOD)
-        self.rule(checking, amount="100.00", category_id=FOOD)
+        self.budget(amount="300.00", category_id=self.FOOD)
+        self.budget(amount="650.00", category_id=self.HOUSING)
+        self.registered(checking, amount="40.00", category_id=self.FOOD)
+        self.rule(checking, amount="100.00", category_id=self.FOOD)
 
         panel = self.panel()
 
         by_category = {row["category_id"]: row for row in panel["budgets"]}
-        self.assertEqual(set(by_category), {FOOD, HOUSING})
-        self.assertEqual(by_category[FOOD]["remaining"], "160.00")
-        self.assertEqual(by_category[HOUSING]["remaining"], "650.00")
+        self.assertEqual(set(by_category), {self.FOOD, self.HOUSING})
+        self.assertEqual(by_category[self.FOOD]["remaining"], "160.00")
+        self.assertEqual(by_category[self.HOUSING]["remaining"], "650.00")
 
     def test_matches_the_budgets_query(self):
         checking = self.account()
-        self.budget(amount="300.00", category_id=FOOD)
-        self.registered(checking, amount="12.34", category_id=FOOD)
-        self.rule(checking, amount="55.55", category_id=FOOD)
+        self.budget(amount="300.00", category_id=self.FOOD)
+        self.registered(checking, amount="12.34", category_id=self.FOOD)
+        self.rule(checking, amount="55.55", category_id=self.FOOD)
 
         panel = self.panel()
 
-        self.assertEqual(panel["budgets"], [self.row(FOOD)])
+        self.assertEqual(panel["budgets"], [self.row(self.FOOD)])
 
 
 class CarryOverTests(DashboardApiTestCase):

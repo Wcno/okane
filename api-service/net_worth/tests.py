@@ -109,7 +109,7 @@ class DecompositionTests(NetWorthApiTestCase):
         response = self.call(
             "PUT",
             f"/api/expenses/{expense['id']}",
-            {"account_id": checking["id"], "amount": "10.00", "category_id": 2, "date": "2026-10-10"},
+            {"account_id": checking["id"], "amount": "10.00", "category_id": expense["category_id"], "date": "2026-10-10"},
         )
         self.assertEqual(response.status_code, 200, response.content)
 

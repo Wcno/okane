@@ -8,7 +8,6 @@ from django.test import TestCase, override_settings, tag
 from investments.models import Asset
 
 TODAY = datetime.date(2026, 11, 16)
-FOOD = 1
 
 
 @tag("database")
@@ -29,6 +28,10 @@ class AccountStatementTests(TestCase):
             content_type="application/json",
             headers={"X-Okane-Service-Key": "expected-key", "X-Okane-User-Id": str(user)},
         )
+
+    def food(self):
+        listed = self.call("GET", "/api/categories").json()["results"]
+        return next(item["id"] for item in listed if item["key"] == "food")
 
     def post(self, path, body, user=1):
         response = self.call("POST", path, body, user=user)
@@ -63,7 +66,7 @@ class AccountStatementTests(TestCase):
         self.post("/api/incomes", {"account_id": checking["id"], "amount": "500.00", "date": "2026-11-02"})
         self.post(
             "/api/expenses",
-            {"account_id": checking["id"], "category_id": FOOD, "amount": "120.10", "date": "2026-11-03"},
+            {"account_id": checking["id"], "category_id": self.food(), "amount": "120.10", "date": "2026-11-03"},
         )
         self.post(
             "/api/transfers",
@@ -98,7 +101,7 @@ class AccountStatementTests(TestCase):
         )
         self.assertEqual(lines[-1]["balance"], self.balance(checking))
         self.assertEqual(lines[3]["counterpart_account_id"], savings["id"])
-        self.assertEqual(lines[2]["category_id"], FOOD)
+        self.assertEqual(lines[2]["category_id"], self.food())
 
     def test_an_investment_account_lists_buys_sells_and_transfers_ending_at_its_balance(self):
         broker = self.account("investment", name="Bróker", opening_balance="2000.00")
@@ -150,7 +153,7 @@ class AccountStatementTests(TestCase):
             self.post("/api/incomes", {"account_id": account["id"], "amount": amount, "date": "2026-11-02"})
         self.post(
             "/api/expenses",
-            {"account_id": account["id"], "category_id": FOOD, "amount": "5.00", "date": "2026-11-02"},
+            {"account_id": account["id"], "category_id": self.food(), "amount": "5.00", "date": "2026-11-02"},
         )
 
         lines = self.statement(account)["results"]

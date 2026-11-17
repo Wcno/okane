@@ -7,7 +7,7 @@ from django.test import TransactionTestCase, override_settings, tag
 
 from erasure.models import ErasedUser
 from expenses.models import Expense
-from expenses.tests import FOOD, TODAY, ExpenseApiTestCase
+from expenses.tests import TODAY, ExpenseApiTestCase
 from investments.models import Asset, InvestmentTransaction
 from public_api.models import IdempotencyRecord
 
@@ -23,8 +23,9 @@ class PublicApiTestCase(ExpenseApiTestCase):
             method, MOVEMENTS, data=json.dumps(body), content_type="application/json", headers=headers
         )
 
-    def expense_body(self, account, **fields):
-        return {"type": "expense", "account_id": account["id"], "category_id": FOOD, "amount": "12.50", **fields}
+    def expense_body(self, account, user=1, **fields):
+        category_id = self.initial_category("food", user=user)
+        return {"type": "expense", "account_id": account["id"], "category_id": category_id, "amount": "12.50", **fields}
 
 
 class MovementTypeTests(PublicApiTestCase):
@@ -35,7 +36,7 @@ class MovementTypeTests(PublicApiTestCase):
         asset = Asset.objects.create(provider="fake", market="XNAS", symbol="AAPL", name="Apple", currency="USD")
         bodies = {
             "income": {"account_id": spending["id"], "amount": "100.00"},
-            "expense": {"account_id": spending["id"], "category_id": FOOD, "amount": "12.50"},
+            "expense": {"account_id": spending["id"], "category_id": self.FOOD, "amount": "12.50"},
             "transfer": {
                 "source_account_id": spending["id"],
                 "destination_account_id": savings["id"],
@@ -124,7 +125,7 @@ class IdempotencyTests(PublicApiTestCase):
         theirs = self.account(user=2)
 
         first = self.send(self.expense_body(mine), user=1)
-        other = self.send(self.expense_body(theirs), user=2)
+        other = self.send(self.expense_body(theirs, user=2), user=2)
 
         self.assertEqual((first.status_code, other.status_code), (201, 201))
         self.assertNotEqual(first.json()["id"], other.json()["id"])
@@ -176,7 +177,9 @@ class ConcurrentIdempotencyTests(TransactionTestCase):
             content_type="application/json",
             headers=headers,
         ).json()
-        body = json.dumps({"type": "expense", "account_id": account["id"], "category_id": FOOD, "amount": "5.00"})
+        categories = self.client.generic("GET", "/api/categories", headers=headers).json()["results"]
+        food = next(item["id"] for item in categories if item["key"] == "food")
+        body = json.dumps({"type": "expense", "account_id": account["id"], "category_id": food, "amount": "5.00"})
         statuses = []
         barrier = threading.Barrier(4)
 

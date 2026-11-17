@@ -12,7 +12,7 @@ from django.core.management import call_command
 from django.db import connection
 from django.test import Client, TransactionTestCase, override_settings, tag
 
-from expenses.tests import FOOD, TODAY, ExpenseApiTestCase
+from expenses.tests import TODAY, ExpenseApiTestCase
 from investments import quotes
 from investments.models import Asset, InvestmentTransaction, QuotedPrice
 from investments.prices import refresh_prices

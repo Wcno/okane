@@ -3,7 +3,8 @@ from django.db import transaction
 from accounts.models import Account
 from erasure.locks import lock_for_erasure
 from erasure.models import ErasedUser
-from budgets.models import Budget
+from budgets.models import Budget, BudgetMonth
+from categories.models import Category, InitialCatalogCopy
 from expenses.models import Expense
 from incomes.models import Income
 from investments.models import InvestmentTransaction, ReferencePrice
@@ -18,12 +19,15 @@ ERASED_MODELS = (
     RecurringPaymentOccurrence,
     RecurringPayment,
     Budget,
+    BudgetMonth,
     Expense,
     Income,
     Transfer,
     InvestmentTransaction,
     ReferencePrice,
     IdempotencyRecord,
+    Category,
+    InitialCatalogCopy,
     Account,
 )
 
