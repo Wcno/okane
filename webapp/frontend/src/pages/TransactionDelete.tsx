@@ -5,7 +5,7 @@ import { TradeChip } from '../components/investments/TradeChip'
 import { ConfirmCard, RecordSummary } from '../components/screen/ConfirmCard'
 import { ScreenHeader } from '../components/screen/Screen'
 import { deleteTrade, type Transaction } from '../investments/api'
-import { describeTransaction, transactionsBack } from '../investments/presentation'
+import { cashMoved, describeTransaction, nouns, transactionsBack } from '../investments/presentation'
 import { useAfterTradeChange } from '../investments/useAfterTradeChange'
 import { formatMoney } from '../lib/money'
 
@@ -14,9 +14,10 @@ function Confirmation({ transaction, accounts }: { transaction: Transaction; acc
   const afterChange = useAfterTradeChange()
   const account = accounts.find((candidate) => candidate.id === transaction.accountId)
   const { title, details } = describeTransaction(transaction, account?.name, { withDate: true })
-  const kindNoun = transaction.type === 'buy' ? 'compra' : 'venta'
-  // Deleting a purchase gives its cash back to the Account; deleting a sale takes the cash it returned.
+  const kindNoun = nouns[transaction.type]
+  // Deleting a purchase gives its cash back to the Account; deleting a sale or a Dividend takes the cash it returned.
   const direction = transaction.type === 'buy' ? 'subirá' : 'bajará'
+  const moved = cashMoved(transaction)
 
   return (
     <>
@@ -27,13 +28,14 @@ function Confirmation({ transaction, accounts }: { transaction: Transaction; acc
             icon={<TradeChip kind={transaction.type} />}
             title={title}
             details={details}
-            amount={transaction.cashAmount}
+            amount={cashMoved(transaction)}
           />
         }
         message={
           <>
-            Se borrará por completo y no podrás recuperarla. Tus Posiciones se recalcularán sin ella.
-            {account && ` El Saldo de ${account.name} ${direction} ${formatMoney(transaction.cashAmount)}.`}
+            {`Se borrará por completo y no podrás recuperar${transaction.type === 'dividend' ? 'lo' : 'la'}.`}{' '}
+            {transaction.type === 'dividend' ? 'Tus Posiciones no cambian.' : 'Tus Posiciones se recalcularán sin ella.'}
+            {account && ` El Saldo de ${account.name} ${direction} ${formatMoney(moved)}.`}
           </>
         }
         cancel={{ to: transactionsBack.to, label: 'Cancelar' }}

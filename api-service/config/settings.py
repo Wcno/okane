@@ -38,13 +38,15 @@ INSTALLED_APPS = [
     "categories",
     "accounts",
     "expenses",
+    "investments",
+    "transfers",
     "budgets",
     "recurring_payments",
-    "transfers",
-    "investments",
     "incomes",
-    "dashboard",
+    "public_api",
     "erasure",
+    "dashboard",
+    "net_worth",
 ]
 
 MIDDLEWARE = [

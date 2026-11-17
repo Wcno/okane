@@ -211,7 +211,7 @@ test('the list shows loading, explains a failure and recovers on retry', async (
   await createIncome(page.request, { account_id: account.id, description: 'Regalo' })
 
   let attempts = 0
-  await page.route('**/api/incomes?*', async (route) => {
+  await page.route('**/api/movements?*', async (route) => {
     attempts += 1
     if (attempts === 1) {
       await new Promise((resolve) => setTimeout(resolve, 400))
@@ -268,7 +268,7 @@ test('the list pages on request, keeps day headings and the keyboard where it wa
   await more.focus()
   await page.keyboard.press('Enter')
   await expect(page.getByText('Mostrando 51 de 51 ingresos.')).toBeVisible()
-  await expect(page.locator('a[id^=income-]').nth(50)).toBeFocused()
+  await expect(page.locator('a[id^=movement-income-]').nth(50)).toBeFocused()
   await expect(page.getByRole('button', { name: 'Mostrar más' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'mar 10 nov' })).toBeVisible()
@@ -307,7 +307,7 @@ test('the populated list keeps a register action that opens the form', async ({ 
   await createIncome(page.request, { account_id: account.id, description: 'Intereses' })
 
   await page.goto('/incomes')
-  const register = page.getByRole('main').getByRole('link', { name: /Registrar ingreso|Ingreso/ })
+  const register = page.getByRole('main').getByRole('link', { name: /^(Registrar ingreso|Ingreso)$/ })
   await expect(register).toBeVisible()
   await expectScreenQuality(page, 'incomes-list-with-register-action')
   if (isPhone()) expect(await heightOf(register)).toBeGreaterThanOrEqual(44)

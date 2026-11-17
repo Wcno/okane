@@ -10,7 +10,7 @@ ACCOUNT_HAS_PENDING = (
 class RecurringPaymentLedgerSource:
     """Reservations move no money, but they refer to Accounts and block archiving them."""
 
-    def balance_changes(self, account_ids):
+    def balance_changes(self, account_ids, as_of=None):
         return {}
 
     def accounts_with_records(self, account_ids):

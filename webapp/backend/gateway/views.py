@@ -11,9 +11,6 @@ FORWARDED_REQUEST_HEADERS = ("Accept", "Content-Type")
 
 # Readiness is the one call that needs no session; it carries no User.
 PUBLIC_PATHS = frozenset({"/api/health"})
-# The public API authenticates personal tokens (#32); a session cookie never
-# substitutes for one.
-TOKEN_API = "/api/v1"
 
 
 def authentication_required():
@@ -27,17 +24,21 @@ def forward(request):
     if any(segment in (".", "..") for segment in request.path.split("/")):
         return JsonResponse({"detail": "not_found"}, status=404)
 
-    headers = {
-        name: request.headers[name]
-        for name in FORWARDED_REQUEST_HEADERS
-        if name in request.headers
-    }
     user_id = None
     if request.path not in PUBLIC_PATHS:
-        is_token_api = request.path == TOKEN_API or request.path.startswith(TOKEN_API + "/")
-        if is_token_api or not request.user.is_authenticated:
+        if not request.user.is_authenticated:
             return authentication_required()
         user_id = request.user.pk
+    return relay(request, user_id)
+
+
+def relay(request, user_id, extra_headers=()):
+    """Rebuild the call from scratch for api-service, on behalf of `user_id` when there is one."""
+    headers = {
+        name: request.headers[name]
+        for name in (*FORWARDED_REQUEST_HEADERS, *extra_headers)
+        if name in request.headers
+    }
     headers = service_headers(headers, user_id)
 
     # get_full_path keeps the query string exactly as the client sent it.

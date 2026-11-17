@@ -2,11 +2,12 @@ import { TriangleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { Account } from '../../accounts/api'
 import type { Asset, Trade, TradeField, TradeInput, TradeKind } from '../../investments/api'
-import { cashAmount, exceedsCash, type TradeDraft } from '../../investments/form'
+import { cashAmount, commissionAmount, exceedsCash, netCash, type TradeDraft } from '../../investments/form'
 import { positionsBack } from '../../investments/presentation'
 import { useTradeForm } from '../../investments/useTradeForm'
 import { todayInPanama } from '../../lib/dates'
 import type { Outcome } from '../../lib/http'
+import { typedAmount } from '../../lib/amount'
 import { formatMoney } from '../../lib/money'
 import { RecordEditor } from '../record/RecordEditor'
 import { borderClassName, fieldClassName } from '../record/fieldStyles'
@@ -17,11 +18,12 @@ import { AssetPicker } from './AssetPicker'
 const copy: Record<TradeKind, { submit: string; submitting: string; cash: string }> = {
   buy: { submit: 'Registrar compra', submitting: 'Registrando…', cash: 'Saldrá de la Cuenta' },
   sell: { submit: 'Registrar venta', submitting: 'Registrando…', cash: 'Volverá a la Cuenta' },
+  dividend: { submit: 'Registrar dividendo', submitting: 'Registrando…', cash: 'Entrará en la Cuenta' },
 }
 
 /**
- * The form that records or corrects one purchase or sale. Buy and Sell differ
- * in the words they use; a correction passes its own labels, its Account note
+ * The form that records or corrects one purchase, sale or Dividend. Buy and Sell differ
+ * in the words they use, a Dividend asks for the amount it paid instead of units and price; a correction passes its own labels, its Account note
  * and the content below the buttons.
  */
 export function TradeEditor({
@@ -46,11 +48,14 @@ export function TradeEditor({
   /** Content below the buttons, such as the way to the delete screen. */
   children?: ReactNode
 }) {
-  const { form, draft, change, errors, isSubmitting, submit } = useTradeForm({ initial, accounts, save, onSaved })
+  const { form, draft, change, errors, isSubmitting, submit } = useTradeForm({ kind, initial, accounts, save, onSaved })
   const id = (name: string) => `${kind}-${name}`
   const account = accounts.find((candidate) => candidate.id === draft.accountId)
-  const cash = cashAmount(draft.units, draft.unitPrice)
-  const warnAboutCash = exceedsCash(kind, cash, account)
+  const isDividend = kind === 'dividend'
+  const grossCash = isDividend ? typedAmount(draft.amount) : cashAmount(draft.units, draft.unitPrice)
+  const commission = commissionAmount(draft.commission)
+  const cash = grossCash === null ? null : netCash(kind, grossCash, commission)
+  const warnAboutCash = exceedsCash(kind, grossCash, account, commission)
   const buttons = labels ?? copy[kind]
 
   return (
@@ -89,28 +94,54 @@ export function TradeEditor({
 
           <AssetPicker id={id('asset')} asset={draft.asset} onChange={(asset) => change({ asset })} errors={errors.assetId} />
 
-          <div className="grid grid-cols-1 items-start gap-5 min-[420px]:grid-cols-2 min-[420px]:gap-3">
+          {isDividend ? (
             <TextField
-              id={id('units')}
-              label="Unidades"
+              id={id('amount')}
+              label="Importe del dividendo"
               inputMode="decimal"
               autoComplete="off"
-              placeholder="0.25"
-              value={draft.units}
-              onChange={(event) => change({ units: event.target.value })}
-              errors={errors.units}
+              placeholder="12.40"
+              value={draft.amount}
+              onChange={(event) => change({ amount: event.target.value })}
+              errors={errors.amount}
             />
-            <TextField
-              id={id('price')}
-              label="Precio por unidad"
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="187.35"
-              value={draft.unitPrice}
-              onChange={(event) => change({ unitPrice: event.target.value })}
-              errors={errors.unitPrice}
-            />
-          </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 items-start gap-5 min-[420px]:grid-cols-2 min-[420px]:gap-3">
+                <TextField
+                  id={id('units')}
+                  label="Unidades"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  placeholder="0.25"
+                  value={draft.units}
+                  onChange={(event) => change({ units: event.target.value })}
+                  errors={errors.units}
+                />
+                <TextField
+                  id={id('price')}
+                  label="Precio por unidad"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  placeholder="187.35"
+                  value={draft.unitPrice}
+                  onChange={(event) => change({ unitPrice: event.target.value })}
+                  errors={errors.unitPrice}
+                />
+              </div>
+              <TextField
+                id={id('commission')}
+                label="Comisión (opcional)"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="0.00"
+                hint={kind === 'buy' ? 'Se suma al costo de la compra.' : 'Se descuenta de lo que recibes.'}
+                value={draft.commission}
+                onChange={(event) => change({ commission: event.target.value })}
+                errors={errors.commission}
+              />
+            </>
+          )}
 
           {/* Always in the page, so a screen reader hears the amount and the warning when they appear. */}
           <div aria-live="polite" className="empty:hidden">

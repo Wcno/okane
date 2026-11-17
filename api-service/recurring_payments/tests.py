@@ -113,7 +113,7 @@ class CreateRuleTests(RecurringPaymentApiTestCase):
 
         self.assert_rejected(self.create_rule(account, amount="0"), "amount")
         self.assert_rejected(self.create_rule(account, amount="12.345"), "amount")
-        self.assert_rejected(self.create_rule(account, category_id="2"), "category_id")
+        self.assert_rejected(self.create_rule(account, category_id=99), "category_id")
         self.assert_rejected(self.create_rule(account, day_of_month=32), "day_of_month")
         self.assert_rejected(self.create_rule(account, day_of_month=0), "day_of_month")
         self.assert_rejected(self.create_rule(account, day_of_month="5"), "day_of_month")
@@ -134,17 +134,6 @@ class CreateRuleTests(RecurringPaymentApiTestCase):
         foreign = self.account(user=2)
 
         self.assertEqual(self.create_rule(foreign).status_code, 404)
-
-    def test_another_users_category_or_unknown_category_is_not_found(self):
-        account = self.account()
-        theirs = self.initial_category("food", user=2)
-
-        for category_id in (theirs, 99999):
-            with self.subTest(category_id=category_id):
-                response = self.create_rule(account, category_id=category_id)
-                self.assertEqual(response.status_code, 404)
-                self.assertEqual(response.json(), {"detail": "not_found"})
-        self.assertEqual(RecurringPayment.objects.count(), 0)
 
     def test_a_start_after_the_day_skips_that_month(self):
         account = self.account()

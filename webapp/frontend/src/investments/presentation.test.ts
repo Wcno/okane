@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset, Trade, Transaction } from './api'
-import { describeTransaction, formatPrice, formatUnits, tradeNotice, unitsPhrase } from './presentation'
+import { cashMoved, describeTransaction, formatPrice, formatUnits, tradeNotice, unitsPhrase } from './presentation'
 
 const asset: Asset = {
   id: 7,
@@ -19,6 +19,7 @@ const trade = (fields: Partial<Trade>): Trade => ({
   assetId: 7,
   units: '2.00000000',
   unitPrice: '100.00000000',
+  commission: '0.00',
   cashAmount: '200.00',
   date: '2026-01-02',
   accountBalance: '800.00',
@@ -85,6 +86,7 @@ describe('describeTransaction', () => {
     assetId: 7,
     units: '2.50000000',
     unitPrice: '100.00000000',
+    commission: '0.00',
     cashAmount: '250.00',
     date: '2026-11-10',
     asset,
@@ -103,3 +105,44 @@ describe('describeTransaction', () => {
     )
   })
 })
+
+describe('commissions and dividends', () => {
+  const dividend: Transaction = {
+    id: 2,
+    type: 'dividend',
+    accountId: 3,
+    assetId: 7,
+    units: null,
+    unitPrice: null,
+    commission: '0.00',
+    cashAmount: '12.40',
+    date: '2026-11-10',
+    asset,
+  }
+
+  it('describes a dividend without units or price', () => {
+    expect(describeTransaction(dividend, 'Bróker').details).toBe('Dividendo · Bróker')
+  })
+
+  it('names the commission of a purchase', () => {
+    const purchase: Transaction = { ...dividend, type: 'buy', units: '2.00000000', unitPrice: '100.00000000', commission: '1.50' }
+    expect(describeTransaction(purchase, 'Bróker').details).toBe('Compra · 2 unidades a $100.00 · comisión $1.50 · Bróker')
+  })
+
+  it('says a dividend was registered with its Account Balance', () => {
+    const notice = tradeNotice('created', trade({ type: 'dividend', units: null, unitPrice: null, cashAmount: '12.40' }), asset, {
+      name: 'Bróker',
+      balance: '812.40',
+    })
+    expect(notice).toBe('Registraste el dividendo de AAPL por $12.40. Saldo de Bróker: $812.40.')
+  })
+})
+
+describe('cashMoved', () => {
+  it('adds a purchase commission, subtracts a sale one and leaves a dividend alone', () => {
+    expect(cashMoved({ type: 'buy', cashAmount: '200.00', commission: '1.50' })).toBe('201.50')
+    expect(cashMoved({ type: 'sell', cashAmount: '150.00', commission: '2.25' })).toBe('147.75')
+    expect(cashMoved({ type: 'dividend', cashAmount: '12.40', commission: '0.00' })).toBe('12.40')
+  })
+})
+

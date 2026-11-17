@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { NotFoundError, SessionEndedError } from '../lib/http'
-import { createIncome, deleteIncome, getIncome, listIncomes, updateIncome } from './api'
+import { NotFoundError } from '../lib/http'
+import { createIncome, deleteIncome, getIncome, updateIncome } from './api'
 
 function json(status: number, body?: unknown) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -15,26 +15,6 @@ const draft = { amount: '100.00', accountId: 3, date: '2026-11-16', description:
 
 afterEach(() => {
   vi.unstubAllGlobals()
-})
-
-describe('listIncomes', () => {
-  it('reads one page with its total and the next page', async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(json(200, { results: [received], total: 51, page: 1, page_size: 50, next_page: 2 }))
-    vi.stubGlobal('fetch', fetch)
-
-    await expect(listIncomes(1)).resolves.toEqual({ records: [income], total: 51, nextPage: 2 })
-    expect(fetch.mock.calls[0][0]).toBe('/api/incomes?page_size=50&page=1')
-  })
-
-  it('explains a failure and tells an ended session apart', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')))
-    await expect(listIncomes(1)).rejects.toThrow(/conectar con Okane/)
-
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(401, { detail: 'authentication_required' })))
-    await expect(listIncomes(1)).rejects.toBeInstanceOf(SessionEndedError)
-  })
 })
 
 describe('getIncome', () => {

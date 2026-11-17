@@ -141,10 +141,19 @@ Without PostgreSQL, `python manage.py test --exclude-tag database` runs the
 tests that do not touch the database.
 
 Browser tests use Playwright against a running stack, on desktop and mobile
-widths. CI runs them after the smoke test and keeps the report when one fails.
+widths. `e2e/tests/journey.spec.ts` walks the whole product as one User (sign
+up, Accounts, Income and Expense, Budget, recurring payment, investment,
+Panel, statement, preferences, token, user deletion) and checks that a second
+User sees none of it; the other specs go deep on each area. The stack runs
+with `QUOTES_PROVIDER=sample` (the Compose default), so quotes never depend on
+the network; production sets `QUOTES_PROVIDER=twelvedata` and its key
+explicitly. The
+dates come from the stack's own clock in Panama. CI runs them on every pull
+request after the smoke test, on a fresh database, and keeps the screenshots
+and the report when one fails.
 
 ```shell
-docker compose up --build --detach --wait
+docker compose up --build --detach --wait --scale price-refresher=0
 cd e2e
 npm ci
 npx playwright install chromium
@@ -152,6 +161,10 @@ npm test
 ```
 
 Set `E2E_BASE_URL` to test a stack on another port.
+The journeys price Positions from the last transaction, so run them on a stack
+whose `price-refresher` is off (`--scale price-refresher=0`, as CI does) and
+that never stored a quoted price; the buy and sell lifecycle alone reads the
+Reference Price from the API and passes either way.
 
 ### Parallel stacks in worktrees
 

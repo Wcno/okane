@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { NotFoundError, RequestError, SessionEndedError } from '../lib/http'
-import { deleteTrade, getTransaction, listTransactions, updateTrade } from './api'
+import { NotFoundError, SessionEndedError } from '../lib/http'
+import { deleteTrade, getTransaction, updateTrade } from './api'
 
 function json(status: number, body?: unknown) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -17,6 +17,7 @@ const received = {
   asset_id: 7,
   units: '2.00000000',
   unit_price: '100.00000000',
+  commission: '0.00',
   cash_amount: '200.00',
   date: '2026-11-10',
   asset,
@@ -28,6 +29,7 @@ const transaction = {
   assetId: 7,
   units: '2.00000000',
   unitPrice: '100.00000000',
+  commission: '0.00',
   cashAmount: '200.00',
   date: '2026-11-10',
   asset: { id: 7, provider: 'sample', market: 'XNAS', symbol: 'AAPL', name: 'Apple Inc', assetType: '', currency: 'USD' },
@@ -36,24 +38,6 @@ const trade = { accountId: 3, assetId: 7, units: '2', unitPrice: '100', date: '2
 
 afterEach(() => {
   vi.unstubAllGlobals()
-})
-
-describe('listTransactions', () => {
-  it('reads one page of the User’s Transactions with its total and the next page', async () => {
-    const fetch = vi.fn().mockResolvedValue(
-      json(200, { results: [received], total: 51, page: 1, page_size: 50, next_page: 2 }),
-    )
-    vi.stubGlobal('fetch', fetch)
-
-    await expect(listTransactions(1)).resolves.toEqual({ records: [transaction], total: 51, nextPage: 2 })
-    expect(fetch.mock.calls[0][0]).toBe('/api/investments/transactions?page_size=50&page=1')
-  })
-
-  it('reports a failure in Spanish that can be retried', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(500, {})))
-
-    await expect(listTransactions(1)).rejects.toBeInstanceOf(RequestError)
-  })
 })
 
 describe('getTransaction', () => {
@@ -92,6 +76,7 @@ describe('updateTrade', () => {
         assetId: 7,
         units: '2.00000000',
         unitPrice: '100.00000000',
+        commission: '0.00',
         cashAmount: '200.00',
         date: '2026-11-10',
         accountBalance: '600.00',

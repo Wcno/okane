@@ -35,6 +35,7 @@ export function RecurringPaymentEditor({
   const { form, draft, change, errors, isSubmitting, submit } = useRecordForm({
     initial,
     validate: (current) => validateRecurringPayment(current, { accounts }),
+    dateDependsOn: ['accountId'],
     save,
     onSaved,
   })

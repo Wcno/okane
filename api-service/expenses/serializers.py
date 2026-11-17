@@ -77,6 +77,7 @@ class ExpenseSerializer(serializers.Serializer):
             self.context["user_id"],
             value,
             unchanged_from=self.instance.category_id if self.instance else None,
+            invalid=CATEGORY_INVALID,
             archived=CATEGORY_IS_ARCHIVED,
         )
 

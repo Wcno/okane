@@ -20,14 +20,14 @@ labels for the public interface.
 | Cuenta archivada | ArchivedAccount |
 | Saldo | Balance |
 | Saldo inicial | OpeningBalance |
-| Movimiento | Entry |
+| Movimiento | Movement |
 | Ingreso | Income |
 | Gasto | Expense |
 | Movimiento con Cuenta | record |
 | Transferencia | Transfer |
 | Estado de cuenta | AccountStatement |
 | Proyección | Projection |
-| Vista de Movimientos | MovementFeed |
+| Vista de Movimientos | Movements (screen), movements (route and API) |
 | Ocurrencia de pago | RecurringPaymentOccurrence |
 | Categoría | Category |
 | Presupuesto | Budget |
@@ -38,6 +38,7 @@ labels for the public interface.
 | Activo | Asset |
 | Transacción de inversión | InvestmentTransaction |
 | Dividendo | Dividend |
+| Comisión | Commission |
 | Posición | Position |
 | Precio de referencia | ReferencePrice |
 | Aporte / Aporte neto | Contribution / NetContribution |

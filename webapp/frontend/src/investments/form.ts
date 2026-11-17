@@ -1,7 +1,14 @@
 import type { Account } from '../accounts/api'
-import { MAX_QUANTITY_DECIMALS, parseQuantity, type ParsedQuantity } from '../lib/amount'
+import {
+  MAX_AMOUNT_TEXT,
+  MAX_QUANTITY_DECIMALS,
+  parseAmount,
+  parsePositiveAmount,
+  parseQuantity,
+  type ParsedQuantity,
+} from '../lib/amount'
 import { formatDay, isCalendarDay, todayInPanama } from '../lib/dates'
-import { toCents } from '../lib/decimal'
+import { sumAmounts, toCents } from '../lib/decimal'
 import type { Asset, TradeErrors, TradeInput, TradeKind } from './api'
 
 /** What the form holds while the User types. */
@@ -10,6 +17,10 @@ export interface TradeDraft {
   asset: Asset | null
   units: string
   unitPrice: string
+  /** Optional in a purchase or a sale; empty means none. */
+  commission: string
+  /** What a Dividend paid. */
+  amount: string
   date: string
 }
 
@@ -21,6 +32,10 @@ const ACCOUNT_REQUIRED = 'Elige la Cuenta de inversión de la operación.'
 const ASSET_REQUIRED = 'Busca el Activo y elígelo de la lista.'
 const DATE_INVALID = 'Elige la fecha de la operación.'
 const DATE_IN_FUTURE = 'La fecha no puede ser futura. Elige hoy o un día anterior.'
+const COMMISSION_INVALID = 'Escribe la comisión como un importe de cero o más, con dos decimales como máximo. Ejemplo: 1.50'
+const COMMISSION_TOO_LARGE = `La comisión es demasiado grande. El máximo es ${MAX_AMOUNT_TEXT}.`
+const AMOUNT_INVALID = 'Escribe el importe del Dividendo mayor que cero, con dos decimales como máximo. Ejemplo: 12.40'
+const AMOUNT_TOO_LARGE = `El importe del Dividendo es demasiado grande. El máximo es ${MAX_AMOUNT_TEXT}.`
 const CASH_TOO_SMALL = 'Con estas unidades y este precio el importe es menor que un centavo. Sube las unidades o el precio.'
 
 const SCALE = 10n ** BigInt(MAX_QUANTITY_DECIMALS)
@@ -46,8 +61,29 @@ export function cashAmount(units: string, unitPrice: string): string | null {
 }
 
 /** Whether a purchase takes more cash than the Account holds; it is accepted anyway, with a warning. */
-export function exceedsCash(kind: TradeKind, cash: string | null, account: Account | undefined): boolean {
-  return kind === 'buy' && cash !== null && account !== undefined && toCents(cash) > toCents(account.balance)
+export function exceedsCash(
+  kind: TradeKind,
+  cash: string | null,
+  account: Account | undefined,
+  commission = '0.00',
+): boolean {
+  return (
+    kind === 'buy' &&
+    cash !== null &&
+    account !== undefined &&
+    toCents(cash) + toCents(commission) > toCents(account.balance)
+  )
+}
+
+/** What the Account's cash moves by: a purchase and its commission go out, a sale less its commission comes in. */
+export function netCash(kind: TradeKind, cash: string, commission: string): string {
+  return sumAmounts([cash, kind === 'sell' ? `-${commission}` : commission])
+}
+
+/** The commission as a money string; zero while it is empty or not valid yet. */
+export function commissionAmount(text: string): string {
+  const parsed = parseAmount(text)
+  return 'amount' in parsed && !parsed.amount.startsWith('-') ? parsed.amount : '0.00'
 }
 
 const quantityMessage = (parsed: ParsedQuantity, invalid: string, tooLarge: string) =>
@@ -60,21 +96,36 @@ export type TradeOutcome = { ok: true; trade: TradeInput; asset: Asset } | { ok:
  * word, including whether the Position holds the units to sell. "Today" is the
  * Panama day at the moment of the check.
  */
-export function validateTrade(draft: TradeDraft, context: { accounts: Account[] }): TradeOutcome {
+export function validateTrade(
+  draft: TradeDraft,
+  context: { accounts: Account[]; kind?: TradeKind },
+): TradeOutcome {
   const errors: TradeErrors = {}
+  const isDividend = context.kind === 'dividend'
   const account = context.accounts.find((candidate) => candidate.id === draft.accountId)
   const units = parseQuantity(draft.units)
   const unitPrice = parseQuantity(draft.unitPrice)
+  const amount = parsePositiveAmount(draft.amount)
+  const commission = draft.commission.trim() === '' ? null : parseAmount(draft.commission)
   const today = todayInPanama()
 
   if (account === undefined) errors.accountId = [ACCOUNT_REQUIRED]
   if (draft.asset === null) errors.assetId = [ASSET_REQUIRED]
-  const unitsError = quantityMessage(units, UNITS_INVALID, UNITS_TOO_LARGE)
-  if (unitsError) errors.units = unitsError
-  const priceError = quantityMessage(unitPrice, PRICE_INVALID, PRICE_TOO_LARGE)
-  if (priceError) errors.unitPrice = priceError
-  if (!errors.units && !errors.unitPrice && cashAmount(draft.units, draft.unitPrice) === '0.00') {
-    errors.units = [CASH_TOO_SMALL]
+  if (isDividend) {
+    if ('error' in amount) errors.amount = [amount.error === 'too-large' ? AMOUNT_TOO_LARGE : AMOUNT_INVALID]
+  } else {
+    const unitsError = quantityMessage(units, UNITS_INVALID, UNITS_TOO_LARGE)
+    if (unitsError) errors.units = unitsError
+    const priceError = quantityMessage(unitPrice, PRICE_INVALID, PRICE_TOO_LARGE)
+    if (priceError) errors.unitPrice = priceError
+    if (!errors.units && !errors.unitPrice && cashAmount(draft.units, draft.unitPrice) === '0.00') {
+      errors.units = [CASH_TOO_SMALL]
+    }
+    if (commission !== null && ('error' in commission || commission.amount.startsWith('-'))) {
+      errors.commission = [
+        'error' in commission && commission.error === 'too-large' ? COMMISSION_TOO_LARGE : COMMISSION_INVALID,
+      ]
+    }
   }
   if (!isCalendarDay(draft.date)) errors.date = [DATE_INVALID]
   else if (draft.date > today) errors.date = [DATE_IN_FUTURE]
@@ -82,24 +133,24 @@ export function validateTrade(draft: TradeDraft, context: { accounts: Account[] 
     errors.date = [`La fecha no puede ser anterior al inicio del registro de la Cuenta (${formatDay(account.openingDate)}).`]
   }
 
-  if (
-    Object.keys(errors).length > 0 ||
-    account === undefined ||
-    draft.asset === null ||
-    'error' in units ||
-    'error' in unitPrice
-  ) {
+  if (Object.keys(errors).length > 0 || account === undefined || draft.asset === null) {
     return { ok: false, errors }
   }
+  const common = { accountId: account.id, assetId: draft.asset.id, date: draft.date }
+  if (isDividend) {
+    return 'amount' in amount
+      ? { ok: true, asset: draft.asset, trade: { ...common, amount: amount.amount } }
+      : { ok: false, errors }
+  }
+  if ('error' in units || 'error' in unitPrice) return { ok: false, errors }
   return {
     ok: true,
     asset: draft.asset,
     trade: {
-      accountId: account.id,
-      assetId: draft.asset.id,
+      ...common,
       units: units.quantity,
       unitPrice: unitPrice.quantity,
-      date: draft.date,
+      ...(commission !== null && 'amount' in commission && { commission: commission.amount }),
     },
   }
 }

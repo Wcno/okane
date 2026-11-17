@@ -16,6 +16,7 @@ export function useBudgetForm({
   return useRecordForm<BudgetDraft, BudgetField, BudgetInput, Budget>({
     initial,
     validate: validateBudget,
+    dateDependsOn: [],
     save,
     onSaved,
   })

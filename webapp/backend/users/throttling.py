@@ -20,23 +20,23 @@ WINDOW = timedelta(minutes=15)
 KEY_LENGTH = AccessAttempt._meta.get_field("key").max_length
 
 
-def _keys(email, origin):
-    # No real email is longer than the column; a longer one still counts.
-    return (
-        (AccessAttempt.Scope.EMAIL, email[:KEY_LENGTH]),
-        (AccessAttempt.Scope.ORIGIN, origin),
-    )
-
-
 class AttemptLimit:
-    def __init__(self, action):
+    def __init__(self, action, *, by_email=True):
         self.action = action
+        self.by_email = by_email
+
+    def _keys(self, email, origin):
+        # No real email is longer than the column; a longer one still counts.
+        keys = ((AccessAttempt.Scope.ORIGIN, origin),)
+        if self.by_email:
+            keys = ((AccessAttempt.Scope.EMAIL, email[:KEY_LENGTH]),) + keys
+        return keys
 
     def seconds_until_allowed(self, email, origin):
         """Return how long the action must wait, or 0 when it may proceed."""
         now = timezone.now()
         wait = 0
-        for scope, key in _keys(email, origin):
+        for scope, key in self._keys(email, origin):
             recent = AccessAttempt.objects.filter(
                 action=self.action, scope=scope, key=key, attempted_at__gt=now - WINDOW
             ).order_by("-attempted_at")
@@ -52,11 +52,11 @@ class AttemptLimit:
         AccessAttempt.objects.filter(attempted_at__lte=now - WINDOW).delete()
         AccessAttempt.objects.bulk_create(
             AccessAttempt(action=self.action, scope=scope, key=key, attempted_at=now)
-            for scope, key in _keys(email, origin)
+            for scope, key in self._keys(email, origin)
         )
 
     def clear(self, email, origin):
-        for scope, key in _keys(email, origin):
+        for scope, key in self._keys(email, origin):
             AccessAttempt.objects.filter(action=self.action, scope=scope, key=key).delete()
 
 
@@ -65,3 +65,5 @@ login_limit = AttemptLimit(AccessAttempt.Action.LOGIN)
 # Every request for a reset link counts, since none of them can be told apart;
 # using a link clears its email and origin.
 recovery_limit = AttemptLimit(AccessAttempt.Action.PASSWORD_RECOVERY)
+# A token that does not exist or was revoked counts against the address that sent it.
+invalid_token_limit = AttemptLimit(AccessAttempt.Action.INVALID_TOKEN, by_email=False)

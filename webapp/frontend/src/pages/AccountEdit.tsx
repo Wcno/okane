@@ -119,6 +119,12 @@ function EditForm({ account }: { account: Account }) {
               El Saldo se calcula a partir del Saldo inicial y de lo que registras. Para corregirlo, registra o corrige
               un movimiento.
             </p>
+            <Link
+              to={`/accounts/${account.id}/statement`}
+              className="mt-3 inline-flex min-h-[44px] items-center text-[0.95rem] font-semibold text-ink underline decoration-line-strong hover:decoration-ink"
+            >
+              Ver estado de cuenta
+            </Link>
           </div>
 
           <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row">

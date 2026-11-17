@@ -29,7 +29,7 @@ test('a visitor is sent to login and comes back after registering', async ({ pag
   await page.getByRole('button', { name: 'Crear usuario' }).click()
 
   await expect(page).toHaveURL(/\/budgets$/)
-  await expect(page.getByRole('heading', { name: 'Presupuestos' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Presupuestos', level: 1 })).toBeVisible()
   await expectScreenQuality(page, 'auth-budgets-under-construction')
 })
 
@@ -97,14 +97,16 @@ test('login works with the keyboard alone', async ({ page, request }) => {
   await expect(page.getByText(email).first()).toBeAttached()
 })
 
-test('one click on the in-app control signs out at once', async ({ page, isMobile }) => {
+test('one click on the in-app control signs out at once', async ({ page, isMobile, expectProblemsDuring }) => {
   await signUp(page.request)
   const control = await openSignOutControl(page, isMobile)
   expect((await page.request.get('/api/accounts')).status()).not.toBe(401)
 
-  await control.click()
-
-  await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  // A read already in flight when the session ends is answered with a 401 or a 400.
+  await expectProblemsDuring(/status of 40[01]\b.*\/(auth\/session|api\/)/, async () => {
+    await control.click()
+    await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  })
   await expect(page).toHaveURL(/\/logout$/)
   await expectScreenQuality(page, 'auth-signed-out')
   expect((await page.request.get('/api/accounts')).status()).toBe(401)
@@ -112,7 +114,7 @@ test('one click on the in-app control signs out at once', async ({ page, isMobil
   await expect(page).toHaveURL(/\/login$/)
 })
 
-test('the in-app sign-out control works with the keyboard alone', async ({ page, isMobile }) => {
+test('the in-app sign-out control works with the keyboard alone', async ({ page, isMobile, expectProblemsDuring }) => {
   await signUp(page.request)
   const control = await openSignOutControl(page, isMobile)
 
@@ -123,9 +125,10 @@ test('the in-app sign-out control works with the keyboard alone', async ({ page,
   await expect(control).toBeFocused()
   const outline = await control.evaluate((element) => getComputedStyle(element).outlineStyle)
   expect(outline).toBe('solid')
-  await page.keyboard.press('Enter')
-
-  await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  await expectProblemsDuring(/status of 40[01]\b.*\/(auth\/session|api\/)/, async () => {
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  })
   expect((await page.request.get('/api/accounts')).status()).toBe(401)
 })
 

@@ -19,5 +19,5 @@ Verificado el 2026-11-16 en las páginas oficiales del proveedor:
 
 - La interfaz busca al enviar la búsqueda, no en cada tecla, para respetar los 8 créditos por minuto.
 - `api-service` necesita salida a internet, que se concede con una red solo de salida; ningún puerto se publica.
-- El precio de la última operación sigue siendo el respaldo del Precio de referencia; la actualización automática de precios (#23) verificará los límites de precios del mismo proveedor.
+- El precio de la última operación sigue siendo el respaldo del Precio de referencia; la actualización automática de precios (#23) usa `GET /time_series` del mismo proveedor (`interval=1day`, `outputsize=1`): un crédito por Activo con operaciones, a 8 por minuto, una vez al día y sin repetirse por Usuario. Si se agotan los créditos, la ejecución se detiene y se conserva el último cierre. Limitación: solo se guarda el último cierre de cada ejecución, no una serie histórica.
 - `QUOTES_PROVIDER=sample` sirve un catálogo fijo de seis Activos, sin red ni clave, para probar la aplicación y para las pruebas de navegador; `.env.example` lo trae activo. Para Activos reales se cambia a `twelvedata` y se configura la clave.

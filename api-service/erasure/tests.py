@@ -11,7 +11,7 @@ from erasure.locks import lock_for_erasure, lock_for_write
 from erasure.models import ErasedUser
 from erasure.service import ERASED_MODELS, erase_user_data
 from expenses.models import Expense
-from expenses.tests import FOOD, ExpenseApiTestCase
+from expenses.tests import ExpenseApiTestCase
 
 ERASE = "/internal/users/me"
 
@@ -37,7 +37,7 @@ class ErasureApiTestCase(ExpenseApiTestCase):
         response = self.call(
             "POST",
             "/api/expenses",
-            {"account_id": account["id"], "category_id": FOOD, "amount": "12.50"},
+            {"account_id": account["id"], "category_id": self.initial_category("food", user=user), "amount": "12.50"},
             user=user,
         )
         self.assertEqual(response.status_code, 201, response.content)
@@ -104,7 +104,7 @@ class WritesAfterErasureTests(ErasureApiTestCase):
         created_expense = self.call(
             "POST",
             "/api/expenses",
-            {"account_id": account["id"], "category_id": FOOD, "amount": "5.00"},
+            {"account_id": account["id"], "category_id": self.FOOD, "amount": "5.00"},
         )
 
         self.assertEqual((created_account.status_code, created_expense.status_code), (409, 409))

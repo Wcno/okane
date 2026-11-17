@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { currentAccount } from '../accounts/api'
-import { announceExpenseRevision } from '../expenses/revision'
+import { announceMovementsRevision } from '../movements/revision'
 import type { ScreenNotice } from '../lib/notice'
 import { cancelledNotice, confirmedNotice, ruleNotice, type RuleChange } from './notices'
 
@@ -26,7 +26,7 @@ export function useAfterRecurringPaymentChange() {
   const afterConfirmation = useCallback(
     async (title: string, confirmation: { amount: string; accountId: number }) => {
       const account = await currentAccount(confirmation.accountId)
-      announceExpenseRevision()
+      announceMovementsRevision()
       toList(confirmedNotice(title, confirmation.amount, account))
     },
     [toList],

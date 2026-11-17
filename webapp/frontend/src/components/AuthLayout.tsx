@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { Logo } from './Logo'
 
 /** Frame of the screens a visitor sees without a session: logo and one card. */
 export function AuthLayout({ title, intro, children }: { title: string; intro?: ReactNode; children: ReactNode }) {
+  useDocumentTitle(title)
   return (
     <div className="flex min-h-dvh flex-col px-4 py-6 sm:px-6 sm:py-10">
       <header className="mx-auto w-full max-w-[28rem]">

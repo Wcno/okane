@@ -133,7 +133,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Build and start the four containers
-        run: docker compose up --build --detach --wait --wait-timeout 240
+        run: docker compose up --build --detach --wait --wait-timeout 240 --scale price-refresher=0
 
       - name: Check the running system
         run: bash scripts/smoke-test.sh

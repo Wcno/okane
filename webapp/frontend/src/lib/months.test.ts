@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isMonth, monthName, monthOf, shiftMonth } from './months'
+import { isMonth, monthName, monthOf, shiftMonth, shortMonthName } from './months'
 
 describe('months', () => {
   it('recognises a month written as 2026-11', () => {
@@ -22,5 +22,10 @@ describe('months', () => {
   it('names a month in Spanish with a capital', () => {
     expect(monthName('2026-11')).toBe('Noviembre 2026')
     expect(monthName('2026-09')).toBe('Septiembre 2026')
+  })
+
+  it('abbreviates a month with its two-digit year for a chart axis', () => {
+    expect(shortMonthName('2026-11')).toBe('nov 26')
+    expect(shortMonthName('2025-01')).toBe('ene 25')
   })
 })

@@ -55,6 +55,7 @@ function ConfirmForm({ occurrence, accounts }: { occurrence: RecurringPaymentOcc
     initial,
     validate: (current) =>
       validateConfirmation(current, { accounts: offered, reservedFrom: occurrence.reservedFrom }),
+    dateDependsOn: ['accountId'],
     // The notice names what was really paid, which the occurrence does not carry back.
     save: async (confirmation) => {
       const outcome = await confirmOccurrence(occurrence.id, confirmation, csrfToken)

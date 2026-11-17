@@ -1,6 +1,6 @@
 import { Ellipsis, Plus, X } from 'lucide-react'
 import { useEffect } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useSignedInUser } from '../auth/context'
 import { bottomBarDestinations, navigationGroups, profileDestinations, type Destination } from '../navigation'
 import { useData } from '../state/context'
@@ -9,22 +9,28 @@ import { ExpenseForm } from './ExpenseForm'
 import { Logo } from './Logo'
 import { SignOutButton } from './SignOutButton'
 
+/** Whether the route on screen is the destination, below it or another route of the same screen. */
+const isCurrent = (destination: Destination, pathname: string) =>
+  [destination.path, ...(destination.alsoActiveOn ?? [])].some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  )
+
 function SidebarLink({ destination }: { destination: Destination }) {
   const Icon = destination.icon
+  const current = isCurrent(destination, useLocation().pathname)
   return (
-    <NavLink
+    <Link
       to={destination.path}
-      className={({ isActive }) =>
-        `flex h-10 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors duration-150 ${
-          isActive
-            ? 'bg-surface font-semibold text-ink shadow-card'
-            : 'font-medium text-ink-2 hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink'
-        }`
-      }
+      aria-current={current ? 'page' : undefined}
+      className={`flex h-10 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors duration-150 ${
+        current
+          ? 'bg-surface font-semibold text-ink shadow-card'
+          : 'font-medium text-ink-2 hover:bg-[color-mix(in_oklab,var(--ink)_6%,transparent)] hover:text-ink'
+      }`}
     >
       <Icon size={18} strokeWidth={2} aria-hidden="true" />
       {destination.name}
-    </NavLink>
+    </Link>
   )
 }
 
@@ -33,6 +39,7 @@ function ProfileLink({ destination }: { destination: Destination }) {
   return (
     <NavLink
       to={destination.path}
+      end
       className={({ isActive }) =>
         `flex h-10 w-full items-center gap-3 rounded-xl px-2 text-[0.95rem] transition-colors duration-150 ${
           isActive
@@ -175,21 +182,23 @@ export function AppShell() {
         <header className="flex h-14 items-center px-4 sm:px-6 lg:hidden">
           <Logo />
         </header>
-        <div className="absolute right-10 top-9 hidden lg:block">
-          <button
-            type="button"
-            onClick={openForm}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-primary pl-3.5 pr-4.5 text-[0.95rem] font-semibold text-on-primary transition-transform duration-150 hover:-translate-y-px active:translate-y-0"
-          >
-            <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
-            Registrar gasto
-          </button>
+        <div className="relative mx-auto w-full max-w-[1180px]">
+          <div className="absolute right-10 top-9 z-10 hidden lg:block">
+            <button
+              type="button"
+              onClick={openForm}
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-primary pl-3.5 pr-4.5 text-[0.95rem] font-semibold text-on-primary transition-transform duration-150 hover:-translate-y-px active:translate-y-0"
+            >
+              <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
+              Registrar gasto
+            </button>
+          </div>
+          <main className="w-full px-4 pb-28 pt-2 sm:px-6 lg:px-10 lg:pb-14 lg:pt-9">
+            <CatalogGate>
+              <Outlet />
+            </CatalogGate>
+          </main>
         </div>
-        <main className="mx-auto w-full max-w-[1180px] px-4 pb-28 pt-2 sm:px-6 lg:px-10 lg:pb-14 lg:pt-9">
-          <CatalogGate>
-            <Outlet />
-          </CatalogGate>
-        </main>
       </div>
       <BottomBar />
       <ExpenseForm />

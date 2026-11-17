@@ -29,11 +29,15 @@ class Asset(models.Model):
 
 
 class InvestmentTransaction(models.Model):
-    """A purchase or a sale of an Asset in an investment Account (GLOSSARY.md)."""
+    """A purchase, a sale or a Dividend of an Asset in an investment Account (GLOSSARY.md).
+
+    A Dividend has no units or price: its cash is the amount the Asset paid.
+    """
 
     class Type(models.TextChoices):
         BUY = "buy"
         SELL = "sell"
+        DIVIDEND = "dividend"
 
     # Users live in webapp-db, so this is the identifier webapp sends, not a foreign key.
     user_id = models.PositiveBigIntegerField()
@@ -42,11 +46,13 @@ class InvestmentTransaction(models.Model):
         Account, on_delete=models.PROTECT, related_name="investment_transactions"
     )
     asset = models.ForeignKey(Asset, on_delete=models.PROTECT, related_name="transactions")
-    type = models.CharField(max_length=4, choices=Type.choices)
-    units = models.DecimalField(max_digits=20, decimal_places=8)
-    unit_price = models.DecimalField(max_digits=20, decimal_places=8)
-    # Units times price rounded to cents when recorded: the cash the Balance uses.
+    type = models.CharField(max_length=8, choices=Type.choices)
+    units = models.DecimalField(max_digits=20, decimal_places=8, null=True)
+    unit_price = models.DecimalField(max_digits=20, decimal_places=8, null=True)
+    # Units times price rounded to cents when recorded, or the amount a Dividend paid: before commission.
     cash_amount = models.DecimalField(max_digits=14, decimal_places=2)
+    # What the broker charged on a purchase or a sale, in cents; a Dividend has none.
+    commission = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -62,5 +68,58 @@ class InvestmentTransaction(models.Model):
             models.CheckConstraint(condition=Q(units__gt=0), name="invtx_units_positive"),
             models.CheckConstraint(condition=Q(unit_price__gt=0), name="invtx_price_positive"),
             models.CheckConstraint(condition=Q(cash_amount__gt=0), name="invtx_cash_positive"),
-            models.CheckConstraint(condition=Q(type__in=["buy", "sell"]), name="invtx_type_known"),
+            models.CheckConstraint(
+                condition=Q(type__in=["buy", "sell", "dividend"]), name="invtx_type_known"
+            ),
+            models.CheckConstraint(condition=Q(commission__gte=0), name="invtx_commission_valid"),
+            models.CheckConstraint(
+                condition=Q(type="dividend", units__isnull=True, unit_price__isnull=True, commission=0)
+                | (Q(type__in=["buy", "sell"]) & Q(units__isnull=False, unit_price__isnull=False)),
+                name="invtx_shape_by_type",
+            ),
+        ]
+
+
+class ReferencePrice(models.Model):
+    """The price a User set by hand for an Asset on a day (GLOSSARY.md, Precio de referencia).
+
+    It belongs to the User: it never changes another User's valuations.
+    """
+
+    # Users live in webapp-db, so this is the identifier webapp sends, not a foreign key.
+    user_id = models.PositiveBigIntegerField()
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="reference_prices")
+    value = models.DecimalField(max_digits=20, decimal_places=8)
+    date = models.DateField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "asset_prices"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user_id", "asset", "date"], name="reference_price_one_per_day"
+            ),
+            models.CheckConstraint(condition=Q(value__gt=0), name="reference_price_positive"),
+        ]
+
+
+class QuotedPrice(models.Model):
+    """The closing price the quotes service gave for an Asset on a day.
+
+    Public data, so it is shared by every User and fetched once per Asset. It is
+    kept apart from the User's own ReferencePrice, which it never replaces: which
+    one a valuation uses is decided when reading (investments.positions).
+    """
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="quoted_prices")
+    value = models.DecimalField(max_digits=20, decimal_places=8)
+    date = models.DateField()
+    provider = models.CharField(max_length=30)
+    fetched_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "asset_quotes"
+        constraints = [
+            models.UniqueConstraint(fields=["asset", "date"], name="quoted_price_one_per_day"),
+            models.CheckConstraint(condition=Q(value__gt=0), name="quoted_price_positive"),
         ]

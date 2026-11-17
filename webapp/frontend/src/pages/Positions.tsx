@@ -3,8 +3,8 @@ import { Link, useLocation } from 'react-router-dom'
 import { smallSecondaryButtonClassName } from '../components/buttons'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { listPositions, type Position } from '../investments/api'
-import { describeAsset, formatPrice, formatUnits, unitsPhrase } from '../investments/presentation'
-import { formatDay } from '../lib/dates'
+import { describeAsset, formatPrice, formatUnits, priceOrigin, unitsPhrase } from '../investments/presentation'
+import { sellPresetOf } from '../investments/tradePreset'
 import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
 import { useLoaded } from '../lib/useLoaded'
@@ -13,7 +13,7 @@ function Row({ position }: { position: Position }) {
   const { asset, accounts } = position
   const share = position.portfolioPercent === null ? 'No aplica' : `${position.portfolioPercent} %`
   const holding = `${unitsPhrase(position.units)} · costo promedio ${formatPrice(position.averageCost)}`
-  const price = `Precio ${formatPrice(position.price.value)} de tu última operación, ${formatDay(position.price.date)}`
+  const price = priceOrigin(position.price)
 
   return (
     <li className="py-3.5">
@@ -28,14 +28,23 @@ function Row({ position }: { position: Position }) {
               {accounts.map((item) => `${item.accountName} ${formatUnits(item.units)}`).join(' · ')}
             </p>
           )}
-          <Link
-            to="/investments/transactions/sell"
-            aria-label={`Vender ${asset.symbol}`}
-            className={`${smallSecondaryButtonClassName} mt-2`}
-          >
-            <TrendingDown size={17} aria-hidden="true" />
-            Vender
-          </Link>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link
+              to="/investments/transactions/sell"
+              state={sellPresetOf(position)}
+              aria-label={`Vender ${asset.symbol}`}
+              className={smallSecondaryButtonClassName}
+            >
+              <TrendingDown size={17} aria-hidden="true" />
+              Vender
+            </Link>
+            <Link
+              to={`/investments/assets/${asset.id}/price`}
+              className="inline-flex min-h-[44px] items-center text-[0.87rem] font-medium text-ink-2 underline underline-offset-2 hover:text-ink"
+            >
+              Corregir precio de {asset.symbol}
+            </Link>
+          </div>
         </div>
         <div className="shrink-0 text-right">
           <p className="text-[1rem] font-semibold tabular-nums">{formatMoney(position.value)}</p>

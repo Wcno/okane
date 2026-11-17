@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from accounts.dates import spanish_day
-from investments.holdings import ZERO, units_phrase
+from investments.holdings import ZERO, units_held, units_phrase
 from investments.models import InvestmentTransaction
 
 CHANGE_LEAVES_SALE_SHORT = (
@@ -20,6 +20,14 @@ CHANGE_LEAVES_SALE_SHORT = (
 DELETE_LEAVES_SALE_SHORT = (
     "No puedes eliminar esta compra: la venta del {date} vende {requested} "
     "y ese día solo tendrías {held}."
+)
+CHANGE_ORPHANS_DIVIDEND = (
+    "No puedes guardar este cambio: el Dividendo del {date} quedaría sin unidades "
+    "del Activo ese día."
+)
+DELETE_ORPHANS_DIVIDEND = (
+    "No puedes eliminar esta compra: el Dividendo del {date} quedaría sin unidades "
+    "del Activo ese día."
 )
 
 
@@ -52,10 +60,38 @@ def first_shortfall(transactions):
     """The first sale that finds fewer units than it sells, or None when every sale is covered."""
     units = ZERO
     for transaction in sorted(transactions, key=lambda t: (t.date, t.id)):
+        if transaction.type == InvestmentTransaction.Type.DIVIDEND:
+            continue
         if transaction.type == InvestmentTransaction.Type.BUY:
             units += transaction.units
         elif transaction.units > units:
             return Shortfall(sale=transaction, held=units)
         else:
             units -= transaction.units
+    return None
+
+
+def first_unfunded_dividend(transactions):
+    """The first Dividend paid on a day the Position holds no units, or None."""
+    # A record not saved yet has no id and comes after every one of its day.
+    for transaction in sorted(transactions, key=lambda t: (t.date, t.id or float("inf"))):
+        if (
+            transaction.type == InvestmentTransaction.Type.DIVIDEND
+            and units_held(transactions, transaction.date) <= 0
+        ):
+            return transaction
+    return None
+
+
+def first_problem(transactions, *, sale_message, dividend_message):
+    """The reason a Position's history no longer holds together, or None when it does.
+
+    Either a sale that finds fewer units than it sells or a Dividend of units not held.
+    """
+    shortfall = first_shortfall(transactions)
+    if shortfall is not None:
+        return shortfall.explain(sale_message)
+    unfunded = first_unfunded_dividend(transactions)
+    if unfunded is not None:
+        return dividend_message.format(date=spanish_day(unfunded.date))
     return None

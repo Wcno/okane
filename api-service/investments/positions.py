@@ -2,16 +2,20 @@
 
 Nothing here is stored (docs/matrices.md): a Position is the average-cost replay of
 the purchases and sales of one Asset in one Account, grouped by Asset for display.
+Its price is the most recent of the User's own manual Reference Price, the quotes
+service's closing price and the last transaction's price, the last one flagged as an estimate.
 """
 
 from decimal import ROUND_HALF_UP, Decimal
 
 from investments.holdings import ZERO, Holding, exact, replay
-from investments.models import InvestmentTransaction
+from investments.models import InvestmentTransaction, QuotedPrice, ReferencePrice
 
 CENT = Decimal("0.01")
 EIGHT_PLACES = Decimal("0.00000001")
 LAST_TRANSACTION = "last_transaction"
+MANUAL = "manual"
+PROVIDER = "provider"
 
 
 def represent_asset(asset):
@@ -31,23 +35,78 @@ def fixed(value, step):
     return f"{value.quantize(step, rounding=ROUND_HALF_UP):f}"
 
 
-@exact
-def positions_of(user_id, as_of):
-    """The User's Positions at the end of `as_of`, grouped by Asset and ordered by value.
+def reference_price(last_transaction, manual, quoted=None):
+    """The Reference Price of an Asset: the most recent date wins.
 
-    A Reference Price is the price of the last known transaction of that Asset;
-    only transactions up to `as_of` count, so a past closing never sees a later one.
+    On a tie the User's own price beats the quotes service's, which beats the last
+    transaction. Only the last transaction is an estimate. Callers pass only prices
+    up to the valuation day, never a future one, and any of the three may be absent;
+    None means there is nothing to base a price on, never zero.
+    """
+    candidates = []
+    if manual is not None:
+        candidates.append({"value": manual.value, "source": MANUAL, "date": manual.date})
+    if quoted is not None:
+        candidates.append({"value": quoted.value, "source": PROVIDER, "date": quoted.date})
+    if last_transaction is not None:
+        candidates.append(
+            {
+                "value": last_transaction.unit_price,
+                "source": LAST_TRANSACTION,
+                "date": last_transaction.date,
+            }
+        )
+    # max keeps the first of equal dates, which is the priority order above.
+    return max(candidates, key=lambda price: price["date"], default=None)
+
+
+def represent_price(price):
+    return {
+        "value": fixed(price["value"], EIGHT_PLACES),
+        "source": price["source"],
+        "date": price["date"].isoformat(),
+        "estimated": price["source"] == LAST_TRANSACTION,
+    }
+
+
+def value_of(units, price):
+    """Cash value of units at a price, to cents, halves away from zero."""
+    return (units * price["value"]).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+@exact
+def held(user_id, as_of):
+    """What the User holds at the end of `as_of`: one entry per Asset, with its price.
+
+    Each entry has the `asset`, its `price` (see `reference_price`) and its
+    `holdings`, a list of (Account, Holding) pairs. Only transactions and manual
+    prices up to `as_of` count, so a past closing never sees a later one.
     """
     transactions = list(
-        InvestmentTransaction.objects.filter(user_id=user_id, date__lte=as_of)
+        InvestmentTransaction.objects.filter(
+            user_id=user_id,
+            date__lte=as_of,
+            type__in=[InvestmentTransaction.Type.BUY, InvestmentTransaction.Type.SELL],
+        )
         .select_related("asset", "account")
         .order_by("date", "id")
     )
     by_holding = {}
-    last_price = {}
+    last_transaction = {}
     for transaction in transactions:
         by_holding.setdefault((transaction.asset, transaction.account), []).append(transaction)
-        last_price[transaction.asset.id] = transaction
+        last_transaction[transaction.asset.id] = transaction
+
+    manual = {}
+    for price in ReferencePrice.objects.filter(
+        user_id=user_id, date__lte=as_of, asset_id__in=last_transaction.keys()
+    ).order_by("date"):
+        manual[price.asset_id] = price
+    quoted = {}
+    for price in QuotedPrice.objects.filter(
+        date__lte=as_of, asset_id__in=last_transaction.keys()
+    ).order_by("date"):
+        quoted[price.asset_id] = price
 
     grouped = {}
     for (asset, account), history in by_holding.items():
@@ -55,25 +114,36 @@ def positions_of(user_id, as_of):
         if holding.units > 0:
             grouped.setdefault(asset, []).append((account, holding))
 
+    return [
+        {
+            "asset": asset,
+            "price": reference_price(
+                last_transaction[asset.id], manual.get(asset.id), quoted.get(asset.id)
+            ),
+            "holdings": sorted(holdings, key=lambda pair: pair[0].id),
+        }
+        for asset, holdings in grouped.items()
+    ]
+
+
+@exact
+def positions_of(user_id, as_of):
+    """The User's Positions at the end of `as_of`, grouped by Asset and ordered by value."""
     positions = []
-    for asset, holdings in grouped.items():
+    for entry in held(user_id, as_of):
+        holdings = entry["holdings"]
         total = Holding(
             sum((holding.units for _, holding in holdings), ZERO),
             sum((holding.cost for _, holding in holdings), ZERO),
         )
-        priced = last_price[asset.id]
-        value = (total.units * priced.unit_price).quantize(CENT, rounding=ROUND_HALF_UP)
+        value = value_of(total.units, entry["price"])
         positions.append(
             {
-                "asset": represent_asset(asset),
+                "asset": represent_asset(entry["asset"]),
                 "units": fixed(total.units, EIGHT_PLACES),
                 "cost": fixed(total.cost, CENT),
                 "average_cost": fixed(total.average_cost, EIGHT_PLACES),
-                "price": {
-                    "value": fixed(priced.unit_price, EIGHT_PLACES),
-                    "source": LAST_TRANSACTION,
-                    "date": priced.date.isoformat(),
-                },
+                "price": represent_price(entry["price"]),
                 "value": f"{value:f}",
                 "accounts": [
                     {
@@ -83,7 +153,7 @@ def positions_of(user_id, as_of):
                         "cost": fixed(holding.cost, CENT),
                         "average_cost": fixed(holding.average_cost, EIGHT_PLACES),
                     }
-                    for account, holding in sorted(holdings, key=lambda pair: pair[0].id)
+                    for account, holding in holdings
                 ],
                 "_value": value,
             }

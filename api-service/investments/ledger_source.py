@@ -1,22 +1,26 @@
 from django.db.models import Case, DecimalField, F, Sum, When
 
+from accounts.ledger import movement_row
 from investments.models import InvestmentTransaction
+from investments.positions import represent_asset
 
 
 class InvestmentLedgerSource:
     """Lets the ledger derive Balances from purchases and sales (ADR 0002, ADR 0003)."""
 
-    def balance_changes(self, account_ids):
+    def balance_changes(self, account_ids, as_of=None):
+        # A purchase costs its amount plus the commission; a sale brings its amount minus it.
         signed = Case(
-            When(type=InvestmentTransaction.Type.BUY, then=-F("cash_amount")),
+            When(type=InvestmentTransaction.Type.BUY, then=-F("cash_amount") - F("commission")),
+            When(type=InvestmentTransaction.Type.SELL, then=F("cash_amount") - F("commission")),
             default=F("cash_amount"),
             output_field=DecimalField(max_digits=14, decimal_places=2),
         )
+        records = InvestmentTransaction.objects.filter(account_id__in=account_ids)
+        if as_of is not None:
+            records = records.filter(date__lte=as_of)
         totals = (
-            InvestmentTransaction.objects.filter(account_id__in=account_ids)
-            .order_by()
-            .values("account_id")
-            .annotate(total=Sum(signed))
+            records.order_by().values("account_id").annotate(total=Sum(signed))
         )
         return {row["account_id"]: row["total"] for row in totals}
 
@@ -27,3 +31,48 @@ class InvestmentLedgerSource:
             .values_list("account_id", flat=True)
             .distinct()
         )
+
+    def movements(self, user_id, wanted, limit):
+        types = wanted.types & {"buy", "sell", "dividend"}
+        if not types:
+            return 0, []
+        records = wanted.narrow(
+            InvestmentTransaction.objects.filter(user_id=user_id, type__in=types), ["account"]
+        )
+        return records.count(), [
+            movement_row(
+                transaction.type, transaction.id, transaction.date, transaction.cash_amount,
+                transaction.account_id,
+                asset=represent_asset(transaction.asset),
+                units=None if transaction.units is None else f"{transaction.units:f}",
+                unit_price=None if transaction.unit_price is None else f"{transaction.unit_price:f}",
+                commission=f"{transaction.commission:f}",
+            )
+            for transaction in records.select_related("asset").order_by("-date", "type", "-id")[:limit]
+        ]
+
+    def statement_entries(self, account_id):
+        trades = InvestmentTransaction.objects.filter(account_id=account_id).select_related("asset")
+        return [
+            {
+                "kind": trade.type,
+                "record_id": trade.id,
+                "date": trade.date,
+                "created_at": trade.created_at,
+                "description": "",
+                "amount": self._cash_effect(trade),
+                "commission": trade.commission,
+                "asset": {"symbol": trade.asset.symbol, "name": trade.asset.name},
+                "units": trade.units,
+            }
+            for trade in trades
+        ]
+
+    @staticmethod
+    def _cash_effect(trade):
+        """What the trade did to the cash: the same rule `balance_changes` sums."""
+        if trade.type == InvestmentTransaction.Type.BUY:
+            return -trade.cash_amount - trade.commission
+        if trade.type == InvestmentTransaction.Type.SELL:
+            return trade.cash_amount - trade.commission
+        return trade.cash_amount

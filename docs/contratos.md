@@ -128,6 +128,15 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - El Estado de cuenta empieza por el Saldo inicial con su fecha. Cada línea
   tiene un orden estable, importe con signo y Saldo resultante; su última
   línea coincide con el Saldo consultado por la API de Cuentas.
+- `GET /api/accounts/{id}/statement` devuelve el Estado de cuenta paginado, del
+  más antiguo al más reciente o, con `order=desc`, al revés; el Saldo de cada línea
+  se calcula sobre todo el historial, nunca sobre la página. Cada línea trae `id`
+  (su posición, única), `kind` (`opening`, `income`, `expense`, `transfer_in`,
+  `transfer_out`, `buy`, `sell`, `dividend`), `record_id`, `date`, `description`,
+  `amount` con signo y `balance`; según el tipo, `category_id`,
+  `counterpart_account_id`, `asset`, `units` y `commission` (ya incluida en el
+  `amount`). El empate de una misma fecha sigue el orden de registro. Una Cuenta
+  ajena responde `404`.
 - `GET /api/expenses/{id}` devuelve un Gasto del Usuario, para abrir sus
   pantallas de edición y eliminación desde un enlace. `GET /api/expenses`
   añade a la paginación `last_used_account_id`: la Cuenta del Gasto registrado
@@ -136,6 +145,9 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `GET /api/transfers/{id}` devuelve una Transferencia del Usuario, con la misma
   forma que el listado, para abrir sus pantallas de edición y eliminación desde
   un enlace; la de otro Usuario responde `404`.
+- `GET /api/accounts/{id}` devuelve una Cuenta del Usuario, archivada o no, con
+  la forma del listado; la de otro Usuario o inexistente responde `404`. Lo usa
+  `webapp` para confirmar la Cuenta de las preferencias.
 - Cada Cuenta de `GET /api/accounts` incluye `net_contribution`: en una Cuenta de
   inversión, su Saldo inicial más las Transferencias que entran menos las que
   salen; en las demás, `null`. Una Transferencia entre dos Cuentas de inversión
@@ -165,6 +177,11 @@ los Saldos iniciales y el Rendimiento mensual está en el
   Si alguna venta quedara sin unidades en ese orden, se responde `400` con el
   motivo y no cambia nada. Al mover una operación de Cuenta o de Activo se revalidan
   las dos Posiciones.
+- Un Dividendo exige unidades del Activo en esa Cuenta en su fecha: se rechaza el
+  Dividendo sin ellas y también la compra eliminada o movida, o la venta, que
+  dejaría sin unidades a un Dividendo. El cuerpo de un Dividendo es solo
+  `account_id`, `asset_id`, `amount` y `date`; `units`, `unit_price` o
+  `commission` responden `400`.
 
 ## Pagos recurrentes
 
@@ -307,6 +324,26 @@ los Saldos iniciales y el Rendimiento mensual está en el
   capital aportado. Se conserva precisión interna y se redondean solo salidas,
   incluida cada fila mensual sin realimentar el redondeo al siguiente cálculo.
   Las simulaciones no modifican Cuentas, tasas guardadas ni registros reales.
+- `POST /api/investments/projection` recibe `selection` (`{"kind": "portfolio"}`
+  o `{"kind": "account", "account_id": n}`, de una Cuenta de ahorro o de inversión
+  propia; otra ajena o inexistente devuelve `404`) y `scenarios`, de uno a tres,
+  cada uno con `initial_capital` (cadena decimal o `null` para el valor de la
+  selección), `monthly_contribution`, `months` (entero) y `annual_rate` (razón
+  decimal). Devuelve `convention`, `source` (`kind`, `account`, `value`, `as_of`,
+  `basis`: `balance` o `valuation`, `estimated` y `saved_annual_rate` de una
+  Cuenta de ahorro, que solo se ofrece) y `scenarios`, cada uno con los datos
+  aplicados más `contributed`, `final_capital`, `result` y `series` mensual
+  (`month`, `capital`, `contributed`). Los errores usan la clave
+  `scenarios.<posición>.<campo>`. Un precio de referencia ausente se sustituye por
+  el de la última transacción del Activo y se marca `estimated`.
+- `GET /api/savings/projection?account_id=` es la Proyección original de una
+  Cuenta de ahorro propia: un escenario con `initial_capital`,
+  `monthly_contribution`, `months` y `annual_rate` opcionales en la consulta.
+  Omitidos, parte del Saldo, con aporte cero, doce meses y la tasa guardada en la
+  Cuenta (cero sin ella). Responde con la misma forma que el `POST` y sus errores
+  usan el nombre del campo. Una Cuenta de otro tipo devuelve `400`.
+- Validación de entrada: el plazo admite hasta 600 meses y un capital proyectado
+  mayor que $999,999,999,999.99 se rechaza.
 - El importe diario del Disponible divide entre los días desde hoy hasta el
   último del mes, incluido hoy. El último día divide entre uno; un Disponible
   negativo permanece negativo y nunca causa una división entre cero.
@@ -325,7 +362,10 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `days_left`: días desde hoy hasta el último del mes, incluido hoy.
   `per_day`: `available` entre `days_left`, truncado a centavos hacia cero; el
   último día divide entre uno y un `available` negativo da un importe negativo.
-- `net_worth`: suma de los Saldos de todas las Cuentas, archivadas incluidas.
+- `net_worth`: el Patrimonio al cierre de hoy, el de la serie de
+  `GET /api/net-worth/history`: Saldos de las Cuentas que no son de inversión
+  más el valor de las de inversión, archivadas incluidas; puede apoyarse en
+  un precio estimado.
 - `income`, `expenses` y `net_savings`: Ingresos y Gastos con fecha del mes y su
   diferencia (Ingresos − Gastos).
 - `budgets`: una fila por Presupuesto del mes, con la forma de `GET /api/budgets`
@@ -336,7 +376,7 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `accounts`: `id`, `name`, `type`, `balance` y `archived` de cada Cuenta. Una
   Cuenta archivada se lista solo si su Saldo no es cero.
 - No incluye Rendimiento ni evolución del Patrimonio; `GET /api/net-worth/history`
-  las ofrece cuando exista.
+  las ofrece.
 
 ## Vista de Movimientos y preferencias
 
@@ -347,6 +387,19 @@ los Saldos iniciales y el Rendimiento mensual está en el
   por cualquiera de sus Cuentas y aparece una vez aun cuando ambas coincidan.
   Orden: fecha descendente y desempate estable por tipo e ID; la paginación
   mantiene ese orden. Filtros con referencias ajenas devuelven `404`.
+- Parámetros: `type` (repetible; omitido son los seis), `account_id`, `from` y
+  `to` (`YYYY-MM-DD`, ambos inclusivos), `page` y `page_size` como las demás
+  listas. Un parámetro mal formado responde `400` con `{"errors": {campo: [...]}}`;
+  una Cuenta ajena o inexistente, `404`. Las Cuentas archivadas filtran.
+- Respuesta: `{results, total, page, page_size, next_page}`. Cada elemento tiene
+  siempre `type`, `id`, `date`, `amount` (cadena decimal exacta; el efectivo de
+  una compra, venta o Dividendo, antes de la comisión), `account_id` (en una
+  Transferencia, la Cuenta de origen), `destination_account_id`, `category_id`
+  (solo Gasto), `description`, `asset`, `units`, `unit_price` y `commission`
+  (solo operaciones de inversión); lo que un tipo no tiene es `null` y la
+  descripción vacía es `""`. El desempate de un mismo día es el tipo en orden
+  alfabético y luego el ID descendente. Cada tipo sale de su fuente del libro,
+  sin tabla común.
 - Las rutas de consulta previas son alias filtrados de `/movements`; sus
   endpoints y formularios especializados siguen disponibles para el curso.
 - `/settings` guarda preferencias por Usuario: filtros predeterminados,
@@ -357,6 +410,21 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - Ocultar una sección nunca modifica cálculos ni permisos; las advertencias al
   registrar un Gasto siguen visibles. Las preferencias se validan, se conservan
   entre sesiones y se borran al eliminar al Usuario.
+- `GET /api/settings/preferences` y `PUT /api/settings/preferences` (sesión y
+  CSRF en `PUT`) los atiende `webapp` con `user_preferences` en `webapp-db`, una
+  fila por Usuario que se borra con él. Sin fila guardada, `GET` devuelve los
+  valores iniciales sin crear nada. Forma, idéntica en ambos sentidos:
+  `{movement_type, account_id, period, from, to, grouping, visible_sections}`.
+  `movement_type` es uno de los seis tipos o `null` (todos); `account_id` es
+  un entero o `null`; `period` es `current_month` (relativo, por defecto), `all`
+  o `custom`, y solo `custom` guarda `from` y `to` (`YYYY-MM-DD`, al menos uno,
+  inclusivos y en orden); `grouping` es `date` o `type`; `visible_sections` lista
+  las secciones del Panel visibles entre `available`, `budgets`, `net_worth`,
+  `upcoming` y `accounts`. `PUT` reemplaza el documento completo.
+- Un valor inválido responde `400` con `{"errors": {campo: [...]}}` y no guarda
+  nada. Una `account_id` se confirma contra `api-service` con el Usuario de la
+  sesión: una Cuenta ajena o inexistente responde `400` en `account_id`, y si
+  `api-service` no responde, `502`.
 
 ## API pública autenticada
 
@@ -397,6 +465,8 @@ los Saldos iniciales y el Rendimiento mensual está en el
   ausente: `400`; referencia ajena: `404`. El cuerpo identifica tipo e ID del
   registro. El contrato OpenAPI que entregue el ticket documentará los seis
   esquemas, filtros, paginación, permisos y respuestas con ejemplos verificables.
+- El contrato OpenAPI se publica sin token en `GET /api/v1/openapi.json` y el
+  ejemplo está en `docs/examples/google-apps-script/okane.gs`.
 - El ejemplo de Google Apps Script usa un token guardado en propiedades del
   script y conserva la misma clave para reintentar una operación. No se entrega
   OAuth, sincronización automática, edición/borrado externo ni gestión de reglas.
@@ -423,6 +493,34 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - El porcentaje de una Posición usa como denominador el valor total de las
   Posiciones, sin efectivo. Con denominador cero el porcentaje no aplica.
   El porcentaje de Rendimiento tampoco aplica si el Aporte neto no es positivo.
+- Precio de referencia de un Usuario y un Activo: gana la fecha más reciente
+  que no sea futura y, con la misma fecha, el precio manual del Usuario sobre
+  el de la última operación. Un precio manual anterior a la última operación
+  no la reemplaza. Un precio tomado de una operación se marca `estimated: true`;
+  un Activo sin ningún precio responde `price: null`, nunca cero.
+  `PUT /api/investments/assets/{id}/price` recibe `value` (hasta ocho decimales,
+  mayor que cero) y `date` (por defecto hoy, nunca futura); guardar otro valor
+  el mismo día lo corrige. `GET` en la misma ruta devuelve `{asset, price}` con
+  el precio que usan las valoraciones de ese Usuario:
+  `price = {value, source: "manual" | "provider" | "last_transaction", date, estimated}`.
+- `GET /api/investments/dashboard` y `GET /api/investments/performance` aceptan
+  `as_of` (hoy por defecto, nunca futuro) y calculan efectivo, Aporte neto,
+  Posiciones y precios al cierre de ese día; una Cuenta que empieza después no
+  participa. Responden `value`, `cash`, `positions_value`, `net_contribution`,
+  `return {amount, percent}` (el porcentaje es `null` si el Aporte neto no es
+  positivo), `estimated` y `accounts`. El dashboard añade `distribution`
+  (hasta siete Activos por valor, más `others_value` y `others_percent`) y
+  `performance` añade `positions` con ganancia contra costo. Con `from` (primer
+  día del período), `performance` añade `period`: el Rendimiento acumulado al
+  cierre menos el acumulado al cierre del día anterior a `from`.
+- `refresh_prices` (comando de gestión, a diario en el servicio `price-refresher`
+  de Compose) consulta una vez por Activo con operaciones, sin importar cuántos
+  Usuarios lo tengan, y guarda en `asset_quotes` el cierre con su fecha real y
+  su proveedor (`source: "provider"`, `estimated: false`). Respeta los créditos
+  del proveedor (ADR 0006), descarta fechas futuras y valores no positivos, y
+  si el servicio falla conserva el último cierre conocido con su fecha. Con la
+  misma fecha, el precio manual del Usuario gana al del proveedor y este a la
+  última operación.
 - La consulta automática guarda la fecha real del dato y su origen; una
   respuesta tardía no reemplaza un dato manual más reciente por uno anterior.
   Cada cierre histórico usa datos conocidos a esa fecha. Un respaldo estimado
@@ -445,6 +543,24 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `GET /api/net-worth/history` devuelve períodos, fechas de corte, Patrimonio,
   Ahorro neto, Rendimiento del período, incorporación de Saldos iniciales y
   procedencia de los precios. Las cifras del Panel coinciden con esa serie.
+- Respuesta: `{as_of, periods}`, con `as_of` igual a hoy y `periods` ordenados del
+  mes más antiguo al actual (vacío sin Cuentas). La serie empieza en el mes de la
+  Cuenta más antigua, aunque sea anterior al primer uso. Cada período tiene
+  `month` (`2026-11`), `opening_cut` (cierre que lo abre: el día anterior al
+  primero del mes) y `closing_cut` (fin de mes; hoy en el mes actual),
+  `opening_net_worth`, `net_worth` (al cierre), `opening_balances_added`
+  (Saldos iniciales de las Cuentas que empiezan en el período), `net_savings`
+  (Ingresos − Gastos del período), `return` (Rendimiento del período, no el
+  acumulado) y `estimated`. Todos los importes son cadenas decimales exactas y se
+  cumple `net_worth − opening_net_worth = opening_balances_added + net_savings +
+  return`.
+- Patrimonio al cierre = Saldos de las Cuentas que no son de inversión + valor
+  de las Cuentas de inversión (efectivo y Posiciones al precio de referencia de
+  ese cierre). Una Transferencia no lo cambia. `estimated` es `true` si algún
+  precio del cierre del período sale de la última Transacción de inversión (el
+  cierre inicial se juzga en el período anterior); nunca se usa un precio posterior al corte ni se valora en cero.
+- `net_worth` de `GET /api/dashboard` es el Patrimonio al cierre de hoy de esa
+  serie, con inversiones.
 
 ## Eliminar un Usuario entre las dos bases
 

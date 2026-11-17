@@ -30,15 +30,15 @@ const card = (page: Page, name: string) => page.getByRole('region', { name })
  */
 async function seedMonth(page: Page) {
   const account = await createAccount(page.request, { name: 'Cuenta corriente', opening_balance: '1000.00' })
-  await createBudget(page.request, { month: thisMonth(), category_id: 2, amount: '300.00' })
-  await createExpense(page.request, { account_id: account.id, amount: '40.00', category_id: 2, description: 'Supermercado' })
+  await createBudget(page.request, { month: thisMonth(), category: 'food', amount: '300.00' })
+  await createExpense(page.request, { account_id: account.id, amount: '40.00', category: 'food', description: 'Supermercado' })
   await createIncome(page.request, { account_id: account.id, amount: '100.00', description: 'Sueldo' })
   await createRecurringPayment(page.request, {
     account_id: account.id,
     start_date: `${previousMonth()}-01`,
     day_of_month: 1,
     amount: '100.00',
-    category_id: 1,
+    category: 'housing',
     description: 'Alquiler',
   })
   await createRecurringPayment(page.request, {
@@ -46,7 +46,7 @@ async function seedMonth(page: Page) {
     start_date: `${thisMonth()}-01`,
     day_of_month: 31,
     amount: '50.00',
-    category_id: 4,
+    category: 'utilities',
     description: 'Internet',
   })
   return account

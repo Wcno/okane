@@ -5,11 +5,13 @@ import { NEW_PASSWORD_HINT, validatePasswordChange, type FormErrors, type Passwo
 import { primaryButtonClassName } from '../components/buttons'
 import { FormAlert, FormNotice } from '../components/FormAlert'
 import { TextField } from '../components/TextField'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 
 type ChangeErrors = FormErrors<keyof PasswordChange>
 
 export function ChangePassword() {
   const { adopt } = useAuth()
+  useDocumentTitle('Cambiar contraseña')
   const { user, csrfToken } = useSignedInUser()
   const currentField = useRef<HTMLInputElement>(null)
   const newField = useRef<HTMLInputElement>(null)

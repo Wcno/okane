@@ -1,8 +1,3 @@
-import threading
-
-from django.db import connection
-from django.test import Client, TransactionTestCase, override_settings, tag
-
 from budgets.models import Budget
 from budgets.tests import BUDGETS, BudgetApiTestCase
 from categories.models import Category
@@ -203,12 +198,12 @@ class ArchivedCategoryTests(CategoryApiTestCase):
         self.assert_rejected(self.create_budget(category_id=mine["id"]), "category_id")
         self.assert_rejected(self.create_rule(account, category_id=mine["id"]), "category_id")
 
-    def test_another_users_category_is_not_found_on_new_records(self):
+    def test_another_users_category_is_refused_on_new_records(self):
         account = self.account()
         theirs = self.category(user=2)
 
-        self.assertEqual(self.register(account, category_id=theirs["id"]).status_code, 404)
-        self.assertEqual(self.create_budget(category_id=theirs["id"]).status_code, 404)
+        self.assert_rejected(self.register(account, category_id=theirs["id"]), "category_id")
+        self.assert_rejected(self.create_budget(category_id=theirs["id"]), "category_id")
 
     def test_past_expenses_and_budgets_stay_visible_and_correctable(self):
         account = self.account()
@@ -306,34 +301,3 @@ class ArchiveBlockersTests(CategoryApiTestCase):
         self.assertEqual(kept.category_id, mine["id"])
         # With a reservation on record the Category is archived, never deleted.
         self.assertEqual(self.remove_category(mine).status_code, 200)
-
-
-@tag("database")
-@override_settings(INTERNAL_SERVICE_KEY="expected-key")
-class ConcurrentCategoryProvisioningTests(TransactionTestCase):
-    """Simultaneous first requests hit the database, so each one commits for real."""
-
-    def test_two_simultaneous_first_requests_copy_the_initial_catalog_once(self):
-        start = threading.Barrier(2)
-        statuses = []
-
-        def list_categories():
-            try:
-                start.wait()
-                response = Client().generic(
-                    "GET",
-                    CATEGORIES,
-                    headers={"X-Okane-Service-Key": "expected-key", "X-Okane-User-Id": "77"},
-                )
-                statuses.append(response.status_code)
-            finally:
-                connection.close()
-
-        threads = [threading.Thread(target=list_categories) for _ in range(2)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
-
-        self.assertEqual(statuses, [200, 200])
-        self.assertEqual(Category.objects.filter(user_id=77).count(), len(INITIAL_KEYS))

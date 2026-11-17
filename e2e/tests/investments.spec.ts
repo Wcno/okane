@@ -16,9 +16,9 @@ const submit = (page: Page, name: 'Registrar compra' | 'Registrar venta') =>
   page.getByRole('main').getByRole('button', { name })
 
 async function pickAsset(page: Page, query: string, choice: RegExp) {
-  await page.getByRole('textbox', { name: 'Activo' }).fill(query)
+  await page.getByRole('combobox', { name: 'Activo' }).fill(query)
   await page.getByRole('button', { name: 'Buscar' }).click()
-  await page.getByRole('button', { name: choice }).click()
+  await page.getByRole('option', { name: choice }).click()
 }
 
 async function fillTrade(page: Page, units: string, price: string) {
@@ -36,6 +36,28 @@ async function expectClearOfActionRow(page: Page, locator: Locator) {
 
 const lineCount = (locator: Locator) =>
   locator.evaluate((element) => Math.round(element.getBoundingClientRect().height / parseFloat(getComputedStyle(element).lineHeight)))
+
+const PRICE_ORIGIN_LABELS = {
+  manual: 'fijado por ti',
+  provider: 'del servicio de cotizaciones',
+  last_transaction: 'de tu última operación',
+} as const
+
+interface ApiPosition {
+  asset: { symbol: string }
+  value: string
+  price: { value: string; source: keyof typeof PRICE_ORIGIN_LABELS }
+}
+
+/** The Reference Price rule picks the origin (a quotes refresh may land at any time), so read what api-service reports. */
+async function positionOf(page: Page, symbol: string) {
+  const response = await page.request.get('/api/investments/positions')
+  expect(response.status()).toBe(200)
+  const { results } = (await response.json()) as { results: ApiPosition[] }
+  return results.find((position) => position.asset.symbol === symbol)!
+}
+
+const dollars = (amount: string) => `$${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
 
 const panamaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Panama' }).format(new Date())
 
@@ -73,7 +95,13 @@ for (const colorScheme of ['light', 'dark'] as const) {
     const row = page.getByRole('listitem').filter({ hasText: 'AAPL' })
     await expect(row).toContainText('2 unidades')
     await expect(row).toContainText('costo promedio $100.00')
-    await expect(row).toContainText('$200.00')
+    // Value and origin follow the Reference Price api-service reports now, whoever set it.
+    await expect(async () => {
+      await page.reload()
+      const position = await positionOf(page, 'AAPL')
+      await expect(row).toContainText(dollars(position.value))
+      await expect(row).toContainText(PRICE_ORIGIN_LABELS[position.price.source])
+    }).toPass()
     await expect(row).toContainText('100.00 %')
     // The two lines under the name each fit in two lines of a phone.
     for (const line of await row.locator('p').all()) expect(await lineCount(line)).toBeLessThanOrEqual(2)
@@ -81,7 +109,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     await page.getByRole('link', { name: 'Vender AAPL' }).click()
     await expect(page).toHaveURL(/\/investments\/transactions\/sell$/)
-    await pickAsset(page, 'aapl', /^AAPL/)
+    // Selling from a Position opens with its Asset already chosen.
+    await expect(page.getByRole('button', { name: 'Cambiar el Activo AAPL' })).toBeVisible()
     await fillTrade(page, '1', '150')
     await expect(page.getByText('Volverá a la Cuenta: $150.00')).toBeVisible()
     await expectScreenQuality(page, `investments-sell-filled-${colorScheme}`)
@@ -194,11 +223,11 @@ test('the search keeps markets apart, explains an empty result and never submits
   await createAccount(page.request, { name: 'Bróker', type: 'investment' })
 
   await page.goto('/investments/transactions/buy')
-  const search = page.getByRole('textbox', { name: 'Activo' })
+  const search = page.getByRole('combobox', { name: 'Activo' })
   await search.fill('shop')
   await search.press('Enter')
-  const results = page.getByRole('list', { name: 'Resultados de la búsqueda' })
-  await expect(results.getByRole('button')).toHaveCount(2)
+  const results = page.getByRole('listbox', { name: 'Resultados de la búsqueda' })
+  await expect(results.getByRole('option')).toHaveCount(2)
   await expect(results).toContainText('XNYS')
   await expect(results).toContainText('XTSE')
   await expect(page).toHaveURL(/\/transactions\/buy$/)
@@ -220,14 +249,14 @@ test('a search that cannot connect says so and works again on retry', async ({ p
   await page.route('**/api/investments/assets/search*', (route) => (blocked ? route.abort() : route.continue()))
 
   await page.goto('/investments/transactions/buy')
-  await page.getByRole('textbox', { name: 'Activo' }).fill('aapl')
+  await page.getByRole('combobox', { name: 'Activo' }).fill('aapl')
   await page.getByRole('button', { name: 'Buscar' }).click()
   await expect(page.getByText('No pudimos conectar con Okane. Revisa tu conexión e inténtalo de nuevo.')).toBeVisible()
   await expectScreenQuality(page, 'investments-buy-search-failed')
 
   blocked = false
   await page.getByRole('button', { name: 'Buscar' }).click()
-  await expect(page.getByRole('button', { name: /^AAPL/ })).toBeVisible()
+  await expect(page.getByRole('option', { name: /^AAPL/ })).toBeVisible()
   await expect(page.getByText('No pudimos conectar con Okane.')).toHaveCount(0)
 })
 
@@ -302,12 +331,12 @@ test('the controls of the purchase screen are at least 44px tall on a phone', as
   await createAccount(page.request, { name: 'Bróker', type: 'investment' })
 
   await page.goto('/investments/transactions/buy')
-  await page.getByRole('textbox', { name: 'Activo' }).fill('aapl')
+  await page.getByRole('combobox', { name: 'Activo' }).fill('aapl')
   await page.getByRole('button', { name: 'Buscar' }).click()
 
   const controls = [
     page.getByRole('button', { name: 'Buscar' }),
-    page.getByRole('button', { name: /^AAPL/ }),
+    page.getByRole('option', { name: /^AAPL/ }),
     page.getByLabel('Unidades'),
     page.getByLabel('Precio por unidad'),
     submit(page, 'Registrar compra'),

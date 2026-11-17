@@ -28,9 +28,17 @@ function useKeepFocusAfterMore<Entry>(feed: RecordFeed<Entry>, rowId: (record: E
   }
 }
 
+/** Records that share a heading: a day, or a type. */
+export interface FeedGroup<Entry> {
+  key: string
+  heading: string
+  records: Entry[]
+}
+
 /**
- * The records of a feed under a heading for each day, then the count and
- * "Mostrar más". `row` renders one record as a RecordRow whose link has `rowId`.
+ * The records of a feed under a heading for each day (or the groups `groupBy`
+ * makes), then the count and "Mostrar más". `row` renders one record as a
+ * RecordRow whose link has `rowId`.
  */
 export function DayFeed<Entry extends { id: number; date: string }>({
   feed,
@@ -38,6 +46,7 @@ export function DayFeed<Entry extends { id: number; date: string }>({
   row,
   rowId,
   countText,
+  groupBy,
 }: {
   feed: RecordFeed<Entry>
   showMore: () => void
@@ -45,17 +54,26 @@ export function DayFeed<Entry extends { id: number; date: string }>({
   rowId: (record: Entry) => string
   /** "Mostrando 50 de 51 gastos." */
   countText: (shown: number, total: number) => string
+  /** Another way to group the records than one group per day. */
+  groupBy?: (records: Entry[]) => FeedGroup<Entry>[]
 }) {
   const today = todayInPanama()
   const rememberAsked = useKeepFocusAfterMore(feed, rowId)
   const isLoadingMore = feed.more.status === 'loading'
+  const groups: FeedGroup<Entry>[] = groupBy
+    ? groupBy(feed.records)
+    : groupByDay(feed.records).map((group) => ({
+        key: `day-${group.date}`,
+        heading: dayHeading(group.date, today),
+        records: group.records,
+      }))
 
   return (
     <div className="max-w-[44rem] space-y-4 lg:space-y-5">
-      {groupByDay(feed.records).map((group) => (
-        <section key={group.date} aria-labelledby={`day-${group.date}`} className={cardClassName}>
-          <h2 id={`day-${group.date}`} className="text-[1rem] font-medium text-ink-2">
-            {dayHeading(group.date, today)}
+      {groups.map((group) => (
+        <section key={group.key} aria-labelledby={group.key} className={cardClassName}>
+          <h2 id={group.key} className="text-[1rem] font-medium text-ink-2">
+            {group.heading}
           </h2>
           <ul className="mt-3 divide-y divide-line">{group.records.map(row)}</ul>
         </section>

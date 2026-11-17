@@ -1,5 +1,4 @@
 import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
-import type { RecordPage } from '../lib/recordPage'
 
 /** An Asset of the catalog: identified by provider, market and symbol, never by symbol alone. */
 export interface Asset {
@@ -18,17 +17,35 @@ export interface AssetSearch {
   providerAvailable: boolean
 }
 
-export type TradeKind = 'buy' | 'sell'
+/** What a Transacción de inversión can be: a purchase, a sale or a Dividend. */
+export type TradeKind = 'buy' | 'sell' | 'dividend'
 
+/**
+ * What the forms send. A purchase or a sale sends `units`, `unitPrice` and an
+ * optional `commission`; a Dividend sends only the `amount` it paid.
+ */
 export interface TradeInput {
   accountId: number
   assetId: number
-  units: string
-  unitPrice: string
   date: string
+  units?: string
+  unitPrice?: string
+  commission?: string
+  amount?: string
 }
 
-export interface Trade extends TradeInput {
+interface RecordedTrade {
+  accountId: number
+  assetId: number
+  date: string
+  /** Null in a Dividend, which has no units or price. */
+  units: string | null
+  unitPrice: string | null
+  /** Zero when none was charged; always zero in a Dividend. */
+  commission: string
+}
+
+export interface Trade extends RecordedTrade {
   id: number
   type: TradeKind
   cashAmount: string
@@ -37,14 +54,14 @@ export interface Trade extends TradeInput {
 }
 
 /** A recorded purchase or sale as the list and the read-one screen show it, with its Asset. */
-export interface Transaction extends TradeInput {
+export interface Transaction extends RecordedTrade {
   id: number
   type: TradeKind
   cashAmount: string
   asset: Asset
 }
 
-export type TradeField = 'accountId' | 'assetId' | 'units' | 'unitPrice' | 'date'
+export type TradeField = 'accountId' | 'assetId' | 'units' | 'unitPrice' | 'commission' | 'amount' | 'date'
 export type TradeErrors = FieldErrors<TradeField>
 
 export interface PositionAccount {
@@ -55,13 +72,21 @@ export interface PositionAccount {
   averageCost: string
 }
 
+/** The price a valuation uses, with the day it is from; one taken from the last transaction is an estimate. */
+export interface ReferencePrice {
+  value: string
+  source: 'manual' | 'provider' | 'last_transaction'
+  date: string
+  estimated: boolean
+}
+
 /** What the User holds of one Asset, with the Accounts that add up to it. */
 export interface Position {
   asset: Asset
   units: string
   cost: string
   averageCost: string
-  price: { value: string; source: 'last_transaction'; date: string }
+  price: ReferencePrice
   value: string
   /** A percentage with two decimals; null when the portfolio has no value to share. */
   portfolioPercent: string | null
@@ -80,7 +105,7 @@ const ACCOUNT_OR_ASSET_GONE =
 const TRANSACTION_OR_ACCOUNT_GONE =
   'No encontramos esta Transacción de inversión o la Cuenta elegida. Vuelve a la lista para ver los datos al día.'
 
-interface AssetBody {
+export interface AssetBody {
   id: number
   provider: string
   market: string
@@ -90,7 +115,7 @@ interface AssetBody {
   currency: string
 }
 
-const toAsset = (body: AssetBody): Asset => ({
+export const toAsset = (body: AssetBody): Asset => ({
   id: body.id,
   provider: body.provider,
   market: body.market,
@@ -113,8 +138,9 @@ interface TradeBody {
   type: TradeKind
   account_id: number
   asset_id: number
-  units: string
-  unit_price: string
+  units: string | null
+  unit_price: string | null
+  commission: string
   cash_amount: string
   date: string
   account_balance: string
@@ -129,15 +155,20 @@ const FORM_FIELDS: Record<string, TradeField> = {
   asset_id: 'assetId',
   units: 'units',
   unit_price: 'unitPrice',
+  commission: 'commission',
+  amount: 'amount',
   date: 'date',
 }
 
+/** Only the fields the operation has: api-service refuses the ones a Dividend does not take. */
 const tradeBody = (trade: TradeInput) => ({
   account_id: trade.accountId,
   asset_id: trade.assetId,
-  units: trade.units,
-  unit_price: trade.unitPrice,
   date: trade.date,
+  ...(trade.units !== undefined && { units: trade.units }),
+  ...(trade.unitPrice !== undefined && { unit_price: trade.unitPrice }),
+  ...(trade.commission !== undefined && { commission: trade.commission }),
+  ...(trade.amount !== undefined && { amount: trade.amount }),
 })
 
 const readTrade = async (response: Response): Promise<Trade> => {
@@ -149,6 +180,7 @@ const readTrade = async (response: Response): Promise<Trade> => {
     assetId: body.asset_id,
     units: body.units,
     unitPrice: body.unit_price,
+    commission: body.commission,
     cashAmount: body.cash_amount,
     date: body.date,
     accountBalance: body.account_balance,
@@ -167,7 +199,7 @@ export function recordTrade(kind: TradeKind, trade: TradeInput, csrfToken: strin
   })
 }
 
-/** Corrects a recorded purchase or sale; its kind stays as it was recorded. */
+/** Corrects a recorded purchase, sale or Dividend; its kind stays as it was recorded. */
 export function updateTrade(id: number, trade: TradeInput, csrfToken: string): Promise<Outcome<Trade, TradeField>> {
   return write({
     method: 'PUT',
@@ -197,21 +229,11 @@ const toTransaction = (body: TransactionBody): Transaction => ({
   assetId: body.asset_id,
   units: body.units,
   unitPrice: body.unit_price,
+  commission: body.commission,
   cashAmount: body.cash_amount,
   date: body.date,
   asset: toAsset(body.asset),
 })
-
-const TRANSACTIONS_PAGE_SIZE = 50
-
-/** One page of the User's Transactions, newest first. */
-export async function listTransactions(page: number): Promise<RecordPage<Transaction>> {
-  const body = await readJson<{ results: TransactionBody[]; total: number; next_page: number | null }>(
-    `/api/investments/transactions?page_size=${TRANSACTIONS_PAGE_SIZE}&page=${page}`,
-    { failed: TRANSACTIONS_FAILED },
-  )
-  return { records: body.results.map(toTransaction), total: body.total, nextPage: body.next_page }
-}
 
 /** One Transaction; throws NotFoundError when it is not the User's or no longer exists. */
 export async function getTransaction(id: number): Promise<Transaction> {
@@ -228,7 +250,7 @@ interface PositionBody {
   units: string
   cost: string
   average_cost: string
-  price: { value: string; source: 'last_transaction'; date: string }
+  price: ReferencePrice
   value: string
   portfolio_percent: string | null
   accounts: { account_id: number; account_name: string; units: string; cost: string; average_cost: string }[]
