@@ -75,7 +75,7 @@ describe('validateRecurringPayment', () => {
 
 describe('validateConfirmation', () => {
   const draft = { amount: '120', accountId: 3, date: '2026-12-02' }
-  const context = { accounts, enteredOn: '2026-11-01' as string | null }
+  const context = { accounts, reservedFrom: '2026-11-01' as string | null }
 
   it('accepts the reviewed payment, today by default', () => {
     expect(validateConfirmation(draft, context)).toEqual({
@@ -103,7 +103,7 @@ describe('validateConfirmation', () => {
 
   it('rejects a day before the Account began', () => {
     expect(
-      validateConfirmation({ ...draft, date: '2025-12-31' }, { accounts, enteredOn: null }),
+      validateConfirmation({ ...draft, date: '2025-12-31' }, { accounts, reservedFrom: null }),
     ).toMatchObject({ ok: false, errors: { date: [expect.stringContaining('Cuenta')] } })
   })
 

@@ -96,7 +96,7 @@ export type ConfirmationOutcome =
  */
 export function validateConfirmation(
   draft: ConfirmationDraft,
-  context: { accounts: Account[]; enteredOn: string | null },
+  context: { accounts: Account[]; reservedFrom: string | null },
 ): ConfirmationOutcome {
   const today = todayInPanama()
   const errors: ConfirmationErrors = {}
@@ -107,8 +107,8 @@ export function validateConfirmation(
   if (account === undefined) errors.accountId = [ACCOUNT_REQUIRED]
   if (!isCalendarDay(draft.date)) errors.date = ['Elige el día en que pagaste.']
   else if (draft.date > today) errors.date = ['La fecha no puede ser futura. Elige hoy o un día anterior.']
-  else if (context.enteredOn !== null && draft.date < context.enteredOn) {
-    errors.date = [`La fecha no puede ser anterior a la reserva (${formatDay(context.enteredOn)}).`]
+  else if (context.reservedFrom !== null && draft.date < context.reservedFrom) {
+    errors.date = [`La fecha no puede ser anterior a la reserva (${formatDay(context.reservedFrom)}).`]
   } else if (account !== undefined && draft.date < account.openingDate) {
     errors.date = [`La fecha no puede ser anterior al inicio del registro de la Cuenta (${formatDay(account.openingDate)}).`]
   }

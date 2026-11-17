@@ -16,13 +16,13 @@ const affectedFields = (patch: Partial<ConfirmationDraft>): ConfirmationField[] 
 export function useConfirmationForm({
   initial,
   accounts,
-  enteredOn,
+  reservedFrom,
   save,
   onSaved,
 }: {
   initial: ConfirmationDraft
   accounts: Account[]
-  enteredOn: string | null
+  reservedFrom: string | null
   save: (confirmation: Confirmation) => Promise<Outcome<RecurringPaymentOccurrence, ConfirmationField>>
   onSaved: (occurrence: RecurringPaymentOccurrence, confirmation: Confirmation) => void | Promise<void>
 }) {
@@ -49,7 +49,7 @@ export function useConfirmationForm({
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     if (isSubmitting) return
-    const checked = validateConfirmation(draft, { accounts, enteredOn })
+    const checked = validateConfirmation(draft, { accounts, reservedFrom })
     if (!checked.ok) {
       showErrors(checked.errors)
       return

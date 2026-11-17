@@ -8,6 +8,10 @@ export const recurringPaymentsBack = { to: '/recurring-payments', label: 'Pagos 
 export const ruleTitle = (rule: Pick<RecurringPayment, 'description' | 'categoryId'>) =>
   rule.description || categoryById(rule.categoryId).name
 
+/** What an occurrence is called: the description it was reserved with, else its Category. */
+export const occurrenceTitle = (occurrence: Pick<RecurringPaymentOccurrence, 'description' | 'categoryId'>) =>
+  occurrence.description || categoryById(occurrence.categoryId).name
+
 /** A rule as a row of the list: the title, and what is known about it. */
 export function describeRule(rule: RecurringPayment, accountName: string | undefined) {
   const category = categoryById(rule.categoryId).name

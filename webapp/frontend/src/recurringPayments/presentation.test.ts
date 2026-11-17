@@ -11,7 +11,10 @@ const occurrence = (id: number, dueDate: string, status: RecurringPaymentOccurre
   amount: '100.00',
   accountId: 3,
   categoryId: 1,
-  enteredOn: dueDate.slice(0, 8) + '01',
+  description: '',
+  reservedFrom: dueDate.slice(0, 8) + '01',
+  resolvedOn: null,
+  resolvedAt: null,
   expenseId: null,
 })
 

@@ -58,7 +58,7 @@ function ConfirmForm({
   const { form, draft, change, errors, isSubmitting, submit } = useConfirmationForm({
     initial: { amount: occurrence.amount, accountId: occurrence.accountId, date: todayInPanama() },
     accounts: offered,
-    enteredOn: occurrence.enteredOn,
+    reservedFrom: occurrence.reservedFrom,
     save: (confirmation) => confirmOccurrence(occurrence.id, confirmation, csrfToken),
     onSaved: (_saved, confirmation) => afterConfirmation(name, confirmation),
   })
@@ -115,7 +115,7 @@ function ConfirmForm({
                 id={id('date')}
                 type="date"
                 value={draft.date}
-                min={[occurrence.enteredOn, chosen?.openingDate].filter(Boolean).sort().pop() ?? undefined}
+                min={[occurrence.reservedFrom, chosen?.openingDate].filter(Boolean).sort().pop() ?? undefined}
                 max={todayInPanama()}
                 onChange={(event) => change({ date: event.target.value })}
                 aria-invalid={Boolean(errors.date)}

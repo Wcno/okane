@@ -6,7 +6,6 @@ import { smallSecondaryButtonClassName } from '../components/buttons'
 import { CategoryChip } from '../components/expenses/CategoryChip'
 import { RecordRow } from '../components/screen/RecordRow'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
-import { categoryById } from '../data/categories'
 import { offeredAccounts } from '../expenses/presentation'
 import { useExpenseRevision } from '../expenses/revision'
 import { formatMoney } from '../lib/money'
@@ -18,9 +17,9 @@ import {
   STATUS_LABELS,
   allOccurrences,
   describeRule,
+  occurrenceTitle,
   dueText,
   resolved,
-  ruleTitle,
   unresolved,
 } from '../recurringPayments/presentation'
 
@@ -73,12 +72,8 @@ function ResolvedRow({ occurrence, names }: { occurrence: RecurringPaymentOccurr
 function Rules({ rules, accounts }: { rules: RecurringPayment[]; accounts: Account[] }) {
   const names = new Map(accounts.map((account) => [account.id, account.name]))
   const occurrences = allOccurrences(rules)
-  const ruleNames = new Map(rules.map((rule) => [rule.id, ruleTitle(rule)]))
-  const lookup: Names = {
-    account: (id) => names.get(id),
-    rule: (occurrence) =>
-      ruleNames.get(occurrence.recurringPaymentId) ?? categoryById(occurrence.categoryId).name,
-  }
+  const lookup: Names = { account: (id) => names.get(id), rule: occurrenceTitle }
+  const active = rules.filter((rule) => rule.status === 'active')
   const toConfirm = unresolved(occurrences)
   const answered = resolved(occurrences)
 
@@ -100,12 +95,13 @@ function Rules({ rules, accounts }: { rules: RecurringPayment[]; accounts: Accou
         </section>
       )}
 
+      {active.length > 0 && (
       <section aria-labelledby="rules" className={cardClassName}>
         <h2 id="rules" className="text-[1rem] font-medium text-ink-2">
           Tus pagos recurrentes
         </h2>
         <ul className="mt-3 divide-y divide-line">
-          {rules.map((rule) => {
+          {active.map((rule) => {
             const { title, details } = describeRule(rule, names.get(rule.accountId))
             return (
               <RecordRow
@@ -121,6 +117,7 @@ function Rules({ rules, accounts }: { rules: RecurringPayment[]; accounts: Accou
           })}
         </ul>
       </section>
+      )}
 
       {answered.length > 0 && (
         <section aria-labelledby="answered" className={cardClassName}>

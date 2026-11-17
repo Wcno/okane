@@ -11,8 +11,14 @@ export interface RecurringPaymentOccurrence {
   amount: string
   accountId: number
   categoryId: number
-  /** The day the reservation began to count; null until api-service says so. */
-  enteredOn: string | null
+  /** The rule's description when the reservation was made; empty when it had none. */
+  description: string
+  /** The day the money began to be reserved. */
+  reservedFrom: string
+  /** The day the User says the payment happened, or the day it was cancelled; null while open. */
+  resolvedOn: string | null
+  /** The moment the answer was recorded; null while open. */
+  resolvedAt: string | null
   /** The Expense a confirmation created, kept even after that Expense is deleted. */
   expenseId: number | null
 }
@@ -26,7 +32,8 @@ export interface RecurringPayment {
   categoryId: number
   dayOfMonth: number
   startDate: string
-  status: string
+  /** A deleted rule stays in the list only while it has pending occurrences. */
+  status: 'active' | 'deleted'
   occurrences: RecurringPaymentOccurrence[]
 }
 
@@ -75,7 +82,10 @@ interface OccurrenceBody {
   amount: string
   account_id: number
   category_id: number
-  entered_on: string | null
+  description: string
+  reserved_from: string
+  resolved_on: string | null
+  resolved_at: string | null
   expense_id: number | null
 }
 
@@ -87,7 +97,7 @@ interface RecurringPaymentBody {
   category_id: number
   day_of_month: number
   start_date: string
-  status: string
+  status: 'active' | 'deleted'
   occurrences?: OccurrenceBody[]
 }
 
@@ -99,7 +109,10 @@ const toOccurrence = (body: OccurrenceBody): RecurringPaymentOccurrence => ({
   amount: body.amount,
   accountId: body.account_id,
   categoryId: body.category_id,
-  enteredOn: body.entered_on,
+  description: body.description,
+  reservedFrom: body.reserved_from,
+  resolvedOn: body.resolved_on,
+  resolvedAt: body.resolved_at,
   expenseId: body.expense_id,
 })
 

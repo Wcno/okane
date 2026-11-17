@@ -26,7 +26,10 @@ const receivedOccurrence = {
   amount: '100.00',
   account_id: 3,
   category_id: 1,
-  entered_on: '2026-11-01',
+  description: 'Alquiler',
+  reserved_from: '2026-11-01',
+  resolved_on: null,
+  resolved_at: null,
   expense_id: null,
 }
 const occurrence = {
@@ -37,7 +40,10 @@ const occurrence = {
   amount: '100.00',
   accountId: 3,
   categoryId: 1,
-  enteredOn: '2026-11-01',
+  description: 'Alquiler',
+  reservedFrom: '2026-11-01',
+  resolvedOn: null,
+  resolvedAt: null,
   expenseId: null,
 }
 const receivedRule = {
