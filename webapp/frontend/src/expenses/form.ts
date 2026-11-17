@@ -1,5 +1,5 @@
 import type { Account } from '../accounts/api'
-import { MAX_AMOUNT_TEXT, parseAmount, type ParsedAmount } from '../lib/amount'
+import { MAX_AMOUNT_TEXT, parsePositiveAmount } from '../lib/amount'
 import { formatDay, isCalendarDay, todayInPanama } from '../lib/dates'
 import type { ExpenseErrors, ExpenseInput } from './api'
 
@@ -23,16 +23,9 @@ const DATE_IN_FUTURE = 'La fecha no puede ser futura. Elige hoy o un día anteri
 const DESCRIPTION_TOO_LONG = `La descripción admite hasta ${DESCRIPTION_MAX_LENGTH} caracteres.`
 
 
-/** An Expense takes a positive amount: zero and a negative one are as invalid as text. */
-export function parseExpenseAmount(text: string): ParsedAmount {
-  const parsed = parseAmount(text)
-  if ('error' in parsed) return parsed
-  return parsed.amount.startsWith('-') || parsed.amount === '0.00' ? { error: 'invalid' } : parsed
-}
-
 /** The amount to show a consequence for, or null while what is typed is not one. */
 export function typedAmount(text: string): string | null {
-  const parsed = parseExpenseAmount(text)
+  const parsed = parsePositiveAmount(text)
   return 'amount' in parsed ? parsed.amount : null
 }
 
@@ -46,7 +39,7 @@ export type ExpenseOutcome = { ok: true; expense: ExpenseInput } | { ok: false; 
 export function validateExpense(draft: ExpenseDraft, context: { accounts: Account[] }): ExpenseOutcome {
   const today = todayInPanama()
   const errors: ExpenseErrors = {}
-  const parsed = parseExpenseAmount(draft.amount)
+  const parsed = parsePositiveAmount(draft.amount)
   const amount = 'amount' in parsed ? parsed.amount : null
   const description = draft.description.trim()
   const account = context.accounts.find((candidate) => candidate.id === draft.accountId)

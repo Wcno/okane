@@ -17,6 +17,10 @@ import { Logout } from './pages/Logout'
 import { Menu } from './pages/Menu'
 import { Register } from './pages/Register'
 import { ResetPassword } from './pages/ResetPassword'
+import { TransferCreate } from './pages/TransferCreate'
+import { TransferDelete } from './pages/TransferDelete'
+import { TransferEdit } from './pages/TransferEdit'
+import { Transfers } from './pages/Transfers'
 import { UnderConstruction } from './pages/UnderConstruction'
 
 export default function App() {
@@ -44,6 +48,10 @@ export default function App() {
             <Route path="/expenses/create" element={<ExpenseCreate />} />
             <Route path="/expenses/:id/edit" element={<ExpenseEdit />} />
             <Route path="/expenses/:id/delete" element={<ExpenseDelete />} />
+            <Route path="/transfers" element={<Transfers />} />
+            <Route path="/transfers/create" element={<TransferCreate />} />
+            <Route path="/transfers/:id/edit" element={<TransferEdit />} />
+            <Route path="/transfers/:id/delete" element={<TransferDelete />} />
             <Route path="/profile/change-password" element={<ChangePassword />} />
             <Route path="*" element={<UnderConstruction />} />
           </Route>

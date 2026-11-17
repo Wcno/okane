@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseAmount } from './amount'
+import { parseAmount, parsePositiveAmount } from './amount'
 
 describe('parseAmount', () => {
   it('reads an exact amount in cents as the decimal string the API takes', () => {
@@ -30,3 +30,23 @@ describe('parseAmount', () => {
     }
   })
 })
+
+describe('parsePositiveAmount', () => {
+  it('reads a positive amount, with a comma or a point', () => {
+    expect(parsePositiveAmount('12.5')).toEqual({ amount: '12.50' })
+    expect(parsePositiveAmount(' 12,50 ')).toEqual({ amount: '12.50' })
+    expect(parsePositiveAmount('0.01')).toEqual({ amount: '0.01' })
+    expect(parsePositiveAmount('999999999999.99')).toEqual({ amount: '999999999999.99' })
+  })
+
+  it('refuses zero, a negative amount and what is not an amount', () => {
+    for (const text of ['', '0', '0.00', '-5', '12.505', 'abc', '1,250.00']) {
+      expect(parsePositiveAmount(text), text).toEqual({ error: 'invalid' })
+    }
+  })
+
+  it('says an amount past twelve integer digits is too large', () => {
+    expect(parsePositiveAmount('9999999999999')).toEqual({ error: 'too-large' })
+  })
+})
+

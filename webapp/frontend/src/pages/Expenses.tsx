@@ -1,17 +1,16 @@
 import { ReceiptText } from 'lucide-react'
-import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import type { Account } from '../accounts/api'
 import { useAccounts } from '../accounts/useAccounts'
 import { CategoryChip } from '../components/expenses/CategoryChip'
-import { smallSecondaryButtonClassName } from '../components/buttons'
-import { FormAlert } from '../components/FormAlert'
+import { MoreFooter } from '../components/screen/MoreFooter'
 import { RecordRow } from '../components/screen/RecordRow'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
 import type { Expense } from '../expenses/api'
-import { NEEDS_AN_ACCOUNT, dayHeading, describeExpense, groupByDay, offeredAccounts } from '../expenses/presentation'
+import { NEEDS_AN_ACCOUNT, describeExpense, offeredAccounts } from '../expenses/presentation'
 import { useExpenseFeed, type ExpenseFeed } from '../expenses/useExpenseFeed'
 import { todayInPanama } from '../lib/dates'
+import { dayHeading, groupByDay } from '../lib/days'
 import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
 
@@ -33,28 +32,6 @@ function Row({ expense, accountName }: { expense: Expense; accountName: string }
   )
 }
 
-/**
- * After "Mostrar más" the keyboard stays where it was: on the button while
- * there are more pages, else on the first row that arrived, so it does not
- * fall back to the top of the page.
- */
-function useKeepFocusAfterMore(feed: ExpenseFeed) {
-  const asked = useRef(false)
-  const shown = useRef(feed.expenses.length)
-
-  useEffect(() => {
-    const previous = shown.current
-    shown.current = feed.expenses.length
-    if (!asked.current || feed.expenses.length <= previous) return
-    asked.current = false
-    if (feed.nextPage === null) document.getElementById(rowId(feed.expenses[previous]))?.focus()
-  }, [feed.expenses, feed.nextPage])
-
-  return () => {
-    asked.current = true
-  }
-}
-
 function Feed({
   feed,
   accounts,
@@ -66,45 +43,23 @@ function Feed({
 }) {
   const today = todayInPanama()
   const names = new Map(accounts.map((account) => [account.id, account.name]))
-  const rememberAsked = useKeepFocusAfterMore(feed)
-  const isLoadingMore = feed.more.status === 'loading'
 
   return (
     <div className="max-w-[44rem] space-y-4 lg:space-y-5">
-      {groupByDay(feed.expenses).map((group) => (
+      {groupByDay(feed.items).map((group) => (
         <section key={group.date} aria-labelledby={`day-${group.date}`} className={cardClassName}>
           <h2 id={`day-${group.date}`} className="text-[1rem] font-medium text-ink-2">
             {dayHeading(group.date, today)}
           </h2>
           <ul className="mt-3 divide-y divide-line">
-            {group.expenses.map((expense) => (
+            {group.items.map((expense) => (
               <Row key={expense.id} expense={expense} accountName={names.get(expense.accountId) ?? ''} />
             ))}
           </ul>
         </section>
       ))}
 
-      <div className="flex flex-col items-center gap-3 px-1 pt-1">
-        <p className="text-[0.87rem] text-ink-3" role="status">
-          Mostrando {feed.expenses.length} de {feed.total} gastos.
-        </p>
-        {feed.more.status === 'failed' && <FormAlert>{feed.more.message}</FormAlert>}
-        {feed.nextPage !== null && (
-          <button
-            type="button"
-            // Not `disabled`: a disabled button drops the keyboard out of the page.
-            aria-disabled={isLoadingMore}
-            onClick={() => {
-              if (isLoadingMore) return
-              rememberAsked()
-              showMore()
-            }}
-            className={`${smallSecondaryButtonClassName} justify-center aria-disabled:opacity-70`}
-          >
-            {isLoadingMore ? 'Cargando…' : feed.more.status === 'failed' ? 'Reintentar' : 'Mostrar más'}
-          </button>
-        )}
-      </div>
+      <MoreFooter feed={feed} noun="gastos" rowId={rowId} showMore={showMore} />
     </div>
   )
 }
@@ -126,7 +81,7 @@ export function Expenses() {
 
       {state.status !== 'ready' ? (
         <Pending state={state} retry={retry} loading="Cargando tus gastos…" />
-      ) : state.value.expenses.length === 0 ? (
+      ) : state.value.items.length === 0 ? (
         <EmptyState
           icon={ReceiptText}
           title="Aún no registras gastos"
