@@ -42,6 +42,8 @@ export function ScreenHeader({
           <Link to={action.to} className={primaryActionClassName}>
             <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
             <span className="sm:hidden">{action.shortLabel ?? action.label}</span>
+            {/* The name starts with what is on screen and still carries the full label, so a short one never hides it. */}
+            {action.shortLabel && <span className="sr-only sm:hidden">. {action.label}</span>}
             <span className="hidden sm:inline">{action.label}</span>
           </Link>
         )}
