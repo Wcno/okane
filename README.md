@@ -145,7 +145,9 @@ widths. `e2e/tests/journey.spec.ts` walks the whole product as one User (sign
 up, Accounts, Income and Expense, Budget, recurring payment, investment,
 Panel, statement, preferences, token, user deletion) and checks that a second
 User sees none of it; the other specs go deep on each area. The stack runs
-with `QUOTES_PROVIDER=sample`, so quotes never depend on the network, and the
+with `QUOTES_PROVIDER=sample` (the Compose default), so quotes never depend on
+the network; production sets `QUOTES_PROVIDER=twelvedata` and its key
+explicitly. The
 dates come from the stack's own clock in Panama. CI runs them on every pull
 request after the smoke test, on a fresh database, and keeps the screenshots
 and the report when one fails.
