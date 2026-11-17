@@ -83,7 +83,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page.getByRole('status').filter({ hasText: 'Eliminaste' })).toContainText('$100.00')
     // Without a Budget the Category shows only what it spent, never a Restante.
     await expect(page.getByRole('heading', { name: 'Gastado sin Presupuesto' })).toBeVisible()
-    await expect(page.getByRole('link', { name: /^Alimentación\s*Sin Presupuesto.*\$120\.00$/ })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^Alimentación.*Sin Presupuesto.*\$120\.00.*Crear Presupuesto/ })).toBeVisible()
     await expect(page.getByText('Restante por Categoría')).toBeHidden()
     await expectScreenQuality(page, `budgets-unbudgeted-${colorScheme}`)
   })
