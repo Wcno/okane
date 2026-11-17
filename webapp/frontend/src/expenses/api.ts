@@ -4,7 +4,7 @@ import { RequestError, readJson, write, type FieldErrors, type Outcome } from '.
 export interface Expense {
   id: number
   amount: string
-  /** One of the fixed Categories, 1 to 8 (data/categories.ts). */
+  /** One of the User's Categories (categories/api.ts); its id belongs to that User. */
   categoryId: number
   accountId: number
   date: string

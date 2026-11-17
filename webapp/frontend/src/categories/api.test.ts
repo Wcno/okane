@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { NotFoundError } from '../lib/http'
-import { archiveCategory, createCategory, getCategory, listCategories, renameCategory } from './api'
+import { createCategory, deleteCategory, getCategory, listCategories, renameCategory } from './api'
 
 function json(status: number, body?: unknown) {
   return new Response(body === undefined ? null : JSON.stringify(body), {
@@ -9,8 +9,8 @@ function json(status: number, body?: unknown) {
   })
 }
 
-const received = { id: 9, name: 'Mascotas', is_custom: true, archived_at: null }
-const category = { id: 9, name: 'Mascotas', isCustom: true, archivedAt: null }
+const received = { id: 9, name: 'Mascotas', key: null, has_records: false, archived_at: null }
+const category = { id: 9, name: 'Mascotas', key: null, hasRecords: false, archivedAt: null }
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -33,26 +33,37 @@ describe('categories api', () => {
     await expect(getCategory(9)).rejects.toBeInstanceOf(NotFoundError)
   })
 
-  it('creates, renames and archives with the CSRF token', async () => {
+  it('creates, renames and deletes with the CSRF token', async () => {
     const fetch = vi.fn().mockImplementation(() => Promise.resolve(json(200, received)))
     vi.stubGlobal('fetch', fetch)
 
     await createCategory({ name: 'Mascotas' }, 'token')
     await renameCategory(9, { name: 'Mis mascotas' }, 'token')
-    await archiveCategory(9, 'token')
+    await deleteCategory(9, 'token')
 
     expect(fetch.mock.calls.map(([path, init]) => [init.method, path, init.headers['X-CSRFToken']])).toEqual([
       ['POST', '/api/categories', 'token'],
       ['PUT', '/api/categories/9', 'token'],
-      ['POST', '/api/categories/9/archive', 'token'],
+      ['DELETE', '/api/categories/9', 'token'],
     ])
+  })
+
+  it('says whether deleting removed the Category or archived it', async () => {
+    const archived = { ...received, has_records: true, archived_at: '2026-11-16T10:00:00Z' }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(json(204)).mockResolvedValueOnce(json(200, archived)))
+
+    expect(await deleteCategory(9, 'token')).toEqual({ ok: true, value: { result: 'deleted' } })
+    expect(await deleteCategory(9, 'token')).toMatchObject({
+      ok: true,
+      value: { result: 'archived', category: { id: 9, hasRecords: true, archivedAt: '2026-11-16T10:00:00Z' } },
+    })
   })
 
   it('returns what api-service says when archiving is refused', async () => {
     const message = 'Mueve o elimina los pagos recurrentes de esta Categoría antes de archivarla.'
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(409, { errors: { form: [message] } })))
 
-    const outcome = await archiveCategory(9, 'token')
+    const outcome = await deleteCategory(9, 'token')
 
     expect(outcome).toMatchObject({ ok: false, errors: { form: [message] } })
   })

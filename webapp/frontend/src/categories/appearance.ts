@@ -11,24 +11,24 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-const initialIcons: Record<number, LucideIcon> = {
-  1: House,
-  2: Utensils,
-  3: CarFront,
-  4: Zap,
-  5: HeartPulse,
-  6: Clapperboard,
-  7: GraduationCap,
-  8: Shapes,
+/**
+ * The initial Categories are told apart by the `key` api-service gives each User's copy;
+ * ids are per Category, so nothing here depends on them. A Category the User creates has no key.
+ * The hue follows the key, in the order of the validated palette (DESIGN.md, The Entity Keeps Its Hue Rule).
+ */
+const initial: Record<string, { icon: LucideIcon; hue: number }> = {
+  housing: { icon: House, hue: 1 },
+  food: { icon: Utensils, hue: 2 },
+  transport: { icon: CarFront, hue: 3 },
+  utilities: { icon: Zap, hue: 4 },
+  health: { icon: HeartPulse, hue: 5 },
+  entertainment: { icon: Clapperboard, hue: 6 },
+  education: { icon: GraduationCap, hue: 7 },
+  other: { icon: Shapes, hue: 0 },
 }
 
-/** The icon of the initial Categories; every other one wears the generic tag. */
-export const iconOf = (categoryId: number): LucideIcon => initialIcons[categoryId] ?? Tag
+/** The icon of an initial Category; every other one wears the generic tag. */
+export const iconOf = (key: string | null): LucideIcon => (key ? initial[key]?.icon : undefined) ?? Tag
 
-/**
- * The CSS variable of a Category's hue. `cat-1` to `cat-7` belong to the first
- * seven by identity (DESIGN.md, The Entity Keeps Its Hue Rule); any Category
- * beyond them, "Otros" included, uses the neutral `cat-0`.
- */
-export const toneOf = (categoryId: number): string =>
-  categoryId >= 1 && categoryId <= 7 ? `var(--cat-${categoryId})` : 'var(--cat-0)'
+/** The CSS variable of a Category's hue; any Category beyond the seven hues, "Otros" included, is neutral. */
+export const toneOf = (key: string | null): string => `var(--cat-${(key ? initial[key]?.hue : undefined) ?? 0})`

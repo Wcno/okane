@@ -1,5 +1,5 @@
 import { useSignedInUser } from '../auth/context'
-import { archiveCategory, type Category } from '../categories/api'
+import { deleteCategory, type Category } from '../categories/api'
 import { categoriesBack } from '../categories/presentation'
 import { useAfterCategoryChange } from '../categories/useAfterCategoryChange'
 import { OneCategoryScreen } from '../components/categories/OneCategoryScreen'
@@ -10,27 +10,34 @@ import { ScreenHeader } from '../components/screen/Screen'
 function Confirmation({ category }: { category: Category }) {
   const { csrfToken } = useSignedInUser()
   const afterChange = useAfterCategoryChange()
+  // A Category with records is archived instead: deleting it would rewrite history.
+  const willArchive = category.hasRecords
+  const label = willArchive ? 'Archivar Categoría' : 'Eliminar Categoría'
 
   return (
     <>
-      <ScreenHeader title="Archivar Categoría" back={categoriesBack} />
+      <ScreenHeader title={label} back={categoriesBack} />
       <ConfirmCard
         summary={<RecordSummary icon={<CategoryChip categoryId={category.id} />} title={category.name} />}
-        message="Dejará de ofrecerse para Gastos, Presupuestos y Pagos recurrentes nuevos. Sus Gastos y Presupuestos pasados se conservan y se siguen viendo. Si tiene Pagos recurrentes, muévelos a otra Categoría o elimínalos antes."
+        message={
+          willArchive
+            ? 'Esta Categoría tiene movimientos; se archivará y conservará su historial. Dejará de ofrecerse para Gastos, Presupuestos y Pagos recurrentes nuevos, y sus Gastos y Presupuestos pasados se siguen viendo. Si tiene Pagos recurrentes, muévelos a otra Categoría o elimínalos antes.'
+            : 'Esta Categoría no tiene Gastos, Presupuestos ni Pagos recurrentes. Se borrará por completo y no podrás recuperarla.'
+        }
         cancel={{ to: categoriesBack.to, label: 'Cancelar' }}
         confirm={{
-          label: 'Archivar Categoría',
-          busyLabel: 'Archivando…',
-          run: () => archiveCategory(category.id, csrfToken),
-          onSaved: (archived) => afterChange('archived', archived),
-          failure: 'No pudimos archivar la Categoría. Inténtalo de nuevo.',
+          label,
+          busyLabel: willArchive ? 'Archivando…' : 'Eliminando…',
+          run: () => deleteCategory(category.id, csrfToken),
+          onSaved: (removal) => afterChange(removal.result, category),
+          failure: 'No pudimos completar el cambio. Inténtalo de nuevo.',
         }}
       />
     </>
   )
 }
 
-/** Archives one of the User's own Categories after saying what stays as it is. */
+/** Delete screen of a Category: removes one without records, archives one that has them. */
 export function CategoryArchive() {
-  return <OneCategoryScreen title="Archivar Categoría">{(category) => <Confirmation category={category} />}</OneCategoryScreen>
+  return <OneCategoryScreen title="Eliminar Categoría">{(category) => <Confirmation category={category} />}</OneCategoryScreen>
 }

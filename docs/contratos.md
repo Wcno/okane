@@ -211,15 +211,26 @@ los Saldos iniciales y el Rendimiento mensual está en el
 
 ## Categorías
 
-- `GET /api/categories` devuelve `{results}` sin paginar, con el catálogo inicial
-  (ids estables 1 a 8: Vivienda, Alimentación, Transporte, Servicios, Salud,
-  Entretenimiento, Educación, Otros) y las Categorías propias del Usuario,
-  archivadas incluidas: `id`, `name`, `is_custom`, `archived_at`.
-  `GET /api/categories/{id}` devuelve una; otra Categoría ajena es `404`.
+- Cada Usuario tiene sus propias Categorías; sus ids son suyos y no se comparten.
+  Parte de una copia del catálogo inicial (Vivienda, Alimentación, Transporte,
+  Servicios, Salud, Entretenimiento, Educación y Otros) que api-service crea la
+  primera vez que necesita sus Categorías, porque no tiene un evento de registro.
+  Una marca por Usuario evita que el catálogo reaparezca si las elimina todas.
+  La migración que introdujo el modelo copió el catálogo para cada Usuario con
+  registros y reasignó sus Gastos, Presupuestos, reglas y ocurrencias a su copia.
+- `GET /api/categories` devuelve `{results}` sin paginar, archivadas incluidas:
+  `id`, `name`, `key`, `has_records` y `archived_at`. `key` nombra la inicial de
+  la que es copia (`housing`, `food`, `transport`, `utilities`, `health`,
+  `entertainment`, `education`, `other`; fija su icono y tono) y es `null` en las
+  creadas por el Usuario. `GET /api/categories/{id}` devuelve una; la de otro
+  Usuario es `404`.
 - `POST /api/categories` y `PUT /api/categories/{id}` reciben `name` (hasta 40
   caracteres, único entre las Categorías activas del Usuario sin distinguir
-  mayúsculas). `POST /api/categories/{id}/archive` archiva y es idempotente.
-  El catálogo inicial no se renombra ni se archiva (`409`).
+  mayúsculas); cualquiera puede renombrarse.
+- `DELETE /api/categories/{id}` responde `204` y borra una Categoría sin Gastos,
+  Presupuestos, reglas ni ocurrencias; con registros la archiva y responde `200`
+  con la Categoría, igual que las Cuentas. `POST /api/categories/{id}/archive`
+  archiva sin borrar y es idempotente.
 - Archivar devuelve `409` mientras la Categoría tenga Pagos recurrentes vigentes
   o reservas pendientes. Las Categorías archivadas se rechazan en Gastos,
   Presupuestos y Pagos recurrentes nuevos, pero se conservan en los registros

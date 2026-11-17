@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.db.models import Q, Sum
 
 from budgets.models import Budget
-from categories.rules import visible_to
+from categories.rules import owned_by
 from expenses.models import Expense
 from recurring_payments import reservations, schedule
 
@@ -49,7 +49,7 @@ def represent_month(user_id, month):
     with_history = budgets.keys() | spent.keys() | committed.keys()
     category_ids = [
         category.id
-        for category in visible_to(user_id)
+        for category in owned_by(user_id)
         if category.archived_at is None or category.id in with_history
     ]
     return [

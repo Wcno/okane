@@ -7,7 +7,7 @@ import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
  */
 export interface BudgetLine {
   id: number | null
-  /** One of the fixed Categories, 1 to 8 (data/categories.ts). */
+  /** One of the User's Categories (categories/api.ts); its id belongs to that User. */
   categoryId: number
   /** The calendar month, as 2026-11. */
   month: string

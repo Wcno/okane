@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from accounts.serializers import messages
 from categories.models import NAME_MAX_LENGTH, Category
-from categories.rules import visible_to
+from categories.rules import owned_by
 
 NAME_INVALID = "Escribe el nombre de la Categoría."
 NAME_TOO_LONG = f"El nombre puede tener hasta {NAME_MAX_LENGTH} caracteres."
@@ -33,7 +33,7 @@ class CategorySerializer(serializers.Serializer):
         name = " ".join(value.split())
         if not name:
             raise serializers.ValidationError(NAME_INVALID)
-        taken = visible_to(self.context["user_id"]).filter(
+        taken = owned_by(self.context["user_id"]).filter(
             name__iexact=name, archived_at__isnull=True
         )
         if self.instance is not None:
@@ -52,9 +52,11 @@ class CategorySerializer(serializers.Serializer):
 
 
 def represent(category):
+    """`category` comes from `rules.with_records`, so `has_records` is on it."""
     return {
         "id": category.id,
         "name": category.name,
-        "is_custom": category.is_custom,
+        "key": category.key,
+        "has_records": category.has_records,
         "archived_at": category.archived_at.isoformat() if category.archived_at else None,
     }
