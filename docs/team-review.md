@@ -2,7 +2,7 @@
 
 Status: **plan approved by the team on 2026-11-15; ticket #4 implemented**.
 The team approved issues #4–#25 and #30–#32, which carry `ready-for-agent`.
-The four containers run; the screens remain a demonstration with sample data.
+The four containers run; the Panel reads `GET /api/dashboard` and no screen uses sample data.
 The approval is recorded in issue #3.
 
 ## Review order

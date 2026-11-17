@@ -19,7 +19,8 @@ from django.http import HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.views.decorators.http import require_http_methods, require_POST, require_safe
 
-from users import recovery
+from gateway.erasure import erase_financial_data
+from users import recovery, tokens
 from users.models import User, normalize_email
 from users.throttling import login_limit, recovery_limit
 
@@ -33,6 +34,7 @@ TOO_MANY_ATTEMPTS = (
     "Hubo demasiados intentos fallidos. Por seguridad, espera hasta 15 minutos "
     "y vuelve a intentarlo."
 )
+WRONG_PASSWORD = "La contraseña no coincide. Revísala e inténtalo de nuevo."
 WRONG_CURRENT_PASSWORD = "La contraseña actual no coincide. Revísala e inténtalo de nuevo."
 TOO_MANY_REQUESTS = (
     "Hubo demasiadas solicitudes seguidas. Por seguridad, espera hasta 15 minutos "
@@ -68,13 +70,19 @@ def too_many_attempts(wait, message):
     return response
 
 
-def read_fields(request, *names):
-    """Return the named text fields sent as JSON, or None if unreadable."""
+def read_json_object(request):
+    """Return the JSON object sent, or None if the body is anything else."""
     try:
         data = json.loads(request.body)
     except (UnicodeDecodeError, json.JSONDecodeError):
         return None
-    if not isinstance(data, dict):
+    return data if isinstance(data, dict) else None
+
+
+def read_fields(request, *names):
+    """Return the named text fields sent as JSON, or None if unreadable."""
+    data = read_json_object(request)
+    if data is None:
         return None
     values = [data.get(name, "") for name in names]
     if not all(isinstance(value, str) for value in values):
@@ -212,6 +220,7 @@ def reset_password(request):
     # the same token, but only one can consume the original password hash.
     if not User.objects.filter(pk=user.pk, password=previous_hash).update(password=user.password):
         return validation_errors({"form": [RESET_LINK_UNUSABLE]})
+    tokens.revoke_all(user)
     if request.user.pk == user.pk:
         logout(request)
     # Using a link is the correct attempt that restarts both counts: whoever
@@ -241,8 +250,32 @@ def change_password(request):
     # The new hash ends every session of the User; this one is signed again.
     user.set_password(new_password)
     user.save(update_fields=["password"])
+    tokens.revoke_all(user)
     update_session_auth_hash(request, user)
     return session_state(request)
+
+
+@require_http_methods(["DELETE"])
+def delete_me(request):
+    user = request.user
+    if not user.is_authenticated:
+        return JsonResponse({"detail": "authentication_required"}, status=401)
+    fields = read_fields(request, "password")
+    if fields is None:
+        return validation_errors({"form": [UNREADABLE_REQUEST]})
+    if not user.check_password(fields[0]):
+        return validation_errors({"password": [WRONG_PASSWORD]})
+
+    # Tokens stop working first, so nothing new is written while the data is erased.
+    tokens.revoke_all(user)
+    # The User stays until api-service confirms, so a failure can be retried.
+    if not erase_financial_data(user.pk):
+        return JsonResponse({"status": "unavailable", "service": "api-service"}, status=502)
+    # Deleting the User ends every one of their sessions: a session whose User
+    # no longer exists is anonymous.
+    logout(request)
+    user.delete()
+    return HttpResponse(status=204)
 
 
 def csrf_failure(request, reason=""):

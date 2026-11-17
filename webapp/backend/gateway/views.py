@@ -2,8 +2,7 @@ import httpx
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 
-SERVICE_KEY_HEADER = "X-Okane-Service-Key"
-USER_ID_HEADER = "X-Okane-User-Id"
+from gateway.upstream import api_service, service_headers
 
 # The forwarded request is built from scratch: only these client headers are
 # copied, so cookies, tokens and forged service identities never reach
@@ -12,11 +11,6 @@ FORWARDED_REQUEST_HEADERS = ("Accept", "Content-Type")
 
 # Readiness is the one call that needs no session; it carries no User.
 PUBLIC_PATHS = frozenset({"/api/health"})
-# The public API authenticates personal tokens (#32); a session cookie never
-# substitutes for one.
-TOKEN_API = "/api/v1"
-
-api_service = httpx.Client(timeout=10)
 
 
 def authentication_required():
@@ -30,17 +24,22 @@ def forward(request):
     if any(segment in (".", "..") for segment in request.path.split("/")):
         return JsonResponse({"detail": "not_found"}, status=404)
 
+    user_id = None
+    if request.path not in PUBLIC_PATHS:
+        if not request.user.is_authenticated:
+            return authentication_required()
+        user_id = request.user.pk
+    return relay(request, user_id)
+
+
+def relay(request, user_id, extra_headers=()):
+    """Rebuild the call from scratch for api-service, on behalf of `user_id` when there is one."""
     headers = {
         name: request.headers[name]
-        for name in FORWARDED_REQUEST_HEADERS
+        for name in (*FORWARDED_REQUEST_HEADERS, *extra_headers)
         if name in request.headers
     }
-    headers[SERVICE_KEY_HEADER] = settings.INTERNAL_SERVICE_KEY
-    if request.path not in PUBLIC_PATHS:
-        is_token_api = request.path == TOKEN_API or request.path.startswith(TOKEN_API + "/")
-        if is_token_api or not request.user.is_authenticated:
-            return authentication_required()
-        headers[USER_ID_HEADER] = str(request.user.pk)
+    headers = service_headers(headers, user_id)
 
     # get_full_path keeps the query string exactly as the client sent it.
     url = settings.API_SERVICE_URL + request.get_full_path()

@@ -1,5 +1,6 @@
 import { ArrowLeft, Hammer } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { allDestinations } from '../navigation'
 
 /** Placeholder for the routes in docs/matrices.md that have no implemented screen yet. */
@@ -7,6 +8,7 @@ export function UnderConstruction() {
   const { pathname } = useLocation()
   const destination = allDestinations.find((candidate) => candidate.path === pathname)
   const title = destination?.name ?? 'Esta página no existe'
+  useDocumentTitle(title)
 
   return (
     <>

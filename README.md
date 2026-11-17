@@ -16,16 +16,15 @@ Tecnológica de Panamá, group 1M321.
 **The team approved the plan on 2026-11-15. The first ticket, the container
 skeleton ([#4](https://github.com/Wcno/okane/issues/4)), is implemented.**
 One command starts the four containers: `webapp` serves the frontend
-demonstration and forwards `/api/*` to `api-service`. The screens still use
-in-memory sample data that resets on refresh; there are no users or financial
-records yet.
+demonstration and forwards `/api/*` to `api-service`. The Panel reads its
+figures from `GET /api/dashboard`; no screen uses sample data.
 
 | Area | Status |
 |---|---|
 | Product, domain glossary, use-case matrices and design system | Documented |
 | Specification, contracts and ADRs 0001 to 0005 | Approved |
 | 25 implementation tickets (#4–#25, #30–#32) | Approved, labeled `ready-for-agent`; #4 implemented |
-| Frontend demonstration | Available with sample data |
+| Frontend | The Panel reads the API; no screen uses sample data |
 | Four containers with Docker Compose | Available: health checks and `/api/*` forwarding |
 | Authentication, accounts and the other features | Not implemented |
 | Tests | Frontend units, HTTP tests of both services, smoke test of the stack |
@@ -142,10 +141,19 @@ Without PostgreSQL, `python manage.py test --exclude-tag database` runs the
 tests that do not touch the database.
 
 Browser tests use Playwright against a running stack, on desktop and mobile
-widths. CI runs them after the smoke test and keeps the report when one fails.
+widths. `e2e/tests/journey.spec.ts` walks the whole product as one User (sign
+up, Accounts, Income and Expense, Budget, recurring payment, investment,
+Panel, statement, preferences, token, user deletion) and checks that a second
+User sees none of it; the other specs go deep on each area. The stack runs
+with `QUOTES_PROVIDER=sample` (the Compose default), so quotes never depend on
+the network; production sets `QUOTES_PROVIDER=twelvedata` and its key
+explicitly. The
+dates come from the stack's own clock in Panama. CI runs them on every pull
+request after the smoke test, on a fresh database, and keeps the screenshots
+and the report when one fails.
 
 ```shell
-docker compose up --build --detach --wait
+docker compose up --build --detach --wait --scale price-refresher=0
 cd e2e
 npm ci
 npx playwright install chromium
@@ -153,6 +161,10 @@ npm test
 ```
 
 Set `E2E_BASE_URL` to test a stack on another port.
+The journeys price Positions from the last transaction, so run them on a stack
+whose `price-refresher` is off (`--scale price-refresher=0`, as CI does) and
+that never stored a quoted price; the buy and sell lifecycle alone reads the
+Reference Price from the API and passes either way.
 
 ### Parallel stacks in worktrees
 

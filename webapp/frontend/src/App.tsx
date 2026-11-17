@@ -4,15 +4,51 @@ import { AppShell } from './components/AppShell'
 import { AccountCreate } from './pages/AccountCreate'
 import { AccountDelete } from './pages/AccountDelete'
 import { AccountEdit } from './pages/AccountEdit'
+import { AccountStatement } from './pages/AccountStatement'
 import { Accounts } from './pages/Accounts'
+import { BudgetCreate } from './pages/BudgetCreate'
+import { BudgetDelete } from './pages/BudgetDelete'
+import { BudgetEdit } from './pages/BudgetEdit'
+import { Budgets } from './pages/Budgets'
+import { Categories } from './pages/Categories'
+import { CategoryArchive } from './pages/CategoryArchive'
+import { CategoryCreate } from './pages/CategoryCreate'
+import { CategoryEdit } from './pages/CategoryEdit'
 import { ChangePassword } from './pages/ChangePassword'
+import { UserDelete } from './pages/UserDelete'
 import { Dashboard } from './pages/Dashboard'
+import { ExpenseCreate } from './pages/ExpenseCreate'
+import { ExpenseDelete } from './pages/ExpenseDelete'
+import { ExpenseEdit } from './pages/ExpenseEdit'
+import { IncomeCreate } from './pages/IncomeCreate'
+import { IncomeDelete } from './pages/IncomeDelete'
+import { IncomeEdit } from './pages/IncomeEdit'
+import { Integrations } from './pages/Integrations'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { Login } from './pages/Login'
 import { Logout } from './pages/Logout'
 import { Menu } from './pages/Menu'
+import { Movements } from './pages/Movements'
+import { AssetPrice } from './pages/AssetPrice'
+import { InvestmentsDashboard } from './pages/InvestmentsDashboard'
+import { InvestmentsPerformance } from './pages/InvestmentsPerformance'
+import { Positions } from './pages/Positions'
+import { OccurrenceCancel } from './pages/OccurrenceCancel'
+import { OccurrenceConfirm } from './pages/OccurrenceConfirm'
+import { RecurringPaymentCreate } from './pages/RecurringPaymentCreate'
+import { RecurringPaymentDelete } from './pages/RecurringPaymentDelete'
+import { RecurringPaymentEdit } from './pages/RecurringPaymentEdit'
+import { RecurringPayments } from './pages/RecurringPayments'
 import { Register } from './pages/Register'
+import { Settings } from './pages/Settings'
 import { ResetPassword } from './pages/ResetPassword'
+import { Projection } from './pages/Projection'
+import { Trade } from './pages/Trade'
+import { TransferCreate } from './pages/TransferCreate'
+import { TransferDelete } from './pages/TransferDelete'
+import { TransferEdit } from './pages/TransferEdit'
+import { TransactionDelete } from './pages/TransactionDelete'
+import { TransactionEdit } from './pages/TransactionEdit'
 import { UnderConstruction } from './pages/UnderConstruction'
 
 export default function App() {
@@ -36,7 +72,50 @@ export default function App() {
             <Route path="/accounts/create" element={<AccountCreate />} />
             <Route path="/accounts/:id/edit" element={<AccountEdit />} />
             <Route path="/accounts/:id/delete" element={<AccountDelete />} />
+            <Route path="/movements" element={<Movements />} />
+            <Route path="/accounts/:id/statement" element={<AccountStatement />} />
+            <Route path="/expenses" element={<Movements view="expense" />} />
+            <Route path="/expenses/create" element={<ExpenseCreate />} />
+            <Route path="/expenses/:id/edit" element={<ExpenseEdit />} />
+            <Route path="/expenses/:id/delete" element={<ExpenseDelete />} />
+            <Route path="/investments/dashboard" element={<InvestmentsDashboard />} />
+            <Route path="/investments/performance" element={<InvestmentsPerformance />} />
+            <Route path="/investments/assets/:id/price" element={<AssetPrice />} />
+            <Route path="/investments/positions" element={<Positions />} />
+            <Route path="/investments/transactions/buy" element={<Trade kind="buy" />} />
+            <Route path="/investments/transactions/sell" element={<Trade kind="sell" />} />
+            <Route path="/investments/transactions/dividend" element={<Trade kind="dividend" />} />
+            <Route path="/savings/projection" element={<Projection />} />
+            <Route path="/investments/projection" element={<Projection />} />
+            <Route path="/transfers" element={<Movements view="transfer" />} />
+            <Route path="/transfers/create" element={<TransferCreate />} />
+            <Route path="/transfers/:id/edit" element={<TransferEdit />} />
+            <Route path="/transfers/:id/delete" element={<TransferDelete />} />
+            <Route path="/investments/transactions" element={<Movements view="investments" />} />
+            <Route path="/investments/transactions/:id/edit" element={<TransactionEdit />} />
+            <Route path="/investments/transactions/:id/delete" element={<TransactionDelete />} />
+            <Route path="/budgets" element={<Budgets />} />
+            <Route path="/budgets/create" element={<BudgetCreate />} />
+            <Route path="/budgets/:id/edit" element={<BudgetEdit />} />
+            <Route path="/budgets/:id/delete" element={<BudgetDelete />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/categories/create" element={<CategoryCreate />} />
+            <Route path="/categories/:id/edit" element={<CategoryEdit />} />
+            <Route path="/categories/:id/archive" element={<CategoryArchive />} />
+            <Route path="/recurring-payments" element={<RecurringPayments />} />
+            <Route path="/recurring-payments/create" element={<RecurringPaymentCreate />} />
+            <Route path="/recurring-payments/occurrences/:id/confirm" element={<OccurrenceConfirm />} />
+            <Route path="/recurring-payments/occurrences/:id/cancel" element={<OccurrenceCancel />} />
+            <Route path="/recurring-payments/:id/edit" element={<RecurringPaymentEdit />} />
+            <Route path="/recurring-payments/:id/delete" element={<RecurringPaymentDelete />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/incomes" element={<Movements view="income" />} />
+            <Route path="/incomes/create" element={<IncomeCreate />} />
+            <Route path="/incomes/:id/edit" element={<IncomeEdit />} />
+            <Route path="/incomes/:id/delete" element={<IncomeDelete />} />
+            <Route path="/settings/integrations" element={<Integrations />} />
             <Route path="/profile/change-password" element={<ChangePassword />} />
+            <Route path="/profile/delete" element={<UserDelete />} />
             <Route path="*" element={<UnderConstruction />} />
           </Route>
         </Route>

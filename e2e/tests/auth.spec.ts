@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
+import { expect, expectScreenQuality, test } from './support/qa.js'
 import { PASSWORD, signUp, uniqueEmail } from './support/session.js'
 
 async function fillCredentials(page: Page, email: string, password: string) {
@@ -28,10 +29,13 @@ test('a visitor is sent to login and comes back after registering', async ({ pag
   await page.getByRole('button', { name: 'Crear usuario' }).click()
 
   await expect(page).toHaveURL(/\/budgets$/)
-  await expect(page.getByRole('heading', { name: 'Presupuestos' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Presupuestos', level: 1 })).toBeVisible()
+  await expectScreenQuality(page, 'auth-budgets-under-construction')
 })
 
-test('registering with an email already in use says what happened', async ({ page, request }) => {
+test('registering with an email already in use says what happened', async ({ page, request, expectedProblems }) => {
+  // The duplicate email is answered with a 400 that the browser logs.
+  expectedProblems.push(/status of 400/)
   const email = await signUp(request)
 
   await page.goto('/register')
@@ -41,6 +45,7 @@ test('registering with an email already in use says what happened', async ({ pag
   await expect(page.getByText('Ya existe un usuario con este correo. Inicia sesión o regístrate con otro correo.')).toBeVisible()
   await expect(page.getByLabel('Correo')).toBeFocused()
   await expect(page).toHaveURL(/\/register$/)
+  await expectScreenQuality(page, 'auth-register-email-in-use')
 })
 
 test('a short password is explained before it is sent', async ({ page }) => {
@@ -50,9 +55,12 @@ test('a short password is explained before it is sent', async ({ page }) => {
 
   await expect(page.getByText('La contraseña debe tener al menos 10 caracteres. Te faltan 5.')).toBeVisible()
   await expect(page.getByLabel('Contraseña')).toBeFocused()
+  await expectScreenQuality(page, 'auth-register-short-password')
 })
 
-test('a wrong password does not reveal whether the email exists', async ({ page, request }) => {
+test('a wrong password does not reveal whether the email exists', async ({ page, request, expectedProblems }) => {
+  // The wrong password is answered with a 400 that the browser logs.
+  expectedProblems.push(/status of 400/)
   const email = await signUp(request)
 
   await page.goto('/login')
@@ -63,6 +71,7 @@ test('a wrong password does not reveal whether the email exists', async ({ page,
     'El correo o la contraseña no coinciden. Revísalos e inténtalo de nuevo.',
   )
   await expect(page).toHaveURL(/\/login$/)
+  await expectScreenQuality(page, 'auth-login-wrong-password')
 
   // A correct attempt right after clears the count, so reruns never hit the limit.
   await page.getByLabel('Contraseña').fill(PASSWORD)
@@ -88,21 +97,24 @@ test('login works with the keyboard alone', async ({ page, request }) => {
   await expect(page.getByText(email).first()).toBeAttached()
 })
 
-test('one click on the in-app control signs out at once', async ({ page, isMobile }) => {
+test('one click on the in-app control signs out at once', async ({ page, isMobile, expectProblemsDuring }) => {
   await signUp(page.request)
   const control = await openSignOutControl(page, isMobile)
   expect((await page.request.get('/api/accounts')).status()).not.toBe(401)
 
-  await control.click()
-
-  await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  // A read already in flight when the session ends is answered with a 401 or a 400.
+  await expectProblemsDuring(/status of 40[01]\b.*\/(auth\/session|api\/)/, async () => {
+    await control.click()
+    await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  })
   await expect(page).toHaveURL(/\/logout$/)
+  await expectScreenQuality(page, 'auth-signed-out')
   expect((await page.request.get('/api/accounts')).status()).toBe(401)
   await page.goto('/dashboard')
   await expect(page).toHaveURL(/\/login$/)
 })
 
-test('the in-app sign-out control works with the keyboard alone', async ({ page, isMobile }) => {
+test('the in-app sign-out control works with the keyboard alone', async ({ page, isMobile, expectProblemsDuring }) => {
   await signUp(page.request)
   const control = await openSignOutControl(page, isMobile)
 
@@ -113,9 +125,10 @@ test('the in-app sign-out control works with the keyboard alone', async ({ page,
   await expect(control).toBeFocused()
   const outline = await control.evaluate((element) => getComputedStyle(element).outlineStyle)
   expect(outline).toBe('solid')
-  await page.keyboard.press('Enter')
-
-  await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  await expectProblemsDuring(/status of 40[01]\b.*\/(auth\/session|api\/)/, async () => {
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('heading', { name: 'Cerraste tu sesión' })).toBeVisible()
+  })
   expect((await page.request.get('/api/accounts')).status()).toBe(401)
 })
 
@@ -126,6 +139,7 @@ test('opening the logout screen only asks; the session stays open', async ({ pag
 
   await expect(page.getByRole('heading', { name: '¿Cerrar tu sesión?' })).toBeVisible()
   await expect(page.getByText(email)).toBeVisible()
+  await expectScreenQuality(page, 'auth-logout-confirmation')
   expect((await page.request.get('/api/accounts')).status()).not.toBe(401)
   await page.getByRole('link', { name: 'Volver al Panel' }).click()
   await expect(page).toHaveURL(/\/dashboard$/)
@@ -163,16 +177,13 @@ for (const colorScheme of ['light', 'dark'] as const) {
     ]
 
     for (const { route, signedIn, controls } of screens) {
-      test(`${route} fits the viewport and shows focus on every control`, async ({ page }) => {
+      test(`${route} meets the screen quality bar and shows focus on every control`, async ({ page }) => {
         if (signedIn) await signUp(page.request)
         await page.goto(route)
         await expect(page.getByRole('main')).toBeVisible()
         await expect(page.locator('html')).toHaveAttribute('lang', 'es')
 
-        const overflow = await page.evaluate(
-          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-        )
-        expect(overflow).toBeLessThanOrEqual(0)
+        await expectScreenQuality(page, `auth${route.replaceAll('/', '-')}-${colorScheme}`)
 
         await page.keyboard.press('Tab')
         await expectVisibleFocus(page.getByRole('link', { name: 'Okane, ir al Panel' }))

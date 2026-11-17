@@ -133,7 +133,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Build and start the four containers
-        run: docker compose up --build --detach --wait --wait-timeout 240
+        run: docker compose up --build --detach --wait --wait-timeout 240 --scale price-refresher=0
 
       - name: Check the running system
         run: bash scripts/smoke-test.sh
@@ -157,6 +157,15 @@ jobs:
       - name: Run the browser tests on desktop and mobile
         working-directory: e2e
         run: npm test
+
+      - name: Keep the QA screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: qa-screenshots
+          path: e2e/qa-screenshots
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Keep the browser test report
         if: failure()

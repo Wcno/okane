@@ -1,123 +1,101 @@
-import { TrendingDown, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
-import { netWorthHistory, today, netWorth } from '../../data/sample'
+import type { Dashboard } from '../../dashboard/api'
 import { formatMoney } from '../../lib/money'
-import { useAnimatedNumber } from '../../lib/useAnimatedNumber'
-import { useData } from '../../state/context'
-import { NetWorthChart } from './NetWorthChart'
-import { monthNames } from '../../data/months'
+import type { NetWorthPeriod } from '../../netWorth/api'
+import { useNetWorthHistory } from '../../netWorth/useNetWorthHistory'
+import { smallSecondaryButtonClassName } from '../buttons'
+import { BigFigure } from './BigFigure'
 import { Card } from './Card'
+import { NetWorthChart } from './NetWorthChart'
+import { NetWorthTable } from './NetWorthTable'
 
 type View = 'chart' | 'table'
 
-/** The second product answer: monthly Net Worth change, split into Net Savings and Investment Return. */
-export function NetWorthCard() {
-  const { state } = useData()
+const VIEWS: { id: View; label: string }[] = [
+  { id: 'chart', label: 'Gráfico' },
+  { id: 'table', label: 'Tabla' },
+]
+
+/** The month's change split into what made it: the Ahorro neto, the Rendimiento and, apart, the Saldos iniciales that joined. */
+function Breakdown({ period }: { period: NetWorthPeriod }) {
+  const added = Number(period.openingBalancesAdded) !== 0
+  return (
+    <>
+      <dl className="mt-5 space-y-2 border-t border-line pt-4 text-[0.95rem]">
+        <div className="flex items-baseline justify-between gap-4">
+          <dt className="text-ink-2">Ahorro neto</dt>
+          <dd className="font-semibold tabular-nums">{formatMoney(period.netSavings)}</dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-4">
+          <dt className="text-ink-2">Rendimiento del período</dt>
+          <dd className="font-semibold tabular-nums">{formatMoney(period.periodReturn, { sign: true })}</dd>
+        </div>
+        {added && (
+          <div className="flex items-baseline justify-between gap-4 border-t border-line pt-2">
+            <dt className="text-ink-2">Saldos iniciales incorporados</dt>
+            <dd className="font-semibold tabular-nums">{formatMoney(period.openingBalancesAdded, { sign: true })}</dd>
+          </div>
+        )}
+      </dl>
+      {added && (
+        <p className="mt-2 text-[0.85rem] text-ink-3">
+          Es dinero que ya tenías en Cuentas que empezaron este mes; no es ahorro ni ganancia.
+        </p>
+      )}
+    </>
+  )
+}
+
+/** Patrimonio today, how this month's change splits, and its monthly evolution as a chart or a table. */
+export function NetWorthCard({ dashboard }: { dashboard: Dashboard }) {
+  const { state, retry } = useNetWorthHistory()
   const [view, setView] = useState<View>('chart')
-  const series = netWorthHistory(state)
-  const currentMonth = series[series.length - 1]
-  const change = Math.round((currentMonth.netSavings + currentMonth.investmentReturn) * 100) / 100
-  const displayed = useAnimatedNumber(netWorth(state))
-  const Trend = change >= 0 ? TrendingUp : TrendingDown
+  const periods = state.status === 'ready' ? state.value : []
+  const current = periods[periods.length - 1]
 
   return (
-    <Card id="net-worth" title="Patrimonio">
-      <p className="mt-1.5 text-[2.3rem] font-semibold leading-none tracking-[-0.03em]">
-        {formatMoney(displayed)}
-      </p>
+    <Card id="net-worth" title="Patrimonio" link={{ to: '/accounts', text: 'Cuentas' }}>
+      <BigFigure amount={dashboard.netWorth} secondary />
+      <p className="mt-3.5 text-ink-2">Tus Cuentas y tus inversiones al valor de hoy, también las archivadas.</p>
 
-      <p
-        className={`mt-3 inline-flex items-center gap-1.5 text-[0.95rem] font-semibold ${
-          change >= 0 ? 'text-good' : 'text-critical'
-        }`}
-      >
-        <Trend size={17} aria-hidden="true" />
-        <span className="tabular-nums">{formatMoney(change, { sign: true })}</span>
-        <span className="font-medium text-ink-2">en lo que va de {today.month}</span>
-      </p>
-
-      <dl className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-surface-2 px-4 py-3">
-          <dt className="text-[0.9rem] text-ink-2">Ahorro neto</dt>
-          <dd className="mt-0.5 text-[1.15rem] font-semibold tabular-nums">
-            {formatMoney(currentMonth.netSavings, { sign: true })}
-          </dd>
-          <dd className="mt-0.5 text-[0.82rem] leading-snug text-ink-3">Ingresos menos Gastos</dd>
+      {state.status === 'loading' && (
+        <p role="status" className="mt-5 text-ink-3">
+          Cargando la evolución…
+        </p>
+      )}
+      {(state.status === 'failed' || state.status === 'gone') && (
+        <div className="mt-5">
+          <p className="text-ink-2">{state.message}</p>
+          <button type="button" onClick={retry} className={`${smallSecondaryButtonClassName} mt-3`}>
+            Reintentar
+          </button>
         </div>
-        <div className="rounded-2xl bg-surface-2 px-4 py-3">
-          <dt className="text-[0.9rem] text-ink-2">Rendimiento</dt>
-          <dd className="mt-0.5 text-[1.15rem] font-semibold tabular-nums">
-            {formatMoney(currentMonth.investmentReturn, { sign: true })}
-          </dd>
-          <dd className="mt-0.5 text-[0.82rem] leading-snug text-ink-3">De tus inversiones</dd>
-        </div>
-      </dl>
-
-      <div className="mt-6 flex items-center justify-between gap-3">
-        <h3 className="text-[0.95rem] font-medium">Evolución por mes</h3>
-        <div role="group" aria-label="Forma de ver la evolución" className="flex rounded-full bg-surface-2 p-0.5">
-          {(
-            [
-              ['chart', 'Gráfico'],
-              ['table', 'Tabla'],
-            ] as const
-          ).map(([option, text]) => (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={view === option}
-              onClick={() => setView(option)}
-              className={`h-7 rounded-full px-3 text-[0.85rem] transition-colors duration-150 ${
-                view === option
-                  ? 'bg-surface font-semibold text-ink shadow-card'
-                  : 'font-medium text-ink-2 hover:text-ink'
-              }`}
-            >
-              {text}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {view === 'chart' ? (
-        <NetWorthChart series={series} />
-      ) : (
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-[0.9rem]">
-            <thead>
-              <tr className="border-b border-line text-ink-3">
-                <th scope="col" className="py-2 pr-3 text-left font-medium">
-                  Mes
-                </th>
-                <th scope="col" className="px-3 py-2 text-right font-medium">
-                  Ahorro neto
-                </th>
-                <th scope="col" className="px-3 py-2 text-right font-medium">
-                  Rendimiento
-                </th>
-                <th scope="col" className="py-2 pl-3 text-right font-medium">
-                  Patrimonio
-                </th>
-              </tr>
-            </thead>
-            <tbody className="tabular-nums">
-              {series.map((point, index) => (
-                <tr key={point.month} className="border-b border-line last:border-0">
-                  <th scope="row" className="py-2 pr-3 text-left font-medium">
-                    {monthNames[point.month]}
-                  </th>
-                  <td className="px-3 py-2 text-right text-ink-2">
-                    {index === 0 ? '' : formatMoney(point.netSavings, { sign: true })}
-                  </td>
-                  <td className="px-3 py-2 text-right text-ink-2">
-                    {index === 0 ? '' : formatMoney(point.investmentReturn, { sign: true })}
-                  </td>
-                  <td className="py-2 pl-3 text-right font-semibold">{formatMoney(point.netWorth)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      )}
+      {current && (
+        <>
+          <Breakdown period={current} />
+          <div className="mt-5 border-t border-line pt-4">
+            <div className="flex items-center justify-between gap-4">
+              <h3 className="text-[0.95rem] font-medium text-ink-2">Evolución mensual</h3>
+              <div className="flex gap-1.5" role="group" aria-label="Vista de la evolución">
+                {VIEWS.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={view === id}
+                    onClick={() => setView(id)}
+                    className={`${smallSecondaryButtonClassName} aria-pressed:border-ink aria-pressed:text-ink`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-3">
+              {view === 'chart' ? <NetWorthChart periods={periods} /> : <NetWorthTable periods={periods} />}
+            </div>
+          </div>
+        </>
       )}
     </Card>
   )

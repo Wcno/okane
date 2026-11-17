@@ -49,14 +49,14 @@ def _positive_integer(request, name, default, maximum=None):
 
 
 def paginate(request, queryset):
-    """Return the requested page of an ordered queryset and how to continue.
+    """Return the requested page of an ordered queryset or list and how to continue.
 
     Pages hold 50 items unless `page_size` says otherwise, up to 200. A size
     or a page out of range is a validation error, never a silent correction.
     """
     page_size = _positive_integer(request, "page_size", DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE)
     page = _positive_integer(request, "page", 1)
-    total = queryset.count()
+    total = len(queryset) if isinstance(queryset, list) else queryset.count()
     last_page = max(1, -(-total // page_size))
     if page > last_page:
         raise exceptions.ValidationError({"page": [f"La última página es la {last_page}."]})

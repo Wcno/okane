@@ -132,7 +132,7 @@
   }
 }
 
-/* Expense entry uses a bottom sheet on mobile and a centered dialog on larger screens. */
+/* Expense entry uses a bottom sheet on mobile and a dialog fixed near the top on larger screens, so it never re-centres as it grows. */
 dialog.sheet {
   transition:
     opacity 180ms var(--ease-out-quart),
@@ -174,42 +174,9 @@ dialog.sheet[open]::backdrop {
   }
 }
 
-/* Highlight the Category row whose remaining amount has just changed. */
-@keyframes highlight-a {
-  from {
-    background-color: color-mix(in oklab, var(--tone) 16%, transparent);
-  }
-  to {
-    background-color: transparent;
-  }
-}
-
-/* Alternating identical animations restarts the highlight for consecutive entries. */
-@keyframes highlight-b {
-  from {
-    background-color: color-mix(in oklab, var(--tone) 16%, transparent);
-  }
-  to {
-    background-color: transparent;
-  }
-}
-
-.recent-row-a {
-  animation: highlight-a 1400ms var(--ease-out-quart);
-}
-
-.recent-row-b {
-  animation: highlight-b 1400ms var(--ease-out-quart);
-}
-
 @media (prefers-reduced-motion: reduce) {
   dialog.sheet,
   dialog.sheet::backdrop {
     transition: none;
-  }
-
-  .recent-row-a,
-  .recent-row-b {
-    animation: none;
   }
 }

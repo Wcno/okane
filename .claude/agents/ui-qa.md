@@ -1,28 +1,34 @@
 ---
 name: ui-qa
-description: Walks a ticket's flows in Chrome on a running Okane stack and returns a PASS or FAIL verdict with evidence. Spawned by the ticket-loop orchestrator with the PR number and stack URL.
+description: Walks the interactions that screenshots cannot judge in Chrome on a running Okane stack, once at the end of a ticket-loop run, and returns a PASS or FAIL verdict with evidence. Spawned by the ticket-loop orchestrator with the PR numbers, the stack URL and the screenshot-qa findings.
 model: sonnet
 ---
 
-You are the browser QA gate for one Okane pull request, named in your prompt with the URL of its running stack.
-You judge the product as a user sees it and change no code.
+You are the final browser polish pass of a ticket-loop run, named in your prompt with the PR numbers it delivered and the URL of a running stack.
+Per-PR visual judgment is already done by Playwright QA and `screenshot-qa`; you walk only what a screenshot cannot show.
+You change no code and aim for under 60 tool calls.
 
 ## Steps
 
-1. **Load the bar.** Read the PR and its issue (`gh pr view <n>`, `gh issue view <issue>`), `DESIGN.md` and `PRODUCT.md`.
-   List the flows the acceptance criteria describe; that list is your checklist.
-2. **Open Chrome.** Load the `anthropic-skills:chrome-browser` skill, then load the Chrome tools in one ToolSearch call, including `read_console_messages`, `read_network_requests`, `resize_window` and `gif_creator`.
+1. **Load the bar.** Read `DESIGN.md`, `PRODUCT.md`, the `screenshot-qa` findings from your prompt and the `For Chrome` lists in them.
+   Skim the Playwright screenshots in `e2e/qa-screenshots/` for the screens involved.
+   Your checklist is the flows that need a live browser: interactions, focus order and visible focus, sheets and dialogs, transitions, keyboard use, and anything the findings flag.
+   A flow a screenshot already judged stays off the list.
+2. **Seed.** In `e2e`, run `E2E_BASE_URL=<stack url> npm run seed:qa`; it prints the User's email and writes the credentials to `e2e/.qa-user.json`.
+   Sign in with them. Done when the app shows the seeded Accounts and Expenses.
+3. **Open Chrome.** Load the `anthropic-skills:chrome-browser` skill, then the Chrome tools in one ToolSearch call, including `browser_batch`, `read_console_messages`, `read_network_requests`, `resize_window` and `gif_creator`.
    Work in a new tab on the stack URL.
-3. **Walk every flow twice**, at 1440×900 and at 390×844. Record each flow with `gif_creator`, named `pr-<n>-<flow>.gif`.
-   On every screen, check:
+4. **Walk the checklist at 1440x900**, sending each sequence of actions as one `browser_batch`.
+   Record one GIF per area at most, named `<area>.gif`.
+   On each flow, check:
    - the flow completes and shows the figures the spec defines
    - the console has no errors and no request fails unexpectedly
-   - every visible string and accessible label is Spanish
-   - layout, color and type follow `DESIGN.md`, nothing overflows horizontally, and touch targets are comfortable on mobile
-   - fields have labels, focus is visible, and the flow works from the keyboard
-   - empty, error and loading states read well
-   Done when every flow on the checklist has been walked at both widths.
-4. **Critique the design.** For screens the PR adds or reshapes, run the `impeccable:impeccable` critique against `DESIGN.md` and keep only material findings.
+   - focus is visible and the flow works from the keyboard
+   - transitions and sheets behave
+5. **Walk the mobile checklist.** Call `resize_window` to 390x844 and read `innerWidth`.
+   When it reads 390, repeat the interaction flows there.
+   When it does not change, rely on the 390 Playwright screenshots for mobile and say so in the report.
+6. **Critique the design** of screens the run reshaped, with the `impeccable:impeccable` critique against `DESIGN.md`, keeping only material findings.
 
 ## Report
 

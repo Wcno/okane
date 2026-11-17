@@ -1,18 +1,24 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { updateAccount, type Account, type AccountErrors } from '../accounts/api'
-import { NAME_MAX_LENGTH, formatDay, ratioToPercent, validateAccountChanges } from '../accounts/form'
-import { accountTypeLabels, formatAmount, type AccountsNotice } from '../accounts/presentation'
-import { useAccountWrite } from '../accounts/useAccounts'
+import { updateAccount, type Account, type AccountField } from '../accounts/api'
+import { NAME_MAX_LENGTH, ratioToPercent, validateAccountChanges } from '../accounts/form'
+import { accountsBack, accountTypeLabels } from '../accounts/presentation'
 import { useSignedInUser } from '../auth/context'
-import { AccountScreenHeader, OneAccountScreen, cardClassName } from '../components/accounts/AccountScreen'
+import { OneAccountScreen } from '../components/accounts/OneAccountScreen'
+import { DeleteLink } from '../components/screen/DeleteLink'
+import { ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { primaryButtonClassName, secondaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
 import { TextField } from '../components/TextField'
+import { formatDay } from '../lib/dates'
+import { useFieldErrors } from '../lib/useFieldErrors'
+import { formatMoney } from '../lib/money'
+import type { ScreenNotice } from '../lib/notice'
+import { useSubmission } from '../lib/useSubmission'
 
 function EditForm({ account }: { account: Account }) {
   const { csrfToken } = useSignedInUser()
-  const write = useAccountWrite()
+  const { isSubmitting, submit } = useSubmission()
   const navigate = useNavigate()
   const isSavings = account.type === 'savings'
 
@@ -22,10 +28,9 @@ function EditForm({ account }: { account: Account }) {
   const [annualRatePercent, setAnnualRatePercent] = useState(
     account.annualInterestRate === null ? '' : ratioToPercent(account.annualInterestRate),
   )
-  const [errors, setErrors] = useState<AccountErrors>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { errors, setErrors, clearErrors } = useFieldErrors<AccountField>()
 
-  const showErrors = (found: AccountErrors) => {
+  const showErrors = (found: typeof errors) => {
     setErrors(found)
     if (found.name) nameField.current?.focus()
     else if (found.annualInterestRate) rateField.current?.focus()
@@ -40,20 +45,19 @@ function EditForm({ account }: { account: Account }) {
       return
     }
     setErrors({})
-    setIsSubmitting(true)
-    const outcome = await write(() => updateAccount(account.id, checked.changes, csrfToken))
-    setIsSubmitting(false)
-    if (!outcome.ok) {
-      showErrors(outcome.errors)
-      return
-    }
-    const state: AccountsNotice = { notice: `Guardaste los cambios de ${outcome.value.name}.` }
-    navigate('/accounts', { state })
+    const outcome = await submit(
+      () => updateAccount(account.id, checked.changes, csrfToken),
+      (saved) => {
+        const state: ScreenNotice = { notice: `Guardaste los cambios de ${saved.name}.` }
+        navigate('/accounts', { state })
+      },
+    )
+    if (outcome && !outcome.ok) showErrors(outcome.errors)
   }
 
   return (
     <>
-      <AccountScreenHeader title="Editar cuenta" />
+      <ScreenHeader title="Editar cuenta" back={accountsBack} />
 
       <section className={`${cardClassName} max-w-[34rem]`}>
         <form onSubmit={handleSubmit} noValidate className="space-y-5">
@@ -66,7 +70,10 @@ function EditForm({ account }: { account: Account }) {
             autoComplete="off"
             maxLength={NAME_MAX_LENGTH}
             value={name}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              setName(event.target.value)
+              clearErrors('name')
+            }}
             errors={errors.name}
           />
 
@@ -79,7 +86,10 @@ function EditForm({ account }: { account: Account }) {
               autoComplete="off"
               placeholder="4.25"
               value={annualRatePercent}
-              onChange={(event) => setAnnualRatePercent(event.target.value)}
+              onChange={(event) => {
+                setAnnualRatePercent(event.target.value)
+                clearErrors('annualInterestRate')
+              }}
               hint="Opcional. Déjala vacía si la Cuenta no paga intereses."
               errors={errors.annualInterestRate}
             />
@@ -90,11 +100,11 @@ function EditForm({ account }: { account: Account }) {
             <dl className="mt-2.5 space-y-1.5 text-[0.95rem]">
               <div className="flex items-baseline justify-between gap-4">
                 <dt className="text-ink-2">Saldo</dt>
-                <dd className="font-semibold tabular-nums">{formatAmount(account.balance)}</dd>
+                <dd className="font-semibold tabular-nums">{formatMoney(account.balance)}</dd>
               </div>
               <div className="flex items-baseline justify-between gap-4">
                 <dt className="text-ink-2">Saldo inicial</dt>
-                <dd className="tabular-nums">{formatAmount(account.openingBalance)}</dd>
+                <dd className="tabular-nums">{formatMoney(account.openingBalance)}</dd>
               </div>
               <div className="flex items-baseline justify-between gap-4">
                 <dt className="text-ink-2">Fecha de inicio del registro</dt>
@@ -109,6 +119,12 @@ function EditForm({ account }: { account: Account }) {
               El Saldo se calcula a partir del Saldo inicial y de lo que registras. Para corregirlo, registra o corrige
               un movimiento.
             </p>
+            <Link
+              to={`/accounts/${account.id}/statement`}
+              className="mt-3 inline-flex min-h-[44px] items-center text-[0.95rem] font-semibold text-ink underline decoration-line-strong hover:decoration-ink"
+            >
+              Ver estado de cuenta
+            </Link>
           </div>
 
           <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row">
@@ -120,6 +136,11 @@ function EditForm({ account }: { account: Account }) {
             </button>
           </div>
         </form>
+        {account.archivedAt === null && (
+          <DeleteLink to={`/accounts/${account.id}/delete`}>
+            {account.hasRecords ? 'Archivar esta cuenta' : 'Eliminar esta cuenta'}
+          </DeleteLink>
+        )}
       </section>
     </>
   )
@@ -127,5 +148,9 @@ function EditForm({ account }: { account: Account }) {
 
 /** Edit account: the name and, on savings, the annual rate. Never the Balance (ADR 0002). */
 export function AccountEdit() {
-  return <OneAccountScreen title="Editar cuenta">{(account) => <EditForm key={account.id} account={account} />}</OneAccountScreen>
+  return (
+    <OneAccountScreen title="Editar cuenta">
+      {(account) => <EditForm key={account.id} account={account} />}
+    </OneAccountScreen>
+  )
 }

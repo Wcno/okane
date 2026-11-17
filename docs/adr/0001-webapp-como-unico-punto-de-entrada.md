@@ -11,6 +11,7 @@ El curso exige cuatro contenedores (`webapp`, `webapp-db`, `api-service`, `api-d
 - `api-db` no puede tener una llave foránea hacia los usuarios: solo guarda el identificador de Usuario que recibe de `webapp`, y confía en él.
 - Eliminar un Usuario requiere que `webapp` pida a `api-service` borrar sus datos financieros; la base de datos no lo hace en cascada.
 - `api-service` debe rechazar cualquier petición que no venga de `webapp`.
+- `api-service` tiene salida a internet, solo de salida, para consultar el servicio de cotizaciones ([ADR 0006](0006-asset-search-provider.md)); sigue sin publicar ningún puerto.
 
 ## Extensión
 

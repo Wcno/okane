@@ -1,4 +1,5 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
+import { expect, expectScreenQuality, test } from './support/qa.js'
 import { resetLinkPathFor } from './support/mail.js'
 import { PASSWORD, signUp, uniqueEmail } from './support/session.js'
 
@@ -11,7 +12,9 @@ async function signIn(page: Page, email: string, password: string) {
   await page.getByRole('button', { name: 'Iniciar sesión' }).click()
 }
 
-test('a User who forgot the password gets a link, sets a new one and signs in', async ({ page, request }) => {
+test('a User who forgot the password gets a link, sets a new one and signs in', async ({ page, request, expectedProblems }) => {
+  // Using the link a second time is answered with a 400 that the browser logs.
+  expectedProblems.push(/status of 400/)
   const email = await signUp(request)
 
   await page.goto('/login')
@@ -21,6 +24,7 @@ test('a User who forgot the password gets a link, sets a new one and signs in', 
   await page.getByRole('button', { name: 'Enviar enlace' }).click()
   await expect(page.getByRole('heading', { name: 'Revisa tu correo' })).toBeVisible()
   await expect(page.getByRole('status')).toContainText(email)
+  await expectScreenQuality(page, 'password-link-sent')
 
   const link = await resetLinkPathFor(email)
   await page.goto(link)
@@ -29,6 +33,7 @@ test('a User who forgot the password gets a link, sets a new one and signs in', 
 
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByRole('status')).toHaveText('Tu contraseña se cambió. Inicia sesión con la nueva.')
+  await expectScreenQuality(page, 'password-login-after-reset')
   await page.getByLabel('Correo').fill(email)
   await page.getByLabel('Contraseña', { exact: true }).fill(NEW_PASSWORD)
   await page.getByRole('button', { name: 'Iniciar sesión' }).click()
@@ -41,17 +46,21 @@ test('a User who forgot the password gets a link, sets a new one and signs in', 
   await expect(page.getByRole('alert')).toHaveText(
     'Este enlace ya no sirve: se usó o caducó. Pide uno nuevo para restablecer tu contraseña.',
   )
+  await expectScreenQuality(page, 'password-reset-link-used')
   await page.getByRole('link', { name: 'Pide uno nuevo' }).click()
   await expect(page).toHaveURL(/\/forgot-password$/)
 })
 
-test('a link that was never issued is explained when the password is sent', async ({ page }) => {
+test('a link that was never issued is explained when the password is sent', async ({ page, expectedProblems }) => {
+  // The unknown link is answered with a 400 that the browser logs.
+  expectedProblems.push(/status of 400/)
   await page.goto('/reset-password/1-abc-def')
   await page.getByLabel('Contraseña nueva').fill(NEW_PASSWORD)
   await page.getByRole('button', { name: 'Guardar contraseña' }).click()
 
   await expect(page.getByRole('alert')).toContainText('Este enlace ya no sirve')
   await expect(page).toHaveURL(/\/reset-password\//)
+  await expectScreenQuality(page, 'password-reset-link-never-issued')
 })
 
 test('a short new password is explained before it is sent', async ({ page }) => {
@@ -61,6 +70,7 @@ test('a short new password is explained before it is sent', async ({ page }) => 
 
   await expect(page.getByText('La contraseña debe tener al menos 10 caracteres. Te faltan 5.')).toBeVisible()
   await expect(page.getByLabel('Contraseña nueva')).toBeFocused()
+  await expectScreenQuality(page, 'password-reset-short-password')
 })
 
 test('a malformed email is explained before asking for a link', async ({ page }) => {
@@ -70,9 +80,12 @@ test('a malformed email is explained before asking for a link', async ({ page })
 
   await expect(page.getByText('Escribe tu correo completo, por ejemplo ana@ejemplo.com.')).toBeVisible()
   await expect(page.getByLabel('Correo')).toBeFocused()
+  await expectScreenQuality(page, 'password-forgot-malformed-email')
 })
 
-test('changing the password asks for the current one and keeps this session', async ({ page, browser, isMobile }) => {
+test('changing the password asks for the current one and keeps this session', async ({ page, browser, isMobile, expectedProblems }) => {
+  // The wrong current password is answered with a 400 that the browser logs.
+  expectedProblems.push(/status of 400/)
   const email = await signUp(page.request)
   const otherDevice = await browser.newContext()
   const otherPage = await otherDevice.newPage()
@@ -88,10 +101,12 @@ test('changing the password asks for the current one and keeps this session', as
   await page.getByRole('button', { name: 'Cambiar contraseña' }).click()
   await expect(page.getByText('La contraseña actual no coincide. Revísala e inténtalo de nuevo.')).toBeVisible()
   await expect(page.getByLabel('Contraseña actual')).toBeFocused()
+  await expectScreenQuality(page, 'password-change-wrong-current')
 
   await page.getByLabel('Contraseña actual').fill(PASSWORD)
   await page.getByRole('button', { name: 'Cambiar contraseña' }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Tu contraseña se cambió' })).toBeVisible()
+  await expectScreenQuality(page, 'password-change-done')
 
   // This session goes on; the one on the other device ended.
   expect((await page.request.get('/api/accounts')).status()).not.toBe(401)
@@ -112,9 +127,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
   test.describe(`${colorScheme} theme`, () => {
     test.use({ colorScheme })
 
-    test('/forgot-password fits the viewport and shows focus on every control', async ({ page }) => {
+    test('/forgot-password meets the screen quality bar and shows focus on every control', async ({ page }) => {
       await page.goto('/forgot-password')
-      await expectNoHorizontalScroll(page)
+      await expectThemedScreen(page, 'password-forgot', colorScheme)
 
       await page.keyboard.press('Tab')
       await expectVisibleFocus(page.getByRole('link', { name: 'Okane, ir al Panel' }))
@@ -124,9 +139,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
       }
     })
 
-    test('/reset-password fits the viewport and shows focus on every control', async ({ page }) => {
+    test('/reset-password meets the screen quality bar and shows focus on every control', async ({ page }) => {
       await page.goto('/reset-password/1-abc-def')
-      await expectNoHorizontalScroll(page)
+      await expectThemedScreen(page, 'password-reset', colorScheme)
 
       await page.keyboard.press('Tab')
       await expectVisibleFocus(page.getByRole('link', { name: 'Okane, ir al Panel' }))
@@ -136,10 +151,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
       }
     })
 
-    test('/profile/change-password fits the viewport and works with the keyboard alone', async ({ page }) => {
+    test('/profile/change-password meets the screen quality bar and works with the keyboard alone', async ({ page }) => {
       await signUp(page.request)
       await page.goto('/profile/change-password')
-      await expectNoHorizontalScroll(page)
+      await expectThemedScreen(page, 'password-change', colorScheme)
 
       const current = page.getByLabel('Contraseña actual')
       await current.focus()
@@ -157,11 +172,10 @@ for (const colorScheme of ['light', 'dark'] as const) {
   })
 }
 
-async function expectNoHorizontalScroll(page: Page) {
+async function expectThemedScreen(page: Page, name: string, colorScheme: 'light' | 'dark') {
   await expect(page.getByRole('main')).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('lang', 'es')
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-  expect(overflow).toBeLessThanOrEqual(0)
+  await expectScreenQuality(page, `${name}-${colorScheme}`)
 }
 
 /** Focused, with an outline or a ring (DESIGN.md: buttons use an outline, fields a ring). */

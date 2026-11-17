@@ -95,6 +95,7 @@ class CreateAccountTests(AccountApiTestCase):
                 "opening_date": "2026-11-01",
                 "annual_interest_rate": None,
                 "balance": "1000.00",
+                "net_contribution": None,
                 "has_records": False,
                 "archived_at": None,
             },
@@ -141,6 +142,19 @@ class CreateAccountTests(AccountApiTestCase):
         for amount in ("10.005", "abc", "", "1e3", "NaN", "Infinity", 10.5, 10, None):
             with self.subTest(amount=amount):
                 self.assert_rejected(self.create(opening_balance=amount), "opening_balance")
+
+    def test_an_opening_balance_past_twelve_digits_says_it_is_too_large(self):
+        for amount in ("1000000000000.00", "-1000000000000.00", "1234567890123456", "1000000000000.123"):
+            with self.subTest(amount=amount):
+                response = self.create(opening_balance=amount)
+                self.assert_rejected(response, "opening_balance")
+                self.assertIn("demasiado grande", response.json()["errors"]["opening_balance"][0])
+
+    def test_too_many_decimals_in_an_opening_balance_are_not_called_too_large(self):
+        response = self.create(opening_balance="10.1234567890123")
+
+        self.assert_rejected(response, "opening_balance")
+        self.assertNotIn("demasiado grande", response.json()["errors"]["opening_balance"][0])
 
     def test_rejects_an_interest_rate_on_an_account_that_is_not_for_savings(self):
         for account_type in ("spending", "investment"):
@@ -313,6 +327,22 @@ class IsolationTests(AccountApiTestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {"detail": "not_found"})
         self.assertEqual(self.accounts(user=2), [theirs])
+
+    def test_reading_the_account_of_another_user_answers_not_found(self):
+        theirs = self.created(user=2, name="Ajena")
+
+        response = self.call("GET", f"/api/accounts/{theirs['id']}", user=1)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "not_found"})
+
+    def test_reading_one_account_returns_it_as_the_list_does(self):
+        mine = self.created(user=1, name="Mía")
+
+        response = self.call("GET", f"/api/accounts/{mine['id']}", user=1)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), mine)
 
     def test_deleting_the_account_of_another_user_answers_not_found(self):
         theirs = self.created(user=2, name="Ajena")

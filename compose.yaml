@@ -79,6 +79,8 @@ services:
       DATABASE_NAME: okane_api
       DATABASE_USER: okane_api
       DATABASE_PASSWORD: ${API_DB_PASSWORD:?Set API_DB_PASSWORD in .env}
+      QUOTES_PROVIDER: ${QUOTES_PROVIDER:-sample}
+      TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
     depends_on:
       api-db:
         condition: service_healthy
@@ -95,6 +97,33 @@ services:
     networks:
       - services
       - api-data
+      - egress
+    restart: unless-stopped
+
+  # Fetches the quoted closing prices once a day (ticket #23); it serves no requests.
+  price-refresher:
+    build:
+      context: ./api-service
+    entrypoint: []
+    command:
+      - sh
+      - -c
+      - "while true; do python manage.py refresh_prices; sleep 86400; done"
+    environment:
+      DJANGO_SECRET_KEY: ${API_SERVICE_SECRET_KEY:?Set API_SERVICE_SECRET_KEY in .env}
+      INTERNAL_SERVICE_KEY: ${INTERNAL_SERVICE_KEY:?Set INTERNAL_SERVICE_KEY in .env}
+      DATABASE_HOST: api-db
+      DATABASE_NAME: okane_api
+      DATABASE_USER: okane_api
+      DATABASE_PASSWORD: ${API_DB_PASSWORD:?Set API_DB_PASSWORD in .env}
+      QUOTES_PROVIDER: ${QUOTES_PROVIDER:-sample}
+      TWELVE_DATA_API_KEY: ${TWELVE_DATA_API_KEY:-}
+    depends_on:
+      api-service:
+        condition: service_healthy
+    networks:
+      - api-data
+      - egress
     restart: unless-stopped
 
   api-db:
@@ -116,8 +145,10 @@ services:
     restart: unless-stopped
 
 networks:
-  # The only network with a route to the host; webapp alone joins it.
+  # The only network that publishes a port to the host; webapp alone joins it.
   public:
+  # Outbound only: api-service reaches the quotes service through it. It publishes nothing.
+  egress:
   # webapp to api-service.
   services:
     internal: true

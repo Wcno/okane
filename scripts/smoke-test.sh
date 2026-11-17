@@ -74,7 +74,7 @@ pass "the built assets are served"
 [ "$(status_of "$base/api/accounts")" = "401" ] || fail "/api/accounts without a session should answer 401"
 pass "financial calls without a session answer 401"
 
-for route in /auth/unknown /api/../health /assets/missing.js; do
+for route in /auth/unknown /internal/users/me /api/../internal/users/me /api/../health /assets/missing.js; do
   [ "$(status_of "$base$route")" = "404" ] || fail "$route should answer 404"
   page=$(curl -s --path-as-is "$base$route")
   if contains "$page" 'id="root"'; then
@@ -83,8 +83,9 @@ for route in /auth/unknown /api/../health /assets/missing.js; do
 done
 pass "backend routes and missing files are never answered with the frontend"
 
-for name in api-service webapp-db api-db; do
-  ports=$(docker port "$(docker compose ps --quiet "$name")")
+# Read the declared configuration, so a service scaled to zero is still checked.
+for name in api-service webapp-db api-db price-refresher; do
+  ports=$(docker compose config --format json | python3 -c "import json, sys; print(json.load(sys.stdin)['services']['$name'].get('ports') or '')")
   [ -z "$ports" ] || fail "$name publishes a port: $ports"
 done
 pass "only webapp publishes a port"
