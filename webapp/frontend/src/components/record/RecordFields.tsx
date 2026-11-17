@@ -5,7 +5,7 @@ import type { FieldErrors } from '../../lib/http'
 import { DESCRIPTION_MAX_LENGTH, type RecordDraft, type RecordField } from '../../lib/recordForm'
 
 const fieldClassName =
-  'h-11 w-full rounded-xl border bg-surface px-3.5 text-[1rem] text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/15'
+  'h-[44px] w-full rounded-xl border bg-surface px-3.5 text-[1rem] text-ink transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/15'
 
 const borderClassName = (invalid: boolean) =>
   invalid ? 'border-critical' : 'border-line-strong hover:border-ink-3 focus-visible:border-ink'
