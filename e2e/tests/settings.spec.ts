@@ -108,6 +108,16 @@ for (const viewport of VIEWPORTS) {
   }
 }
 
+test.describe('phone width', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('the save button stays in view while the long preferences form is open', async ({ page }) => {
+    await signUp(page.request)
+    await openSettings(page, 390)
+    await expect(page.getByRole('button', { name: 'Guardar preferencias' })).toBeInViewport()
+  })
+})
+
 test('the current month is relative to the day the view is opened', async ({ page }) => {
   await signUp(page.request)
   await seedRecords(page)

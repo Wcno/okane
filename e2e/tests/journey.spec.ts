@@ -135,6 +135,7 @@ test('a User walks the whole product and stays alone in it', async ({ page, brow
   await page.getByLabel('Correo').fill(email)
   await page.getByLabel('Contraseña').fill(PASSWORD)
   await page.getByRole('button', { name: 'Iniciar sesión' }).click()
+  await expect(page).toHaveURL(/\/dashboard$/)
   await page.goto('/settings')
   await expect(page.getByLabel('Agrupar por')).toHaveValue('type')
 

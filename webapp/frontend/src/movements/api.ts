@@ -71,9 +71,9 @@ function toMovement(body: MovementBody): Movement {
           amount: body.amount,
           accountId: body.account_id,
           categoryId: body.category_id,
-          description: body.description,
-          // The feed does not say which reservation an Expense confirmed; its own screen does.
+          // The view does not say which reserve confirmed an Expense; the edit screen reads it.
           recurringPaymentOccurrenceId: null,
+          description: body.description,
         },
       }
     case 'income':

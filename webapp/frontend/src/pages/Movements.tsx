@@ -26,10 +26,10 @@ import {
   type MovementType,
 } from '../movements/api'
 import { describeMovement, movementTypeFilterNames } from '../movements/presentation'
-import { INITIAL_PREFERENCES, movementFilterOf, type Preferences } from '../preferences/api'
-import { usePreferences } from '../preferences/usePreferences'
 import { useMovementsRevision } from '../movements/revision'
 import { movementViews, sameTypes, type Create, type MovementViewName, type Need } from '../movements/views'
+import { INITIAL_PREFERENCES, movementFilterOf, type Preferences } from '../preferences/api'
+import { usePreferences } from '../preferences/usePreferences'
 import { transferAccounts } from '../transfers/presentation'
 
 const rowId = (movement: Movement) => `movement-${movementKey(movement)}`
@@ -102,21 +102,21 @@ function groupByType(movements: Movement[]): FeedGroup<Movement>[] {
 
 /**
  * Every record of the User, whatever its kind, newest first. `/movements` shows
- * them all; the older route of each kind shows the same screen with its type
- * chosen. The filter lives in the address.
+ * them all, starting from the User's preferences; the older route of each kind
+ * shows the same screen with its type chosen. The filter lives in the address.
  */
-function MovementsView({ view, preferences }: { view: MovementViewName; preferences: Preferences }) {
+function MovementsView({ view, preferences }: { view: MovementViewName; preferences: Preferences | null }) {
   const preset = movementViews[view]
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const search = params.toString()
+  // An address that names a filter prevails over the preferences, which never reach the routes of one kind.
   const hasAddressFilter = FILTER_PARAMS.some((name) => params.has(name))
-  // Only the general view starts from the preferences; the older routes of each kind keep their own type.
-  const usesPreferences = view === 'all' && !hasAddressFilter
-  const filter = useMemo(
-    () => (usesPreferences ? movementFilterOf(preferences, todayInPanama()) : readFilter(search, preset.types)),
-    [usesPreferences, preferences, search, preset],
-  )
+  const today = todayInPanama()
+  const filter = useMemo(() => {
+    if (hasAddressFilter || preferences === null) return readFilter(search, preset.types)
+    return movementFilterOf(preferences, today)
+  }, [search, preset, hasAddressFilter, preferences, today])
   const load = useCallback(
     (page: number) => (isReversed(filter) ? Promise.resolve(EMPTY_PAGE) : listMovements(filter, page)),
     [filter],
@@ -134,16 +134,13 @@ function MovementsView({ view, preferences }: { view: MovementViewName; preferen
   }
   const allowed = (create: Create) => create.needs === undefined || can[create.needs]
   const hasRecords = state.status === 'ready' && state.value.records.length > 0
-  const asksForEverything =
-    sameTypes(filter.types, preset.types) && filter.accountId === null && filter.from === '' && filter.to === ''
+  const atRest = !hasAddressFilter
+  const startsFromPreferences = preferences !== null && atRest && preferences.period !== 'all'
   const onlyThisMonth =
-    usesPreferences &&
+    preferences !== null &&
     preferences.period === 'current_month' &&
-    sameTypes(filter.types, preset.types) &&
-    filter.accountId === null
-  const atRest = asksForEverything || onlyThisMonth
-  // Going back leaves the address filters; the preferences then set the view again.
-  const canClear = view === 'all' ? hasAddressFilter : !atRest
+    preferences.accountId === null &&
+    preferences.movementType === null
   const first = allowed(preset.first.create)
     ? preset.first.create
     : (preset.first.withoutAccount ?? preset.first.create)
@@ -181,7 +178,7 @@ function MovementsView({ view, preferences }: { view: MovementViewName; preferen
       <MovementFilters
         filter={filter}
         accounts={known}
-        canClear={canClear}
+        canClear={!atRest}
         onChange={change}
         onClear={() => setParams({}, { replace: true })}
       />
@@ -192,16 +189,18 @@ function MovementsView({ view, preferences }: { view: MovementViewName; preferen
         <EmptyState
           icon={preset.icon}
           title={
-            onlyThisMonth
-              ? 'Aún no hay movimientos este mes'
-              : asksForEverything
+            startsFromPreferences
+              ? onlyThisMonth
+                ? 'Aún no hay movimientos este mes'
+                : 'Ningún movimiento coincide con tus preferencias'
+              : atRest
                 ? preset.empty.title
                 : 'Ningún movimiento coincide con estos filtros'
           }
           text={
-            onlyThisMonth
-              ? 'Tu vista empieza en el mes actual. Cambia el período aquí o en tus preferencias para ver otros meses.'
-              : asksForEverything
+            startsFromPreferences
+              ? 'Tu vista empieza con tus preferencias. Cambia los filtros aquí o en Preferencias para ver otros movimientos.'
+              : atRest
                 ? (note ?? preset.empty.text)
                 : 'Prueba con otro tipo, otra Cuenta u otro período.'
           }
@@ -214,21 +213,20 @@ function MovementsView({ view, preferences }: { view: MovementViewName; preferen
           rowId={rowId}
           row={(movement) => <Row key={movementKey(movement)} movement={movement} accounts={byId} />}
           countText={(shown, total) => `Mostrando ${shown} de ${total} ${preset.noun}.`}
-          groupBy={view === 'all' && preferences.grouping === 'type' ? groupByType : undefined}
+          groupBy={preferences?.grouping === 'type' ? groupByType : undefined}
         />
       )}
     </>
   )
 }
 
-/**
- * Every record of the User, whatever its kind, newest first. `/movements` shows
- * them all, starting from the User's preferences unless the address names a filter;
- * the older route of each kind shows the same screen with its type chosen.
- */
-export function Movements({ view = 'all' }: { view?: MovementViewName }) {
+/** The main screen waits for the preferences it starts from, but never depends on them. */
+function MovementsWithPreferences() {
   const { state, retry } = usePreferences()
-  // Preferences shape the view but never block it: when they cannot be read, the initial ones apply.
-  if (state.status === 'loading') return <Pending state={state} retry={retry} loading={movementViews[view].loading} />
-  return <MovementsView view={view} preferences={state.status === 'ready' ? state.value : INITIAL_PREFERENCES} />
+  if (state.status === 'loading') return <Pending state={state} retry={retry} loading="Cargando tus movimientos…" />
+  return <MovementsView view="all" preferences={state.status === 'ready' ? state.value : INITIAL_PREFERENCES} />
+}
+
+export function Movements({ view = 'all' }: { view?: MovementViewName }) {
+  return view === 'all' ? <MovementsWithPreferences /> : <MovementsView view={view} preferences={null} />
 }
