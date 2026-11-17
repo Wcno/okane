@@ -22,16 +22,14 @@ export function AvailableCard() {
 
   return (
     <Card title="Disponible hasta fin de mes" id="available">
-      <p
-        className="mt-2 text-[3.2rem] font-semibold leading-none tracking-[-0.035em] lg:text-[4.25rem]"
-        aria-label={formatMoney(value)}
-      >
+      <p className="mt-2 text-[3.2rem] font-semibold leading-none tracking-[-0.035em] lg:text-[4.25rem]">
         <span aria-hidden="true">
           {sign}
           <span className="mr-0.5 text-[0.62em] font-medium text-ink-3">$</span>
           {integer}
           <span className="text-[0.5em] font-medium tracking-[-0.01em] text-ink-2">.{cents}</span>
         </span>
+        <span className="sr-only">{formatMoney(value)}</span>
       </p>
 
       <p className="mt-3.5 max-w-[46ch] text-ink-2">
