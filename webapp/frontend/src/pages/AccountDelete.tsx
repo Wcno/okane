@@ -1,17 +1,20 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { deleteAccount, type Account } from '../accounts/api'
-import { accountTypeLabels, formatAmount, type AccountsNotice } from '../accounts/presentation'
-import { useAccountWrite } from '../accounts/useAccounts'
+import { accountsBack, accountTypeLabels } from '../accounts/presentation'
 import { useSignedInUser } from '../auth/context'
 import { AccountIcon } from '../components/accounts/AccountIcon'
-import { AccountScreenHeader, OneAccountScreen, cardClassName } from '../components/accounts/AccountScreen'
+import { OneAccountScreen } from '../components/accounts/OneAccountScreen'
+import { ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { primaryButtonClassName, secondaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
+import { formatMoney } from '../lib/money'
+import type { ScreenNotice } from '../lib/notice'
+import { useWrite } from '../lib/useWrite'
 
 function Confirmation({ account }: { account: Account }) {
   const { csrfToken } = useSignedInUser()
-  const write = useAccountWrite()
+  const write = useWrite()
   const navigate = useNavigate()
   const [failure, setFailure] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -31,18 +34,18 @@ function Confirmation({ account }: { account: Account }) {
       setFailure(outcome.errors.form?.join(' ') ?? 'No pudimos completar el cambio. Inténtalo de nuevo.')
       return
     }
-    const state: AccountsNotice = {
+    const state: ScreenNotice = {
       notice:
         outcome.value.result === 'deleted'
           ? `Eliminaste ${account.name}.`
-          : `Archivaste ${account.name}. Su Saldo de ${formatAmount(outcome.value.account.balance)} sigue en tus totales.`,
+          : `Archivaste ${account.name}. Su Saldo de ${formatMoney(outcome.value.account.balance)} sigue en tus totales.`,
     }
     navigate('/accounts', { state })
   }
 
   return (
     <>
-      <AccountScreenHeader title={title} />
+      <ScreenHeader title={title} back={accountsBack} />
 
       <section className={`${cardClassName} max-w-[34rem]`}>
         <div className="flex items-center gap-3.5 rounded-2xl bg-surface-2 p-3.5">
@@ -51,14 +54,14 @@ function Confirmation({ account }: { account: Account }) {
             <h2 className="truncate text-[1rem] font-medium">{account.name}</h2>
             <p className="mt-0.5 text-[0.87rem] text-ink-3">{accountTypeLabels[account.type]}</p>
           </div>
-          <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatAmount(account.balance)}</span>
+          <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatMoney(account.balance)}</span>
         </div>
 
         <p className="mt-4 text-ink-2">
           {isArchived
             ? 'Ya no se ofrece para registrar nada nuevo. Su Saldo y su historial se conservan en tus totales.'
             : willArchive
-              ? `Esta Cuenta tiene movimientos, así que no se borra: se archiva. Dejará de ofrecerse para registrar algo nuevo, y su Saldo de ${formatAmount(account.balance)} y su historial seguirán contando en tus totales.`
+              ? `Esta Cuenta tiene movimientos, así que no se borra: se archiva. Dejará de ofrecerse para registrar algo nuevo, y su Saldo de ${formatMoney(account.balance)} y su historial seguirán contando en tus totales.`
               : 'Esta Cuenta no tiene movimientos. Se borrará por completo y no podrás recuperarla.'}
         </p>
 

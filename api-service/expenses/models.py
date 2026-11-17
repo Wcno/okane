@@ -4,6 +4,8 @@ from django.db.models import Q
 from accounts.models import Account
 from expenses.categories import CATEGORY_IDS
 
+DESCRIPTION_MAX_LENGTH = 140
+
 
 class Expense(models.Model):
     """Money that left an Account, assigned to one Category (GLOSSARY.md, Gasto)."""
@@ -15,7 +17,7 @@ class Expense(models.Model):
     category_id = models.PositiveSmallIntegerField()
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     date = models.DateField()
-    description = models.CharField(max_length=140, blank=True)
+    description = models.CharField(max_length=DESCRIPTION_MAX_LENGTH, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

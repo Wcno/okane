@@ -7,9 +7,7 @@ from accounts import clock
 from accounts.models import Account
 from accounts.serializers import DECIMAL_ERRORS, DecimalStringField, messages
 from expenses.categories import CATEGORY_IDS
-from expenses.models import Expense
-
-DESCRIPTION_MAX_LENGTH = 140
+from expenses.models import DESCRIPTION_MAX_LENGTH, Expense
 
 AMOUNT_INVALID = "Escribe un monto mayor que cero, con dos decimales como máximo. Ejemplo: 12.50"
 CATEGORY_INVALID = "Elige la Categoría del gasto."

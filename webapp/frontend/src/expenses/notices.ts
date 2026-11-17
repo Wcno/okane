@@ -1,5 +1,4 @@
 import type { Account } from '../accounts/api'
-import { listAccounts } from '../accounts/api'
 import { categoryById } from '../data/categories'
 import { formatMoney } from '../lib/money'
 import type { Expense } from './api'
@@ -20,13 +19,4 @@ export function savedNotice(
   const sentence = `${verb} un gasto de ${formatMoney(expense.amount)} en ${categoryById(expense.categoryId).name}.`
   const balance = balanceSentence(account)
   return balance ? `${sentence} ${balance}` : sentence
-}
-
-/** The Account as it is now, read after a change; null if it cannot be read, so the notice goes without it. */
-export async function currentAccount(accountId: number): Promise<Account | undefined> {
-  try {
-    return (await listAccounts()).find((account) => account.id === accountId)
-  } catch {
-    return undefined
-  }
 }

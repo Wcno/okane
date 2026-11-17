@@ -1,20 +1,15 @@
-import { Archive, CircleCheck, Pencil, Plus, Trash2, Wallet } from 'lucide-react'
+import { Archive, Pencil, Plus, Trash2, Wallet } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import type { Account } from '../accounts/api'
 import { formatDay } from '../accounts/form'
-import {
-  accountTypeLabels,
-  accountTypes,
-  formatAmount,
-  formatRate,
-  isAccountsNotice,
-} from '../accounts/presentation'
+import { accountTypeLabels, accountTypes, formatRate } from '../accounts/presentation'
 import { useAccounts } from '../accounts/useAccounts'
 import { AccountIcon } from '../components/accounts/AccountIcon'
-import { AccountScreenHeader, AccountsPending, cardClassName } from '../components/accounts/AccountScreen'
+import { NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { smallSecondaryButtonClassName } from '../components/buttons'
 import { sumAmounts } from '../lib/decimal'
 import { formatMoney, moneyParts } from '../lib/money'
+import { noticeFrom } from '../lib/notice'
 
 const rowActionClassName =
   'grid size-10 shrink-0 place-items-center rounded-full text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink'
@@ -32,7 +27,7 @@ function Row({ account }: { account: Account }) {
         <h3 className="truncate text-[1rem] font-medium">{account.name}</h3>
         <p className="mt-0.5 text-[0.87rem] leading-snug text-ink-3">{details.join(' · ')}</p>
       </div>
-      <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatAmount(account.balance)}</span>
+      <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatMoney(account.balance)}</span>
       <div className="-mr-2 flex shrink-0">
         <Link to={`/accounts/${account.id}/edit`} aria-label={`Editar ${account.name}`} className={rowActionClassName}>
           <Pencil size={17} aria-hidden="true" />
@@ -132,27 +127,20 @@ function NoAccounts() {
 export function Accounts() {
   const { state, retry } = useAccounts()
   const location = useLocation()
-  const notice = isAccountsNotice(location.state) ? location.state.notice : null
+  const notice = noticeFrom(location.state)
 
   return (
     <>
-      <AccountScreenHeader title="Cuentas" back={false} />
+      <ScreenHeader title="Cuentas" />
 
-      <div role="status" aria-live="polite">
-        {notice && (
-          <p className="mb-4 flex items-start gap-2.5 rounded-2xl bg-surface-2 p-3.5 text-[0.95rem] lg:mb-5">
-            <CircleCheck size={18} className="mt-0.5 shrink-0 text-ink-2" aria-hidden="true" />
-            {notice}
-          </p>
-        )}
-      </div>
+      <NoticeBanner notice={notice} />
 
       {state.status !== 'ready' ? (
-        <AccountsPending state={state} retry={retry} />
-      ) : state.accounts.length === 0 ? (
+        <Pending state={state} retry={retry} loading="Cargando tus Cuentas…" />
+      ) : state.value.length === 0 ? (
         <NoAccounts />
       ) : (
-        <AccountGroups accounts={state.accounts} />
+        <AccountGroups accounts={state.value} />
       )}
     </>
   )

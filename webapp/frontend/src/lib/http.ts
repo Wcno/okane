@@ -2,6 +2,7 @@
 
 export const CONNECTION_LOST = 'No pudimos conectar con Okane. Revisa tu conexión e inténtalo de nuevo.'
 export const WRITE_FAILED = 'Okane no pudo guardar el cambio. Espera un momento e inténtalo de nuevo.'
+export const GONE = 'Este registro ya no existe. Vuelve a la lista para verla al día.'
 export const SESSION_ENDED = 'Tu sesión terminó. Inicia sesión de nuevo para continuar.'
 
 /** webapp answered that nobody is signed in. */
@@ -63,10 +64,10 @@ export interface WriteRequest<T, Field extends string> {
   path: string
   csrfToken: string
   body?: unknown
-  /** Maps the field names of api-service to the ones the form uses. */
-  fields: Record<string, Field>
+  /** Maps the field names of api-service to the ones the form uses; a write without a form has none. */
+  fields?: Record<string, Field>
   /** What to say when the record is gone. */
-  gone: string
+  gone?: string
   read: (response: Response) => Promise<T>
 }
 
@@ -90,6 +91,6 @@ export async function write<T, Field extends string>(request: WriteRequest<T, Fi
   return {
     ok: false,
     sessionEnded: response.status === 401,
-    errors: await readErrors(response, request.fields, request.gone),
+    errors: await readErrors(response, request.fields ?? {}, request.gone ?? GONE),
   }
 }

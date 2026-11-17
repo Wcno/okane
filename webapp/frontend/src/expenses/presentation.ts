@@ -1,5 +1,4 @@
 import type { Account } from '../accounts/api'
-import { formatMoney } from '../lib/money'
 import type { Expense } from './api'
 
 /** Accounts that can take an Expense: spending or savings, not archived. `keep` stays even if archived. */
@@ -38,16 +37,6 @@ export function groupByDay(expenses: Expense[]): DayGroup[] {
   }
   return groups
 }
-
-/** The notice shown on the Expenses screen after a change. */
-export interface ExpensesNotice {
-  notice: string
-}
-
-export const isExpensesNotice = (state: unknown): state is ExpensesNotice =>
-  typeof state === 'object' && state !== null && typeof (state as ExpensesNotice).notice === 'string'
-
-export const formatAmount = (amount: string) => formatMoney(amount)
 
 /** The way back to the list from the screens of one Expense. */
 export const expensesBack = { to: '/expenses', label: 'Gastos' }

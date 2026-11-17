@@ -128,7 +128,6 @@ export function deleteExpense(id: number, csrfToken: string): Promise<Outcome<vo
     method: 'DELETE',
     path: `/api/expenses/${id}`,
     csrfToken,
-    fields: FORM_FIELDS,
     gone: EXPENSE_GONE,
     read: async () => undefined,
   })

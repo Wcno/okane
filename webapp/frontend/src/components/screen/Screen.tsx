@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, CircleCheck } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Loaded } from '../../lib/useLoaded'
@@ -65,14 +65,28 @@ export function Pending({
 export function NotHere({ title, text, back }: { title: string; text: string; back: { to: string; label: string } }) {
   return (
     <>
-      <ScreenHeader title={title} />
+      <ScreenHeader title={title} back={back} />
       <section className={`${cardClassName} max-w-[34rem]`}>
         <p className="text-ink-2">{text}</p>
         <Link to={back.to} className={`${smallSecondaryButtonClassName} mt-5`}>
           <ArrowLeft size={17} aria-hidden="true" />
-          {back.label}
+          Volver a {back.label}
         </Link>
       </section>
     </>
+  )
+}
+
+/** The confirmation of the last change, announced without interrupting; the live region is always there. */
+export function NoticeBanner({ notice, className = '' }: { notice: string | null; className?: string }) {
+  return (
+    <div role="status" aria-live="polite">
+      {notice && (
+        <p className={`mb-4 flex items-start gap-2.5 rounded-2xl bg-surface-2 p-3.5 text-[0.95rem] lg:mb-5 ${className}`}>
+          <CircleCheck size={18} className="mt-0.5 shrink-0 text-ink-2" aria-hidden="true" />
+          {notice}
+        </p>
+      )}
+    </div>
   )
 }

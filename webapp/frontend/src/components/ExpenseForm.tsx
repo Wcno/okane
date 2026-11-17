@@ -124,7 +124,7 @@ function QuickSheetContent() {
   const { state, retry } = useLoaded(async () => {
     const [accounts, lastUsed] = await Promise.all([listAccounts(), lastUsedAccountId()])
     return { accounts: offeredAccounts(accounts), lastUsed }
-  }, 'quick-form')
+  })
 
   if (state.status === 'ready' && state.value.accounts.length > 0) {
     return <QuickForm accounts={state.value.accounts} lastUsed={state.value.lastUsed} />

@@ -2,17 +2,20 @@ import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { updateAccount, type Account, type AccountErrors } from '../accounts/api'
 import { NAME_MAX_LENGTH, formatDay, ratioToPercent, validateAccountChanges } from '../accounts/form'
-import { accountTypeLabels, formatAmount, type AccountsNotice } from '../accounts/presentation'
-import { useAccountWrite } from '../accounts/useAccounts'
+import { accountsBack, accountTypeLabels } from '../accounts/presentation'
 import { useSignedInUser } from '../auth/context'
-import { AccountScreenHeader, OneAccountScreen, cardClassName } from '../components/accounts/AccountScreen'
+import { OneAccountScreen } from '../components/accounts/OneAccountScreen'
+import { ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { primaryButtonClassName, secondaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
 import { TextField } from '../components/TextField'
+import { formatMoney } from '../lib/money'
+import type { ScreenNotice } from '../lib/notice'
+import { useWrite } from '../lib/useWrite'
 
 function EditForm({ account }: { account: Account }) {
   const { csrfToken } = useSignedInUser()
-  const write = useAccountWrite()
+  const write = useWrite()
   const navigate = useNavigate()
   const isSavings = account.type === 'savings'
 
@@ -47,13 +50,13 @@ function EditForm({ account }: { account: Account }) {
       showErrors(outcome.errors)
       return
     }
-    const state: AccountsNotice = { notice: `Guardaste los cambios de ${outcome.value.name}.` }
+    const state: ScreenNotice = { notice: `Guardaste los cambios de ${outcome.value.name}.` }
     navigate('/accounts', { state })
   }
 
   return (
     <>
-      <AccountScreenHeader title="Editar cuenta" />
+      <ScreenHeader title="Editar cuenta" back={accountsBack} />
 
       <section className={`${cardClassName} max-w-[34rem]`}>
         <form onSubmit={handleSubmit} noValidate className="space-y-5">
@@ -90,11 +93,11 @@ function EditForm({ account }: { account: Account }) {
             <dl className="mt-2.5 space-y-1.5 text-[0.95rem]">
               <div className="flex items-baseline justify-between gap-4">
                 <dt className="text-ink-2">Saldo</dt>
-                <dd className="font-semibold tabular-nums">{formatAmount(account.balance)}</dd>
+                <dd className="font-semibold tabular-nums">{formatMoney(account.balance)}</dd>
               </div>
               <div className="flex items-baseline justify-between gap-4">
                 <dt className="text-ink-2">Saldo inicial</dt>
-                <dd className="tabular-nums">{formatAmount(account.openingBalance)}</dd>
+                <dd className="tabular-nums">{formatMoney(account.openingBalance)}</dd>
               </div>
               <div className="flex items-baseline justify-between gap-4">
                 <dt className="text-ink-2">Fecha de inicio del registro</dt>

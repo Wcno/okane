@@ -9,9 +9,10 @@ import { FormAlert } from '../components/FormAlert'
 import { ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { categoryById } from '../data/categories'
 import { deleteExpense, type Expense } from '../expenses/api'
-import { expensesBack, formatAmount } from '../expenses/presentation'
-import { useAfterExpenseChange } from '../expenses/useAfterChange'
+import { expensesBack } from '../expenses/presentation'
+import { useAfterExpenseChange } from '../expenses/useAfterExpenseChange'
 import { formatDay } from '../accounts/form'
+import { formatMoney } from '../lib/money'
 import { useWrite } from '../lib/useWrite'
 
 function Confirmation({ expense, accounts }: { expense: Expense; accounts: Account[] }) {
@@ -50,7 +51,7 @@ function Confirmation({ expense, accounts }: { expense: Expense; accounts: Accou
               {[expense.description && category.name, account?.name, formatDay(expense.date)].filter(Boolean).join(' · ')}
             </p>
           </div>
-          <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatAmount(expense.amount)}</span>
+          <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatMoney(expense.amount)}</span>
         </div>
 
         <p className="mt-4 text-ink-2">
@@ -58,7 +59,7 @@ function Confirmation({ expense, accounts }: { expense: Expense; accounts: Accou
           {account && (
             <>
               {' '}
-              El Saldo de {account.name} subirá {formatAmount(expense.amount)}.
+              El Saldo de {account.name} subirá {formatMoney(expense.amount)}.
             </>
           )}
         </p>

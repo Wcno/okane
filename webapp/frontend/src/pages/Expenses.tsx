@@ -1,4 +1,4 @@
-import { CircleCheck, Pencil, Plus, ReceiptText, Trash2 } from 'lucide-react'
+import { Pencil, Plus, ReceiptText, Trash2 } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import type { Account } from '../accounts/api'
 import { todayInPanama } from '../accounts/form'
@@ -6,11 +6,13 @@ import { useAccounts } from '../accounts/useAccounts'
 import { CategoryChip } from '../components/expenses/CategoryChip'
 import { smallSecondaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
-import { Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
+import { NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { categoryById } from '../data/categories'
 import type { Expense } from '../expenses/api'
-import { dayHeading, formatAmount, groupByDay, isExpensesNotice, offeredAccounts } from '../expenses/presentation'
-import { useExpenseFeed, type FeedState } from '../expenses/useExpenseFeed'
+import { dayHeading, groupByDay, offeredAccounts } from '../expenses/presentation'
+import { useExpenseFeed, type ExpenseFeed } from '../expenses/useExpenseFeed'
+import { formatMoney } from '../lib/money'
+import { noticeFrom } from '../lib/notice'
 
 const rowActionClassName =
   'grid size-10 shrink-0 place-items-center rounded-full text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink'
@@ -19,7 +21,7 @@ function Row({ expense, accountName }: { expense: Expense; accountName: string }
   const category = categoryById(expense.categoryId)
   const details = [expense.description && category.name, accountName].filter(Boolean).join(' · ')
   const title = expense.description || category.name
-  const label = `${title}, ${formatAmount(expense.amount)}`
+  const label = `${title}, ${formatMoney(expense.amount)}`
 
   return (
     <li className="flex items-center gap-3 py-3 first:pt-1 last:pb-0">
@@ -28,7 +30,7 @@ function Row({ expense, accountName }: { expense: Expense; accountName: string }
         <h3 className="truncate text-[1rem] font-medium">{title}</h3>
         <p className="mt-0.5 truncate text-[0.87rem] leading-snug text-ink-3">{details}</p>
       </div>
-      <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatAmount(expense.amount)}</span>
+      <span className="shrink-0 text-[1rem] font-semibold tabular-nums">{formatMoney(expense.amount)}</span>
       <div className="-mr-2 flex shrink-0">
         <Link to={`/expenses/${expense.id}/edit`} aria-label={`Editar ${label}`} className={rowActionClassName}>
           <Pencil size={17} aria-hidden="true" />
@@ -42,11 +44,11 @@ function Row({ expense, accountName }: { expense: Expense; accountName: string }
 }
 
 function Feed({
-  state,
+  feed,
   accounts,
   showMore,
 }: {
-  state: Extract<FeedState, { status: 'ready' }>
+  feed: ExpenseFeed
   accounts: Account[]
   showMore: () => void
 }) {
@@ -55,7 +57,7 @@ function Feed({
 
   return (
     <div className="max-w-[44rem] space-y-4 lg:space-y-5">
-      {groupByDay(state.expenses).map((group) => (
+      {groupByDay(feed.expenses).map((group) => (
         <section key={group.date} aria-labelledby={`day-${group.date}`} className={cardClassName}>
           <h2 id={`day-${group.date}`} className="text-[1rem] font-medium text-ink-2">
             {dayHeading(group.date, today)}
@@ -70,17 +72,17 @@ function Feed({
 
       <div className="flex flex-col items-center gap-3 px-1 pt-1">
         <p className="text-[0.87rem] text-ink-3" role="status">
-          Mostrando {state.expenses.length} de {state.total} gastos.
+          Mostrando {feed.expenses.length} de {feed.total} gastos.
         </p>
-        {state.more.status === 'failed' && <FormAlert>{state.more.message}</FormAlert>}
-        {state.nextPage !== null && (
+        {feed.more.status === 'failed' && <FormAlert>{feed.more.message}</FormAlert>}
+        {feed.nextPage !== null && (
           <button
             type="button"
             onClick={showMore}
-            disabled={state.more.status === 'loading'}
+            disabled={feed.more.status === 'loading'}
             className={`${smallSecondaryButtonClassName} justify-center disabled:opacity-70`}
           >
-            {state.more.status === 'loading' ? 'Cargando…' : state.more.status === 'failed' ? 'Reintentar' : 'Mostrar más'}
+            {feed.more.status === 'loading' ? 'Cargando…' : feed.more.status === 'failed' ? 'Reintentar' : 'Mostrar más'}
           </button>
         )}
       </div>
@@ -116,8 +118,8 @@ export function Expenses() {
   const { state, retry, showMore } = useExpenseFeed()
   const accounts = useAccounts()
   const location = useLocation()
-  const notice = isExpensesNotice(location.state) ? location.state.notice : null
-  const known = accounts.state.status === 'ready' ? accounts.state.accounts : []
+  const notice = noticeFrom(location.state)
+  const known = accounts.state.status === 'ready' ? accounts.state.value : []
 
   return (
     <>
@@ -126,21 +128,14 @@ export function Expenses() {
         intro="Lo que has gastado, del más reciente al más antiguo."
       />
 
-      <div role="status" aria-live="polite">
-        {notice && (
-          <p className="mb-4 flex max-w-[44rem] items-start gap-2.5 rounded-2xl bg-surface-2 p-3.5 text-[0.95rem] lg:mb-5">
-            <CircleCheck size={18} className="mt-0.5 shrink-0 text-ink-2" aria-hidden="true" />
-            {notice}
-          </p>
-        )}
-      </div>
+      <NoticeBanner notice={notice} className="max-w-[44rem]" />
 
       {state.status !== 'ready' ? (
         <Pending state={state} retry={retry} loading="Cargando tus gastos…" />
-      ) : state.expenses.length === 0 ? (
+      ) : state.value.expenses.length === 0 ? (
         <NoExpenses canRegister={accounts.state.status !== 'ready' || offeredAccounts(known).length > 0} />
       ) : (
-        <Feed state={state} accounts={known} showMore={showMore} />
+        <Feed feed={state.value} accounts={known} showMore={showMore} />
       )}
     </>
   )

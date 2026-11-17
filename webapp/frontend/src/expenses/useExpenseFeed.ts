@@ -1,79 +1,85 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useAuth } from '../auth/context'
 import { SessionEndedError } from '../lib/http'
-import { listExpenses, type Expense } from './api'
+import { useLoaded, type Loaded } from '../lib/useLoaded'
+import { listExpenses, type Expense, type ExpensePage } from './api'
 import { useExpenseRevision } from './changes'
 
-export type FeedState =
-  | { status: 'loading' }
-  | { status: 'failed'; message: string }
-  | {
-      status: 'ready'
-      expenses: Expense[]
-      total: number
-      nextPage: number | null
-      more: { status: 'idle' } | { status: 'loading' } | { status: 'failed'; message: string }
-    }
+/** The pages after the first one, which belong to one load of the first page. */
+interface LaterPages {
+  firstPage: ExpensePage
+  expenses: Expense[]
+  nextPage: number | null
+  total: number
+  more: { status: 'idle' } | { status: 'loading' } | { status: 'failed'; message: string }
+}
 
-/** The User's Expenses, newest first, one page at a time; "more" appends the next page. */
+export interface ExpenseFeed {
+  expenses: Expense[]
+  total: number
+  nextPage: number | null
+  more: LaterPages['more']
+}
+
+/**
+ * The User's Expenses, newest first. The first page loads like any screen's
+ * data (and again when an Expense changes elsewhere); "more" appends the next.
+ */
 export function useExpenseFeed() {
   const { reload: reloadSession } = useAuth()
   const revision = useExpenseRevision()
-  const [state, setState] = useState<FeedState>({ status: 'loading' })
-  const [attempt, setAttempt] = useState(0)
+  const { state, retry } = useLoaded(() => listExpenses(1), revision)
+  const [later, setLater] = useState<LaterPages | null>(null)
 
-  useEffect(() => {
-    let current = true
-    listExpenses(1).then(
-      (page) =>
-        current &&
-        setState({ status: 'ready', expenses: page.expenses, total: page.total, nextPage: page.nextPage, more: { status: 'idle' } }),
-      (error: Error) => {
-        if (!current) return
-        if (error instanceof SessionEndedError) reloadSession()
-        else setState({ status: 'failed', message: error.message })
-      },
-    )
-    return () => {
-      current = false
-    }
-  }, [attempt, revision, reloadSession])
-
-  const retry = useCallback(() => {
-    setState({ status: 'loading' })
-    setAttempt((count) => count + 1)
-  }, [])
+  const firstPage = state.status === 'ready' ? state.value : null
+  // Pages kept from before a reload of the first page no longer line up with it.
+  const current = later !== null && later.firstPage === firstPage ? later : null
 
   const showMore = useCallback(async () => {
-    if (state.status !== 'ready' || state.nextPage === null || state.more.status === 'loading') return
-    const { nextPage } = state
-    setState({ ...state, more: { status: 'loading' } })
+    if (firstPage === null) return
+    const base: LaterPages = current ?? {
+      firstPage,
+      expenses: [],
+      nextPage: firstPage.nextPage,
+      total: firstPage.total,
+      more: { status: 'idle' },
+    }
+    if (base.nextPage === null || base.more.status === 'loading') return
+    setLater({ ...base, more: { status: 'loading' } })
     try {
-      const page = await listExpenses(nextPage)
-      setState((previous) =>
-        previous.status !== 'ready'
-          ? previous
-          : {
-              ...previous,
-              // A registration between two pages shifts the offsets; never show a row twice.
-              expenses: [
-                ...previous.expenses,
-                ...page.expenses.filter((next) => !previous.expenses.some((shown) => shown.id === next.id)),
-              ],
-              total: page.total,
-              nextPage: page.nextPage,
-              more: { status: 'idle' },
-            },
-      )
+      const page = await listExpenses(base.nextPage)
+      setLater((now) => {
+        const shown = new Set([...firstPage.expenses, ...(now?.expenses ?? [])].map((expense) => expense.id))
+        return {
+          firstPage,
+          // A registration between two pages shifts the offsets; never show a row twice.
+          expenses: [...(now?.expenses ?? []), ...page.expenses.filter((expense) => !shown.has(expense.id))],
+          nextPage: page.nextPage,
+          total: page.total,
+          more: { status: 'idle' },
+        }
+      })
     } catch (error) {
       if (error instanceof SessionEndedError) {
         reloadSession()
         return
       }
-      const message = (error as Error).message
-      setState((previous) => (previous.status !== 'ready' ? previous : { ...previous, more: { status: 'failed', message } }))
+      setLater({ ...base, more: { status: 'failed', message: (error as Error).message } })
     }
-  }, [state, reloadSession])
+  }, [firstPage, current, reloadSession])
 
-  return { state, retry, showMore }
+  const feed: Loaded<ExpenseFeed> =
+    state.status !== 'ready'
+      ? state
+      : {
+          status: 'ready',
+          value: {
+            expenses: [...state.value.expenses, ...(current?.expenses ?? [])],
+            total: current?.total ?? state.value.total,
+            nextPage: current ? current.nextPage : state.value.nextPage,
+            more: current?.more ?? { status: 'idle' },
+          },
+        }
+
+  return { state: feed, retry, showMore }
 }

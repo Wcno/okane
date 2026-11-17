@@ -1,4 +1,3 @@
-import { formatMoney } from '../lib/money'
 import type { Account, AccountType } from './api'
 import { ratioToPercent } from './form'
 
@@ -17,18 +16,10 @@ export const accountTypeDescriptions: Record<AccountType, string> = {
   investment: 'El efectivo de tu bróker. Se fondea con Transferencias.',
 }
 
-/** A decimal string from the API as $1,284.60. */
-export const formatAmount = (amount: string) => formatMoney(amount)
+/** The way back to the list from the screens of one Account. */
+export const accountsBack = { to: '/accounts', label: 'Cuentas' }
 
 export const formatRate = (ratio: string) => `${ratioToPercent(ratio)}%`
-
-/** The notice shown on the Accounts screen after a change. */
-export interface AccountsNotice {
-  notice: string
-}
-
-export const isAccountsNotice = (state: unknown): state is AccountsNotice =>
-  typeof state === 'object' && state !== null && typeof (state as AccountsNotice).notice === 'string'
 
 export const findAccount = (accounts: Account[], id: string | undefined) =>
   accounts.find((account) => String(account.id) === id)

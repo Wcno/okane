@@ -2,24 +2,20 @@ import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createAccount, type AccountErrors, type AccountType } from '../accounts/api'
 import { NAME_MAX_LENGTH, todayInPanama, validateNewAccount } from '../accounts/form'
-import {
-  accountTypeDescriptions,
-  accountTypeLabels,
-  accountTypes,
-  formatAmount,
-  type AccountsNotice,
-} from '../accounts/presentation'
-import { useAccountWrite } from '../accounts/useAccounts'
+import { accountsBack, accountTypeDescriptions, accountTypeLabels, accountTypes } from '../accounts/presentation'
 import { useSignedInUser } from '../auth/context'
-import { AccountScreenHeader, cardClassName } from '../components/accounts/AccountScreen'
+import { ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { primaryButtonClassName, secondaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
 import { TextField } from '../components/TextField'
+import { formatMoney } from '../lib/money'
+import type { ScreenNotice } from '../lib/notice'
+import { useWrite } from '../lib/useWrite'
 
 /** Create account: name, type, opening balance and the day its record starts. */
 export function AccountCreate() {
   const { csrfToken } = useSignedInUser()
-  const write = useAccountWrite()
+  const write = useWrite()
   const navigate = useNavigate()
   const today = todayInPanama()
 
@@ -64,16 +60,17 @@ export function AccountCreate() {
       return
     }
     const created = outcome.value
-    const state: AccountsNotice = {
-      notice: `Creaste ${created.name} con un Saldo inicial de ${formatAmount(created.openingBalance)}.`,
+    const state: ScreenNotice = {
+      notice: `Creaste ${created.name} con un Saldo inicial de ${formatMoney(created.openingBalance)}.`,
     }
     navigate('/accounts', { state })
   }
 
   return (
     <>
-      <AccountScreenHeader
+      <ScreenHeader
         title="Crear cuenta"
+        back={accountsBack}
         intro="Una Cuenta es un lugar donde está tu dinero. Su Saldo se calculará a partir de lo que registres en ella."
       />
 

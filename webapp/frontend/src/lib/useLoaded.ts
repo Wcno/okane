@@ -10,10 +10,11 @@ export type Loaded<T> =
   | { status: 'ready'; value: T }
 
 /**
- * Loads data for a screen again whenever `key` changes; a failure can be retried.
- * A User whose session ended is sent to sign in again.
+ * Loads data for a screen, and again whenever `reloadOn` changes (the id of the
+ * record on screen, a counter that says something changed elsewhere). A failure
+ * can be retried. A User whose session ended is sent to sign in again.
  */
-export function useLoaded<T>(load: () => Promise<T>, key: unknown) {
+export function useLoaded<T>(load: () => Promise<T>, reloadOn?: unknown) {
   const { reload: reloadSession } = useAuth()
   const [state, setState] = useState<Loaded<T>>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
@@ -36,7 +37,7 @@ export function useLoaded<T>(load: () => Promise<T>, key: unknown) {
     return () => {
       current = false
     }
-  }, [key, attempt, reloadSession])
+  }, [reloadOn, attempt, reloadSession])
 
   const retry = useCallback(() => {
     setState({ status: 'loading' })

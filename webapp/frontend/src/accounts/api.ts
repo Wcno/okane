@@ -1,13 +1,9 @@
 import {
-  CONNECTION_LOST,
-  SESSION_ENDED,
-  SessionEndedError,
+  readJson,
   write,
   type FieldErrors,
   type Outcome as SharedOutcome,
 } from '../lib/http'
-
-export { SessionEndedError }
 
 export type AccountType = 'spending' | 'savings' | 'investment'
 
@@ -51,9 +47,6 @@ export type Removal = { result: 'deleted' } | { result: 'archived'; account: Acc
 const LIST_FAILED = 'Okane no pudo consultar tus Cuentas. Espera un momento e inténtalo de nuevo.'
 const ACCOUNT_GONE = 'Esta Cuenta ya no existe. Vuelve a tus Cuentas para ver la lista al día.'
 
-/** The list could not be read; its message is ready to show. */
-export class AccountsRequestError extends Error {}
-
 interface AccountBody {
   id: number
   name: string
@@ -92,17 +85,10 @@ export async function listAccounts(): Promise<Account[]> {
   const accounts: Account[] = []
   let page: number | null = 1
   while (page !== null) {
-    let response: Response
-    try {
-      response = await fetch(`/api/accounts?page_size=${PAGE_SIZE}&page=${page}`, {
-        headers: { Accept: 'application/json' },
-      })
-    } catch {
-      throw new AccountsRequestError(CONNECTION_LOST)
-    }
-    if (response.status === 401) throw new SessionEndedError(SESSION_ENDED)
-    if (!response.ok) throw new AccountsRequestError(LIST_FAILED)
-    const body: { results: AccountBody[]; next_page: number | null } = await response.json()
+    const body: { results: AccountBody[]; next_page: number | null } = await readJson(
+      `/api/accounts?page_size=${PAGE_SIZE}&page=${page}`,
+      { failed: LIST_FAILED },
+    )
     accounts.push(...body.results.map(toAccount))
     page = body.next_page
   }

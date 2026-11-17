@@ -7,7 +7,7 @@ import { OneExpenseScreen } from '../components/expenses/OneExpenseScreen'
 import { ScreenHeader } from '../components/screen/Screen'
 import { updateExpense, type Expense } from '../expenses/api'
 import { expensesBack, offeredAccounts } from '../expenses/presentation'
-import { useAfterExpenseChange } from '../expenses/useAfterChange'
+import { useAfterExpenseChange } from '../expenses/useAfterExpenseChange'
 import type { Account } from '../accounts/api'
 
 function EditForm({ expense, accounts }: { expense: Expense; accounts: Account[] }) {

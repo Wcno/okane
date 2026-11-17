@@ -9,7 +9,7 @@ import { Pending, ScreenHeader, cardClassName } from '../components/screen/Scree
 import { createExpense, lastUsedAccountId } from '../expenses/api'
 import { chooseDefaultAccount } from '../expenses/form'
 import { expensesBack, offeredAccounts } from '../expenses/presentation'
-import { useAfterExpenseChange } from '../expenses/useAfterChange'
+import { useAfterExpenseChange } from '../expenses/useAfterExpenseChange'
 import { useLoaded } from '../lib/useLoaded'
 
 /** Registers an Expense: amount, Category and Account; the date starts as today, the Account as the last one used. */
@@ -20,7 +20,7 @@ export function ExpenseCreate() {
   const { state, retry } = useLoaded(async () => {
     const [accounts, lastUsed] = await Promise.all([listAccounts(), lastUsedAccountId()])
     return { accounts: offeredAccounts(accounts), lastUsed }
-  }, 'create')
+  })
 
   return (
     <>
