@@ -20,7 +20,8 @@ export function RecordRow({
   to: string
   /** The DOM id of the link, so a screen can move the keyboard to a row. */
   id?: string
-  label: string
+  /** Left out, the link is named by what the row shows. */
+  label?: string
   icon: ReactNode
   title: string
   details: string
