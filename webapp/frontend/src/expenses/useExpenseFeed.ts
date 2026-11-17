@@ -1,24 +1,19 @@
 import { useCallback, useState } from 'react'
-import { useAuth } from '../auth/context'
-import { SessionEndedError } from '../lib/http'
 import { useLoaded, type Loaded } from '../lib/useLoaded'
+import { useSessionEnd } from '../lib/useSessionEnd'
 import { listExpenses, type Expense, type ExpensePage } from './api'
-import { useExpenseRevision } from './changes'
-
-/** The pages after the first one, which belong to one load of the first page. */
-interface LaterPages {
-  firstPage: ExpensePage
-  expenses: Expense[]
-  nextPage: number | null
-  total: number
-  more: { status: 'idle' } | { status: 'loading' } | { status: 'failed'; message: string }
-}
+import { useExpenseRevision } from './revision'
 
 export interface ExpenseFeed {
   expenses: Expense[]
   total: number
   nextPage: number | null
-  more: LaterPages['more']
+  more: { status: 'idle' } | { status: 'loading' } | { status: 'failed'; message: string }
+}
+
+/** The pages after the first one, which belong to one load of the first page. */
+interface LaterPages extends ExpenseFeed {
+  firstPage: ExpensePage
 }
 
 /**
@@ -26,7 +21,7 @@ export interface ExpenseFeed {
  * data (and again when an Expense changes elsewhere); "more" appends the next.
  */
 export function useExpenseFeed() {
-  const { reload: reloadSession } = useAuth()
+  const endSession = useSessionEnd()
   const revision = useExpenseRevision()
   const { state, retry } = useLoaded(() => listExpenses(1), revision)
   const [later, setLater] = useState<LaterPages | null>(null)
@@ -60,13 +55,10 @@ export function useExpenseFeed() {
         }
       })
     } catch (error) {
-      if (error instanceof SessionEndedError) {
-        reloadSession()
-        return
-      }
+      if (endSession(error)) return
       setLater({ ...base, more: { status: 'failed', message: (error as Error).message } })
     }
-  }, [firstPage, current, reloadSession])
+  }, [firstPage, current, endSession])
 
   const feed: Loaded<ExpenseFeed> =
     state.status !== 'ready'

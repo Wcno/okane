@@ -1,9 +1,7 @@
-import { Trash2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { todayInPanama } from '../accounts/form'
 import { useSignedInUser } from '../auth/context'
 import { ExpenseEditor } from '../components/expenses/ExpenseEditor'
 import { OneExpenseScreen } from '../components/expenses/OneExpenseScreen'
+import { DeleteLink } from '../components/screen/DeleteLink'
 import { ScreenHeader } from '../components/screen/Screen'
 import { updateExpense, type Expense } from '../expenses/api'
 import { expensesBack, offeredAccounts } from '../expenses/presentation'
@@ -13,7 +11,6 @@ import type { Account } from '../accounts/api'
 function EditForm({ expense, accounts }: { expense: Expense; accounts: Account[] }) {
   const { csrfToken } = useSignedInUser()
   const afterChange = useAfterExpenseChange()
-  const today = todayInPanama()
   const current = accounts.find((account) => account.id === expense.accountId)
   const isOnArchivedAccount = current !== undefined && current.archivedAt !== null
 
@@ -30,9 +27,8 @@ function EditForm({ expense, accounts }: { expense: Expense; accounts: Account[]
           description: expense.description,
         }}
         accounts={offeredAccounts(accounts, expense.accountId)}
-        today={today}
         save={(input) => updateExpense(expense.id, input, csrfToken)}
-        onSaved={(saved) => afterChange('Guardaste', saved)}
+        onSaved={(saved) => afterChange('updated', saved)}
         submitLabel="Guardar cambios"
         submittingLabel="Guardando…"
         cancelTo="/expenses"
@@ -42,15 +38,7 @@ function EditForm({ expense, accounts }: { expense: Expense; accounts: Account[]
             : undefined
         }
       >
-        <div className="mt-5 border-t border-line pt-4">
-          <Link
-            to={`/expenses/${expense.id}/delete`}
-            className="inline-flex h-10 items-center gap-2 rounded-full px-3 text-[0.95rem] font-medium text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink"
-          >
-            <Trash2 size={17} aria-hidden="true" />
-            Eliminar este gasto
-          </Link>
-        </div>
+        <DeleteLink to={`/expenses/${expense.id}/delete`}>Eliminar este gasto</DeleteLink>
       </ExpenseEditor>
     </>
   )

@@ -16,7 +16,6 @@ export const accountTypeDescriptions: Record<AccountType, string> = {
   investment: 'El efectivo de tu bróker. Se fondea con Transferencias.',
 }
 
-/** The way back to the list from the screens of one Account. */
 export const accountsBack = { to: '/accounts', label: 'Cuentas' }
 
 export const formatRate = (ratio: string) => `${ratioToPercent(ratio)}%`

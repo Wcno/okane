@@ -1,21 +1,24 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { updateAccount, type Account, type AccountErrors } from '../accounts/api'
-import { NAME_MAX_LENGTH, formatDay, ratioToPercent, validateAccountChanges } from '../accounts/form'
+import { updateAccount, type Account, type AccountField } from '../accounts/api'
+import { NAME_MAX_LENGTH, ratioToPercent, validateAccountChanges } from '../accounts/form'
 import { accountsBack, accountTypeLabels } from '../accounts/presentation'
 import { useSignedInUser } from '../auth/context'
 import { OneAccountScreen } from '../components/accounts/OneAccountScreen'
+import { DeleteLink } from '../components/screen/DeleteLink'
 import { ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { primaryButtonClassName, secondaryButtonClassName } from '../components/buttons'
 import { FormAlert } from '../components/FormAlert'
 import { TextField } from '../components/TextField'
+import { formatDay } from '../lib/dates'
+import { useFieldErrors } from '../lib/fieldErrors'
 import { formatMoney } from '../lib/money'
 import type { ScreenNotice } from '../lib/notice'
-import { useWrite } from '../lib/useWrite'
+import { useSubmission } from '../lib/useSubmission'
 
 function EditForm({ account }: { account: Account }) {
   const { csrfToken } = useSignedInUser()
-  const write = useWrite()
+  const { isSubmitting, submit } = useSubmission()
   const navigate = useNavigate()
   const isSavings = account.type === 'savings'
 
@@ -25,10 +28,9 @@ function EditForm({ account }: { account: Account }) {
   const [annualRatePercent, setAnnualRatePercent] = useState(
     account.annualInterestRate === null ? '' : ratioToPercent(account.annualInterestRate),
   )
-  const [errors, setErrors] = useState<AccountErrors>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { errors, setErrors, clearErrors } = useFieldErrors<AccountField>()
 
-  const showErrors = (found: AccountErrors) => {
+  const showErrors = (found: typeof errors) => {
     setErrors(found)
     if (found.name) nameField.current?.focus()
     else if (found.annualInterestRate) rateField.current?.focus()
@@ -43,15 +45,14 @@ function EditForm({ account }: { account: Account }) {
       return
     }
     setErrors({})
-    setIsSubmitting(true)
-    const outcome = await write(() => updateAccount(account.id, checked.changes, csrfToken))
-    setIsSubmitting(false)
-    if (!outcome.ok) {
-      showErrors(outcome.errors)
-      return
-    }
-    const state: ScreenNotice = { notice: `Guardaste los cambios de ${outcome.value.name}.` }
-    navigate('/accounts', { state })
+    const outcome = await submit(
+      () => updateAccount(account.id, checked.changes, csrfToken),
+      (saved) => {
+        const state: ScreenNotice = { notice: `Guardaste los cambios de ${saved.name}.` }
+        navigate('/accounts', { state })
+      },
+    )
+    if (outcome && !outcome.ok) showErrors(outcome.errors)
   }
 
   return (
@@ -69,7 +70,10 @@ function EditForm({ account }: { account: Account }) {
             autoComplete="off"
             maxLength={NAME_MAX_LENGTH}
             value={name}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              setName(event.target.value)
+              clearErrors('name')
+            }}
             errors={errors.name}
           />
 
@@ -82,7 +86,10 @@ function EditForm({ account }: { account: Account }) {
               autoComplete="off"
               placeholder="4.25"
               value={annualRatePercent}
-              onChange={(event) => setAnnualRatePercent(event.target.value)}
+              onChange={(event) => {
+                setAnnualRatePercent(event.target.value)
+                clearErrors('annualInterestRate')
+              }}
               hint="Opcional. Déjala vacía si la Cuenta no paga intereses."
               errors={errors.annualInterestRate}
             />
@@ -123,6 +130,11 @@ function EditForm({ account }: { account: Account }) {
             </button>
           </div>
         </form>
+        {account.archivedAt === null && (
+          <DeleteLink to={`/accounts/${account.id}/delete`}>
+            {account.hasRecords ? 'Archivar esta cuenta' : 'Eliminar esta cuenta'}
+          </DeleteLink>
+        )}
       </section>
     </>
   )

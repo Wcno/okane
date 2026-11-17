@@ -1,3 +1,4 @@
+import { parseAmount, type ParsedAmount } from '../lib/amount'
 import type { AccountChanges, AccountErrors, AccountType, NewAccount } from './api'
 
 /** What the creation form holds while the User types. */
@@ -17,26 +18,23 @@ export const NAME_MAX_LENGTH = 80
 const NAME_REQUIRED = 'Escribe el nombre de la Cuenta, por ejemplo Cuenta corriente.'
 const NAME_TOO_LONG = `El nombre admite hasta ${NAME_MAX_LENGTH} caracteres.`
 const TYPE_REQUIRED = 'Elige el tipo de Cuenta: gastos, ahorro o inversión.'
+const OPENING_BALANCE_TOO_LARGE = 'El Saldo inicial es demasiado grande. El máximo es $999,999,999,999.99.'
 const OPENING_BALANCE_INVALID =
   'Escribe el Saldo inicial con dos decimales como máximo, sin separador de miles. Ejemplo: 1250.00'
 const OPENING_DATE_REQUIRED = 'Elige la fecha desde la que llevarás el registro de esta Cuenta.'
 const OPENING_DATE_IN_FUTURE = 'La fecha de inicio no puede ser futura. Elige hoy o un día anterior.'
 const RATE_INVALID = 'Escribe la tasa anual como un porcentaje de cero o más. Ejemplo: 4.25'
 
-const MINUS_SIGNS = /^[-−]/
-const AMOUNT = /^(-?)(\d{1,12})(?:\.(\d{1,2}))?$/
 const PERCENT = /^(\d{1,5})(?:\.(\d{1,4}))?$/
 const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/
 
 const withoutLeadingZeros = (digits: string) => digits.replace(/^0+(?=\d)/, '')
 
-/** The opening balance as the decimal string the API takes, or null if it is not an amount. */
-export function parseOpeningBalance(text: string, isDebt: boolean): string | null {
-  const match = AMOUNT.exec(text.trim().replace(MINUS_SIGNS, '-').replace(',', '.'))
-  if (!match) return null
-  const amount = `${withoutLeadingZeros(match[2])}.${(match[3] ?? '').padEnd(2, '0')}`
-  const isZero = /^0\.00$/.test(amount)
-  return (match[1] || isDebt) && !isZero ? `-${amount}` : amount
+/** The opening balance as the decimal string the API takes; a debt is stored negative. */
+export function parseOpeningBalance(text: string, isDebt: boolean): ParsedAmount {
+  const parsed = parseAmount(text)
+  if ('error' in parsed || !isDebt || parsed.amount.startsWith('-') || parsed.amount === '0.00') return parsed
+  return { amount: `-${parsed.amount}` }
 }
 
 /** 4.25 (percent) as the exact ratio 0.0425; digits move, nothing is multiplied. */
@@ -75,17 +73,19 @@ export function validateNewAccount(draft: AccountDraft, today: string): NewAccou
   const invalidName = nameErrors(name)
   if (invalidName) errors.name = invalidName
   if (draft.type === null) errors.type = [TYPE_REQUIRED]
-  if (openingBalance === null) errors.openingBalance = [OPENING_BALANCE_INVALID]
+  if ('error' in openingBalance) {
+    errors.openingBalance = [openingBalance.error === 'too-large' ? OPENING_BALANCE_TOO_LARGE : OPENING_BALANCE_INVALID]
+  }
   if (!CALENDAR_DAY.test(draft.openingDate)) errors.openingDate = [OPENING_DATE_REQUIRED]
   else if (draft.openingDate > today) errors.openingDate = [OPENING_DATE_IN_FUTURE]
   if (isSavings && rateText !== '' && annualInterestRate === null) errors.annualInterestRate = [RATE_INVALID]
 
-  if (Object.keys(errors).length > 0 || draft.type === null || openingBalance === null) {
+  if (Object.keys(errors).length > 0 || draft.type === null || 'error' in openingBalance) {
     return { ok: false, errors }
   }
   return {
     ok: true,
-    account: { name, type: draft.type, openingBalance, openingDate: draft.openingDate, annualInterestRate },
+    account: { name, type: draft.type, openingBalance: openingBalance.amount, openingDate: draft.openingDate, annualInterestRate },
   }
 }
 
@@ -105,28 +105,4 @@ export function validateAccountChanges(
   const annualInterestRate = percentToRatio(rateText)
   if (annualInterestRate === null) return { ok: false, errors: { annualInterestRate: [RATE_INVALID] } }
   return { ok: true, changes: { name, annualInterestRate } }
-}
-
-const panamaDay = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'America/Panama',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-})
-
-/** Financial dates are calendar days in America/Panama (docs/contratos.md). */
-export const todayInPanama = (now = new Date()) => panamaDay.format(now)
-
-const spanishDay = new Intl.DateTimeFormat('es', {
-  timeZone: 'UTC',
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-})
-
-/** 2026-11-01 as "1 nov 2026". */
-export function formatDay(day: string): string {
-  const parts = spanishDay.formatToParts(new Date(`${day}T00:00:00Z`))
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? ''
-  return `${part('day')} ${part('month').replace('.', '')} ${part('year')}`
 }

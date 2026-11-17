@@ -1,33 +1,39 @@
 import { X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
-import { listAccounts, type Account } from '../accounts/api'
-import { todayInPanama } from '../accounts/form'
+import { currentAccount, type Account } from '../accounts/api'
 import { useSignedInUser } from '../auth/context'
 import { categoryById } from '../data/categories'
 import { confirmationText, previewText, sampleRemainingAfter } from '../data/sampleRemaining'
-import { createExpense, lastUsedAccountId } from '../expenses/api'
-import { announceExpenseChange } from '../expenses/changes'
-import { chooseDefaultAccount, parseAmount } from '../expenses/form'
-import { offeredAccounts } from '../expenses/presentation'
+import { createExpense } from '../expenses/api'
+import { chooseDefaultAccount, typedAmount } from '../expenses/form'
+import { balanceSentence } from '../expenses/notices'
+import { announceExpenseRevision } from '../expenses/revision'
+import { useExpenseAccounts } from '../expenses/useExpenseAccounts'
 import { useExpenseForm } from '../expenses/useExpenseForm'
+import { todayInPanama } from '../lib/dates'
 import { formatMoney } from '../lib/money'
-import { useLoaded } from '../lib/useLoaded'
 import { useData } from '../state/context'
 import { primaryButtonClassName, secondaryButtonClassName } from './buttons'
 import { ExpenseFields } from './expenses/ExpenseFields'
+import { NeedsAnAccount } from './expenses/NeedsAnAccount'
 import { FormAlert } from './FormAlert'
 
-/** The consequence of the Expense on its Category, from the sample Budgets until #9. */
+/**
+ * The consequence of the Expense on its Category, from the sample Budgets
+ * (TEMPORARY, removed with data/sampleRemaining.ts when Budgets arrive in #9).
+ * Once a Category is chosen its room is kept, so the lines below do not move
+ * while the amount is typed.
+ */
 function RemainingHint({ categoryId, amount }: { categoryId: number | null; amount: string | null }) {
   const { state } = useData()
-  const category = categoryId === null ? null : categoryById(categoryId).name
+  if (categoryId === null) return null
+  const category = categoryById(categoryId).name
 
   return (
-    <p className="min-h-[1.4em] text-[0.9rem] text-ink-2" aria-live="polite">
-      {category !== null &&
-        amount !== null &&
-        previewText(category, sampleRemainingAfter(state.budgets, category, amount))}
+    <p className="mt-3 min-h-[2.8em] text-[0.9rem] leading-snug text-ink-2">
+      {amount === null
+        ? `Escribe el monto para ver lo que queda en ${category}.`
+        : previewText(category, sampleRemainingAfter(state.budgets, category, amount))}
     </p>
   )
 }
@@ -42,7 +48,7 @@ function SheetTitle({ onClose }: { onClose: () => void }) {
         type="button"
         onClick={onClose}
         aria-label="Cerrar"
-        className="-mr-2 grid size-9 place-items-center rounded-full text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink"
+        className="-mr-3 grid size-[44px] place-items-center rounded-full text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink"
       >
         <X size={20} aria-hidden="true" />
       </button>
@@ -52,55 +58,59 @@ function SheetTitle({ onClose }: { onClose: () => void }) {
 
 function QuickForm({ accounts, lastUsed }: { accounts: Account[]; lastUsed: number | null }) {
   const { csrfToken } = useSignedInUser()
-  const { state, lastAccountId: sampleAccountId, register, closeForm } = useData()
+  const { state, registerSampleSpend, closeForm } = useData()
   const amountField = useRef<HTMLInputElement>(null)
-  const today = todayInPanama()
 
   useEffect(() => {
     amountField.current?.focus()
   }, [])
 
   const { form, draft, change, errors, isSubmitting, submit } = useExpenseForm({
-    initial: { amount: '', categoryId: null, accountId: chooseDefaultAccount(accounts, lastUsed), date: today, description: '' },
+    initial: {
+      amount: '',
+      categoryId: null,
+      accountId: chooseDefaultAccount(accounts, lastUsed),
+      date: todayInPanama(),
+      description: '',
+    },
     accounts,
-    today,
     save: (expense) => createExpense(expense, csrfToken),
-    onSaved: (expense) => {
+    onSaved: async (expense) => {
       const category = categoryById(expense.categoryId).name
       const consequence = confirmationText(category, sampleRemainingAfter(state.budgets, category, expense.amount))
-      // The sample Panel still follows the quick form; it takes a plain number.
-      const sampleAmount = Number(expense.amount)
-      register(
-        { amount: sampleAmount, category, accountId: sampleAccountId },
-        `Gasto de ${formatMoney(expense.amount)} registrado. ${consequence}`,
+      const account = await currentAccount(expense.accountId)
+      // TEMPORARY until #9 (Budgets): the sample Panel keeps following the quick form
+      // through its Budget spend only; the Account Balances come from api-service.
+      registerSampleSpend(
+        { amount: expense.amount, category },
+        [`Gasto de ${formatMoney(expense.amount)} registrado.`, consequence, balanceSentence(account)]
+          .filter(Boolean)
+          .join(' '),
       )
-      announceExpenseChange()
+      announceExpenseRevision()
       closeForm()
     },
   })
 
-  const amount = parseAmount(draft.amount)
+  const amount = typedAmount(draft.amount)
 
   return (
-    <form
-      ref={form}
-      onSubmit={submit}
-      noValidate
-      className="space-y-5 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-7 sm:pb-7 sm:pt-6"
-    >
-      <SheetTitle onClose={closeForm} />
-      {errors.form && <FormAlert>{errors.form.join(' ')}</FormAlert>}
-      <ExpenseFields
-        idPrefix="expense"
-        draft={draft}
-        onChange={change}
-        errors={errors}
-        accounts={accounts}
-        today={today}
-        amountRef={amountField}
-        hint={<RemainingHint categoryId={draft.categoryId} amount={amount} />}
-      />
-      <div className="flex gap-3 pt-1">
+    <form ref={form} onSubmit={submit} noValidate className="px-5 pt-5 sm:px-7 sm:pt-6">
+      <div className="space-y-5">
+        <SheetTitle onClose={closeForm} />
+        {errors.form && <FormAlert>{errors.form.join(' ')}</FormAlert>}
+        <ExpenseFields
+          idPrefix="expense"
+          draft={draft}
+          onChange={change}
+          errors={errors}
+          accounts={accounts}
+          amountRef={amountField}
+          hint={<RemainingHint categoryId={draft.categoryId} amount={amount} />}
+        />
+      </div>
+      {/* Stays at the foot of the sheet while the fields scroll, so the action is never below the fold. */}
+      <div className="sticky bottom-0 -mx-5 mt-5 flex gap-3 border-t border-line bg-surface px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:-mx-7 sm:px-7 sm:pb-5">
         <button type="button" onClick={closeForm} className={`${secondaryButtonClassName} flex-1`}>
           Cancelar
         </button>
@@ -121,10 +131,7 @@ function QuickForm({ accounts, lastUsed }: { accounts: Account[]; lastUsed: numb
 /** Loads what the form needs: the Accounts that can take an Expense and the last one used. */
 function QuickSheetContent() {
   const { closeForm } = useData()
-  const { state, retry } = useLoaded(async () => {
-    const [accounts, lastUsed] = await Promise.all([listAccounts(), lastUsedAccountId()])
-    return { accounts: offeredAccounts(accounts), lastUsed }
-  })
+  const { state, retry } = useExpenseAccounts()
 
   if (state.status === 'ready' && state.value.accounts.length > 0) {
     return <QuickForm accounts={state.value.accounts} lastUsed={state.value.lastUsed} />
@@ -145,16 +152,7 @@ function QuickSheetContent() {
           </button>
         </>
       )}
-      {state.status === 'ready' && (
-        <>
-          <p className="text-ink-2">
-            Un gasto sale de una Cuenta de gastos o de ahorro. Crea la que usas para pagar y vuelve aquí.
-          </p>
-          <Link to="/accounts/create" onClick={closeForm} className={primaryButtonClassName}>
-            Crear cuenta
-          </Link>
-        </>
-      )}
+      {state.status === 'ready' && <NeedsAnAccount onLeave={closeForm} />}
     </div>
   )
 }

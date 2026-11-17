@@ -10,13 +10,22 @@ export function balanceSentence(account: Pick<Account, 'name' | 'balance'> | und
   return `Saldo de ${account.name}: ${formatMoney(account.balance)}.${negative}`
 }
 
-/** "Registraste un gasto de $12.50 en Alimentación. Saldo de ...". `verb` is in the past, second person. */
+/** What happened to an Expense; the notice says it in Spanish. */
+export type ExpenseChange = 'created' | 'updated' | 'deleted'
+
+const changeVerbs: Record<ExpenseChange, string> = {
+  created: 'Registraste',
+  updated: 'Guardaste',
+  deleted: 'Eliminaste',
+}
+
+/** "Registraste un gasto de $12.50 en Alimentación. Saldo de ..." */
 export function savedNotice(
-  verb: string,
+  change: ExpenseChange,
   expense: Pick<Expense, 'amount' | 'categoryId'>,
   account: Pick<Account, 'name' | 'balance'> | undefined,
 ): string {
-  const sentence = `${verb} un gasto de ${formatMoney(expense.amount)} en ${categoryById(expense.categoryId).name}.`
+  const sentence = `${changeVerbs[change]} un gasto de ${formatMoney(expense.amount)} en ${categoryById(expense.categoryId).name}.`
   const balance = balanceSentence(account)
   return balance ? `${sentence} ${balance}` : sentence
 }

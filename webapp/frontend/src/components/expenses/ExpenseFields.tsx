@@ -3,6 +3,7 @@ import type { Account } from '../../accounts/api'
 import { categories } from '../../data/categories'
 import type { ExpenseErrors } from '../../expenses/api'
 import { DESCRIPTION_MAX_LENGTH, type ExpenseDraft } from '../../expenses/form'
+import { todayInPanama } from '../../lib/dates'
 import { CategoryChip } from './CategoryChip'
 
 const fieldClassName =
@@ -22,8 +23,8 @@ function FieldError({ id, errors }: { id: string; errors?: string[] }) {
 
 /**
  * The fields of an Expense, shared by the quick sheet and the full screens:
- * amount, Category, Account, date and description. `hint` sits between the
- * Category and the Account, where the consequence of the Expense is shown.
+ * amount, Category, Account, date and description. `hint` sits right under
+ * the Categories, where the consequence of the Expense is shown.
  */
 export function ExpenseFields({
   idPrefix,
@@ -31,7 +32,6 @@ export function ExpenseFields({
   onChange,
   errors,
   accounts,
-  today,
   amountRef,
   hint,
   accountNote,
@@ -42,13 +42,13 @@ export function ExpenseFields({
   errors: ExpenseErrors
   /** The Accounts the Expense may name. */
   accounts: Account[]
-  today: string
   amountRef?: Ref<HTMLInputElement>
   hint?: ReactNode
   /** Explains the Account when the Expense already lives on an archived one. */
   accountNote?: string
 }) {
   const id = (name: string) => `${idPrefix}-${name}`
+  const chosenAccount = accounts.find((account) => account.id === draft.accountId)
   const accountNoteId = accountNote ? id('account-note') : undefined
   const accountDescribedBy = [errors.accountId ? id('account-error') : undefined, accountNoteId].filter(Boolean).join(' ')
 
@@ -84,13 +84,14 @@ export function ExpenseFields({
 
       <fieldset aria-describedby={errors.categoryId ? id('category-error') : undefined}>
         <legend className="text-[0.9rem] font-medium text-ink-2">Categoría</legend>
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
+        {/* As many columns as keep the longest name whole (Entretenimiento needs about 165px); a narrow screen gets one. */}
+        <div className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-1.5">
           {categories.map((option) => {
             const selected = draft.categoryId === option.id
             return (
               <label
                 key={option.id}
-                className={`flex min-w-0 cursor-pointer items-center gap-2.5 rounded-2xl border p-1.5 pr-3 transition-colors duration-150 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ink ${
+                className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-2xl border p-1.5 pr-2 transition-colors duration-150 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ink ${
                   selected ? 'border-ink bg-surface-2' : 'border-line hover:bg-surface-2'
                 }`}
               >
@@ -105,7 +106,7 @@ export function ExpenseFields({
                 />
                 <CategoryChip categoryId={option.id} size={36} />
                 <span
-                  className={`min-w-0 truncate text-[0.93rem] ${selected ? 'font-semibold text-ink' : 'font-medium text-ink-2'}`}
+                  className={`min-w-0 break-words text-[0.9rem] leading-tight ${selected ? 'font-semibold text-ink' : 'font-medium text-ink-2'}`}
                 >
                   {option.name}
                 </span>
@@ -114,9 +115,9 @@ export function ExpenseFields({
           })}
         </div>
         <FieldError id={id('category-error')} errors={errors.categoryId} />
+        {/* Always in the page, so a screen reader hears the hint when it appears; empty, it takes no room. */}
+        <div aria-live="polite">{hint}</div>
       </fieldset>
-
-      {hint}
 
       <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 min-[420px]:gap-3">
         <div className="min-w-0">
@@ -147,7 +148,8 @@ export function ExpenseFields({
             id={id('date')}
             type="date"
             value={draft.date}
-            max={today}
+            min={chosenAccount?.openingDate}
+            max={todayInPanama()}
             onChange={(event) => onChange({ date: event.target.value })}
             aria-invalid={Boolean(errors.date)}
             aria-describedby={errors.date ? id('date-error') : undefined}

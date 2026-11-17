@@ -18,6 +18,11 @@ const submitButton = (page: Page) => page.getByRole('main').getByRole('button', 
 
 const accountRow = (page: Page, name: string) => page.getByRole('listitem').filter({ hasText: name })
 
+/** The row of an Expense in the list: one link to its edit screen. */
+const expenseRow = (page: Page, title: string) => page.getByRole('link', { name: new RegExp(`^Editar gasto ${title},`) })
+
+const panamaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Panama' }).format(new Date())
+
 for (const width of [390, 1440]) {
   for (const colorScheme of ['light', 'dark'] as const) {
     test(`expenses lifecycle at ${width}px in ${colorScheme}`, async ({ page }) => {
@@ -33,7 +38,7 @@ for (const width of [390, 1440]) {
       await page.getByRole('link', { name: 'Registrar tu primer gasto' }).click()
 
       await expect(page).toHaveURL(/\/expenses\/create$/)
-      await expect(page.getByLabel('Fecha')).toHaveValue(/^\d{4}-\d{2}-\d{2}$/)
+      await expect(page.getByLabel('Fecha')).toHaveValue(panamaToday())
       await page.getByLabel('Monto').fill('12.50')
       await page.getByText('Alimentación', { exact: true }).click()
       await page.getByLabel('Descripción').fill('Supermercado')
@@ -45,14 +50,14 @@ for (const width of [390, 1440]) {
         'Registraste un gasto de $12.50 en Alimentación. Saldo de Cuenta corriente: $987.50.',
       )
       await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
-      await expect(page.getByRole('heading', { name: 'Supermercado' })).toBeVisible()
+      await expect(expenseRow(page, 'Supermercado')).toBeVisible()
       expect(await noOverflow(page)).toBe(true)
 
       // Correcting the amount and moving the Expense to another Account updates both Balances.
-      await page.getByRole('link', { name: 'Editar Supermercado, $12.50' }).click()
+      await expenseRow(page, 'Supermercado').click()
       await expect(page.getByLabel('Monto')).toHaveValue('12.50')
       await page.getByLabel('Monto').fill('20')
-      await page.getByLabel('Cuenta').selectOption({ label: 'Ahorro' })
+      await page.getByLabel('Cuenta', { exact: true }).selectOption({ label: 'Ahorro' })
       expect(await noOverflow(page)).toBe(true)
       await page.getByRole('button', { name: 'Guardar cambios' }).click()
       await expect(page.getByRole('status').filter({ hasText: 'Guardaste' })).toHaveText(
@@ -63,7 +68,8 @@ for (const width of [390, 1440]) {
       await expect(accountRow(page, 'Ahorro')).toContainText('$480.00')
 
       await page.goto('/expenses')
-      await page.getByRole('link', { name: 'Eliminar Supermercado, $20.00' }).click()
+      await expenseRow(page, 'Supermercado').click()
+      await page.getByRole('link', { name: 'Eliminar este gasto' }).click()
       await expect(page).toHaveURL(/\/expenses\/\d+\/delete$/)
       await expect(page.getByText('El Saldo de Ahorro subirá $20.00.')).toBeVisible()
       expect(await noOverflow(page)).toBe(true)
@@ -87,15 +93,17 @@ test('the quick form proposes the last Account used, saves for real and lowers i
   await page.goto('/dashboard')
   await openQuickForm(page)
   const sheet = page.getByRole('dialog', { name: 'Registrar gasto' })
-  await expect(sheet.getByLabel('Cuenta')).toHaveValue(String(savings.id))
+  await expect(sheet.getByLabel('Cuenta', { exact: true })).toHaveValue(String(savings.id))
   await expect(sheet.getByLabel('Monto')).toBeFocused()
   await sheet.getByLabel('Monto').fill('5')
   await sheet.getByText('Transporte', { exact: true }).click()
-  await expect(sheet.locator('p[aria-live=polite]')).toContainText('Transporte')
+  await expect(sheet.getByText(/Transporte quedará excedida/)).toBeVisible()
   await sheet.getByRole('button', { name: /Registrar gasto/ }).click()
 
   await expect(sheet).toBeHidden()
-  await expect(page.getByRole('status').filter({ hasText: 'Gasto de $5.00 registrado.' })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: 'Gasto de $5.00 registrado.' })).toContainText(
+    'Saldo de Ahorro: $485.00.',
+  )
 
   await page.goto('/accounts')
   await expect(accountRow(page, 'Ahorro')).toContainText('$485.00')
@@ -103,7 +111,7 @@ test('the quick form proposes the last Account used, saves for real and lowers i
   await expect(page.getByText('Mostrando 2 de 2 gastos.')).toBeVisible()
 
   await openQuickForm(page)
-  await expect(page.getByRole('dialog').getByLabel('Cuenta')).toHaveValue(String(savings.id))
+  await expect(page.getByRole('dialog').getByLabel('Cuenta', { exact: true })).toHaveValue(String(savings.id))
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toBeHidden()
 })
@@ -124,14 +132,14 @@ test('the quick form shows what is wrong without losing what was typed', async (
   await expect(sheet.getByLabel('Monto')).toBeFocused()
 
   // The Account is archived elsewhere while the sheet is open: api-service refuses and the draft stays.
-  await sheet.getByLabel('Cuenta').selectOption({ label: 'Cuenta vieja' })
+  await sheet.getByLabel('Cuenta', { exact: true }).selectOption({ label: 'Cuenta vieja' })
   await archiveAccount(page.request, account.id)
   await sheet.getByLabel('Monto').fill('7.25')
   await sheet.getByText('Salud', { exact: true }).click()
   await sheet.getByRole('button', { name: /Registrar gasto/ }).click()
   await expect(sheet.getByText('Esta Cuenta está archivada y no admite registros nuevos')).toBeVisible()
   await expect(sheet.getByLabel('Monto')).toHaveValue('7.25')
-  await expect(sheet.getByLabel('Cuenta')).toBeFocused()
+  await expect(sheet.getByLabel('Cuenta', { exact: true })).toBeFocused()
 })
 
 test('registering rejects a future date and keeps the typed values', async ({ page }) => {
@@ -183,7 +191,7 @@ test('the list shows loading, explains a failure and recovers on retry', async (
   await expect(page.getByText('Cargando tus gastos…')).toBeVisible()
   await expect(page.getByRole('alert')).toContainText('No pudimos conectar con Okane')
   await page.getByRole('button', { name: 'Reintentar' }).click()
-  await expect(page.getByRole('heading', { name: 'Taxi' })).toBeVisible()
+  await expect(expenseRow(page, 'Taxi')).toBeVisible()
 })
 
 test('a save that fails offline is explained and can be repeated', async ({ page }) => {
@@ -228,16 +236,33 @@ test('an Expense on an Account archived since can still be corrected and deleted
   await archiveAccount(page.request, account.id)
 
   await page.goto('/expenses')
-  await page.getByRole('link', { name: 'Editar Cena, $100.00' }).click()
-  await expect(page.getByLabel('Cuenta')).toHaveValue(String(account.id))
+  await expenseRow(page, 'Cena').click()
+  await expect(page.getByLabel('Cuenta', { exact: true })).toHaveValue(String(account.id))
   await expect(page.getByText('Esta Cuenta está archivada.')).toBeVisible()
   await page.getByLabel('Monto').fill('60')
   await page.getByRole('button', { name: 'Guardar cambios' }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Guardaste' })).toContainText('Saldo de Cuenta vieja: $240.00.')
 
-  await page.getByRole('link', { name: 'Eliminar Cena, $60.00' }).click()
+  await expenseRow(page, 'Cena').click()
+  await page.getByRole('link', { name: 'Eliminar este gasto' }).click()
   await page.getByRole('button', { name: 'Eliminar gasto' }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Eliminaste' })).toContainText('Saldo de Cuenta vieja: $300.00.')
+})
+
+test('the keyboard stays on "Mostrar más" while there are more pages', async ({ page }) => {
+  await signUp(page.request)
+  const account = await createAccount(page.request, { opening_balance: '5000.00' })
+  for (let index = 0; index < 101; index += 1) {
+    await createExpense(page.request, { account_id: account.id, amount: '1.00', description: `Gasto ${index}` })
+  }
+
+  await page.goto('/expenses')
+  const more = page.getByRole('button', { name: 'Mostrar más' })
+  await more.focus()
+  await page.keyboard.press('Enter')
+
+  await expect(page.getByText('Mostrando 100 de 101 gastos.')).toBeVisible()
+  await expect(more).toBeFocused()
 })
 
 test('the list shows the next page on request and keeps day headings', async ({ page }) => {
@@ -255,10 +280,186 @@ test('the list shows the next page on request and keeps day headings', async ({ 
   await page.goto('/expenses')
   await expect(page.getByText('Mostrando 50 de 51 gastos.')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'lun 9 nov' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Mostrar más' }).click()
+  const more = page.getByRole('button', { name: 'Mostrar más' })
+  await more.focus()
+  await page.keyboard.press('Enter')
   await expect(page.getByText('Mostrando 51 de 51 gastos.')).toBeVisible()
+  // The button is gone: the keyboard moves to the first row that arrived instead of falling to the page.
+  await expect(page.locator('a[id^=expense-]').nth(50)).toBeFocused()
   await expect(page.getByRole('button', { name: 'Mostrar más' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Hoy' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'mar 10 nov' })).toBeVisible()
   expect(await noOverflow(page)).toBe(true)
+})
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  const inViewport = (page: Page, locator: ReturnType<Page['locator']>) =>
+    locator.evaluate((element, height) => element.getBoundingClientRect().bottom <= height, 844).then(
+      async (fitsBelow) => fitsBelow && (await locator.evaluate((element) => element.getBoundingClientRect().top >= 0)),
+    )
+
+  test('the quick sheet always shows its action, with and without the hint, and the fields do not jump', async ({
+    page,
+  }) => {
+    await signUp(page.request)
+    await createAccount(page.request)
+    await page.goto('/dashboard')
+    await openQuickForm(page)
+    const sheet = page.getByRole('dialog', { name: 'Registrar gasto' })
+    const submit = sheet.getByRole('button', { name: /Registrar gasto/ })
+
+    expect(await inViewport(page, submit)).toBe(true)
+
+    await sheet.getByText('Entretenimiento', { exact: true }).click()
+    await expect(sheet.getByText('Escribe el monto para ver lo que queda en Entretenimiento.')).toBeVisible()
+    expect(await inViewport(page, submit)).toBe(true)
+    const accountTop = (await sheet.getByLabel('Cuenta', { exact: true }).boundingBox())?.y
+
+    await sheet.getByLabel('Monto').fill('15')
+    await expect(sheet.getByText(/Entretenimiento (quedará|no tiene)|Restante en Entretenimiento/)).toBeVisible()
+    expect(await inViewport(page, submit)).toBe(true)
+    expect((await sheet.getByLabel('Cuenta', { exact: true }).boundingBox())?.y).toBe(accountTop)
+
+    // Fields scroll under the action row; the row stays where the thumb is.
+    await sheet.getByLabel('Descripción').scrollIntoViewIfNeeded()
+    expect(await inViewport(page, submit)).toBe(true)
+  })
+
+  test('a field loses its error and its red border as soon as the User changes it', async ({ page }) => {
+    await signUp(page.request)
+    await createAccount(page.request)
+    await page.goto('/dashboard')
+    await openQuickForm(page)
+    const sheet = page.getByRole('dialog', { name: 'Registrar gasto' })
+    await sheet.getByRole('button', { name: /Registrar gasto/ }).click()
+    await expect(sheet.getByLabel('Monto')).toHaveAttribute('aria-invalid', 'true')
+    await expect(sheet.getByText('Elige la Categoría del gasto.')).toBeVisible()
+
+    await sheet.getByLabel('Monto').fill('3')
+    await expect(sheet.getByLabel('Monto')).toHaveAttribute('aria-invalid', 'false')
+    await expect(sheet.getByText('Escribe un monto mayor que cero')).toHaveCount(0)
+    await expect(sheet.getByText('Elige la Categoría del gasto.')).toBeVisible()
+
+    await sheet.getByText('Salud', { exact: true }).click()
+    await expect(sheet.getByText('Elige la Categoría del gasto.')).toHaveCount(0)
+  })
+
+  test('the full-page form clears a field error on change too', async ({ page }) => {
+    await signUp(page.request)
+    await createAccount(page.request, { opening_date: '2026-11-10' })
+    await page.goto('/expenses/create')
+    await page.getByLabel('Monto').fill('4')
+    await page.getByText('Salud', { exact: true }).click()
+    await page.getByLabel('Fecha').fill('2999-01-01')
+    await submitButton(page).click()
+    await expect(page.getByLabel('Fecha')).toHaveAttribute('aria-invalid', 'true')
+
+    await page.getByLabel('Fecha').fill(panamaToday())
+
+    await expect(page.getByLabel('Fecha')).toHaveAttribute('aria-invalid', 'false')
+    await expect(page.getByText('La fecha no puede ser futura')).toHaveCount(0)
+  })
+
+  test('a row is one link that keeps the whole name and Account, and nothing else to tap', async ({ page }) => {
+    await signUp(page.request)
+    const account = await createAccount(page.request, { name: 'Cuenta corriente del hogar' })
+    await createExpense(page.request, {
+      account_id: account.id,
+      amount: '1234.50',
+      description: 'Supermercado de la esquina grande',
+    })
+    await page.goto('/expenses')
+
+    const row = expenseRow(page, 'Supermercado de la esquina grande')
+    await expect(row).toContainText('Supermercado de la esquina grande')
+    await expect(row).toContainText('Alimentación · Cuenta corriente del hogar')
+    await expect(row).toHaveAttribute('aria-label', /^Editar gasto .*\$1,234\.50, Cuenta corriente del hogar$/)
+    await expect(page.getByRole('main').getByRole('button')).toHaveCount(0)
+    expect((await row.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+    // The details wrap instead of being cut: every line of text fits its box.
+    const clipped = await row.evaluate((link) =>
+      [...link.querySelectorAll('span')].some((span) => span.scrollWidth > span.clientWidth + 1),
+    )
+    expect(clipped).toBe(false)
+    expect(await noOverflow(page)).toBe(true)
+
+    await row.click()
+    await expect(page).toHaveURL(/\/expenses\/\d+\/edit$/)
+    const remove = page.getByRole('link', { name: 'Eliminar este gasto' })
+    expect((await remove.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+    await remove.click()
+    await expect(page).toHaveURL(/\/expenses\/\d+\/delete$/)
+  })
+
+  test('every Category name fits its option and every control is at least 44px tall', async ({ page }) => {
+    await signUp(page.request)
+    const account = await createAccount(page.request)
+    for (let index = 0; index < 51; index += 1) {
+      await createExpense(page.request, { account_id: account.id, amount: '1.00' })
+    }
+
+    for (const width of [390, 360]) {
+      await page.setViewportSize({ width, height: 844 })
+      await page.goto('/expenses/create')
+      // The chosen option is in bolder type, so it is the widest.
+      await page.getByText('Entretenimiento', { exact: true }).click()
+      const names = page.locator('fieldset label span.min-w-0')
+      await expect(names).toHaveCount(8)
+      // A name that does not fit would break inside the word: it fits when it stays on one line.
+      const clipped = await names.evaluateAll(
+        (spans) =>
+          spans.filter(
+            (span) =>
+              span.scrollWidth > span.clientWidth + 1 ||
+              span.getBoundingClientRect().height > parseFloat(getComputedStyle(span).lineHeight) * 1.5,
+          ).length,
+      )
+      expect(clipped, `names clipped at ${width}px`).toBe(0)
+      for (const option of await page.locator('fieldset label').all()) {
+        expect((await option.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+      }
+      expect((await page.getByRole('link', { name: 'Gastos' }).first().boundingBox())?.height).toBeGreaterThanOrEqual(44)
+    }
+
+    await page.goto('/expenses')
+    expect((await page.getByRole('button', { name: 'Mostrar más' }).boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  })
+
+  test('a date before the Account started names the day the way the app writes dates', async ({ page }) => {
+    await signUp(page.request)
+    await createAccount(page.request, { opening_date: '2026-11-10' })
+    await page.goto('/expenses/create')
+    await expect(page.getByLabel('Fecha')).toHaveAttribute('min', '2026-11-10')
+
+    await page.getByLabel('Monto').fill('4')
+    await page.getByText('Salud', { exact: true }).click()
+    await page.getByLabel('Fecha').fill('2026-11-01')
+    await submitButton(page).click()
+
+    await expect(page.getByText('La fecha no puede ser anterior al inicio del registro de la Cuenta (10 nov 2026).')).toBeVisible()
+  })
+})
+
+test('an amount past twelve digits says it is too large', async ({ page }) => {
+  await signUp(page.request)
+  await createAccount(page.request)
+  await page.goto('/expenses/create')
+  await page.getByLabel('Monto').fill('1000000000000')
+  await page.getByText('Salud', { exact: true }).click()
+  await submitButton(page).click()
+
+  await expect(page.getByText('El monto es demasiado grande.')).toBeVisible()
+})
+
+test('a comma works as the decimal separator', async ({ page }) => {
+  await signUp(page.request)
+  await createAccount(page.request, { opening_balance: '100.00' })
+  await page.goto('/expenses/create')
+  await page.getByLabel('Monto').fill('12,5')
+  await page.getByText('Salud', { exact: true }).click()
+  await submitButton(page).click()
+
+  await expect(page.getByRole('status').filter({ hasText: 'Registraste' })).toContainText('$12.50')
 })

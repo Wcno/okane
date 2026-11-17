@@ -1,9 +1,4 @@
-import {
-  readJson,
-  write,
-  type FieldErrors,
-  type Outcome as SharedOutcome,
-} from '../lib/http'
+import { readJson, write, type FieldErrors, type Outcome } from '../lib/http'
 
 export type AccountType = 'spending' | 'savings' | 'investment'
 
@@ -39,8 +34,6 @@ export interface AccountChanges {
 
 export type AccountField = 'name' | 'type' | 'openingBalance' | 'openingDate' | 'annualInterestRate'
 export type AccountErrors = FieldErrors<AccountField>
-
-export type Outcome<T> = SharedOutcome<T, AccountField>
 
 export type Removal = { result: 'deleted' } | { result: 'archived'; account: Account }
 
@@ -79,14 +72,15 @@ const FORM_FIELDS: Record<string, AccountField> = {
   annual_interest_rate: 'annualInterestRate',
 }
 
-const PAGE_SIZE = 200
+/** api-service allows 200 per page; Accounts are few, so the list is read whole. */
+const ACCOUNTS_PAGE_SIZE = 200
 
 export async function listAccounts(): Promise<Account[]> {
   const accounts: Account[] = []
   let page: number | null = 1
   while (page !== null) {
     const body: { results: AccountBody[]; next_page: number | null } = await readJson(
-      `/api/accounts?page_size=${PAGE_SIZE}&page=${page}`,
+      `/api/accounts?page_size=${ACCOUNTS_PAGE_SIZE}&page=${page}`,
       { failed: LIST_FAILED },
     )
     accounts.push(...body.results.map(toAccount))
@@ -95,9 +89,18 @@ export async function listAccounts(): Promise<Account[]> {
   return accounts
 }
 
+/** The Account as it is now, to say its Balance in a notice; undefined when it cannot be read. */
+export async function currentAccount(accountId: number): Promise<Account | undefined> {
+  try {
+    return (await listAccounts()).find((account) => account.id === accountId)
+  } catch {
+    return undefined
+  }
+}
+
 const readAccount = async (response: Response) => toAccount(await response.json())
 
-export function createAccount(account: NewAccount, csrfToken: string): Promise<Outcome<Account>> {
+export function createAccount(account: NewAccount, csrfToken: string): Promise<Outcome<Account, AccountField>> {
   const body = {
     name: account.name,
     type: account.type,
@@ -116,7 +119,7 @@ export function createAccount(account: NewAccount, csrfToken: string): Promise<O
   })
 }
 
-export function updateAccount(id: number, changes: AccountChanges, csrfToken: string): Promise<Outcome<Account>> {
+export function updateAccount(id: number, changes: AccountChanges, csrfToken: string): Promise<Outcome<Account, AccountField>> {
   const body: { name: string; annual_interest_rate?: string | null } = { name: changes.name }
   if (changes.annualInterestRate !== undefined) body.annual_interest_rate = changes.annualInterestRate
   return write({
@@ -131,12 +134,11 @@ export function updateAccount(id: number, changes: AccountChanges, csrfToken: st
 }
 
 /** Deletes an Account without records; api-service archives one that has them. */
-export function deleteAccount(id: number, csrfToken: string): Promise<Outcome<Removal>> {
+export function deleteAccount(id: number, csrfToken: string): Promise<Outcome<Removal, AccountField>> {
   return write({
     method: 'DELETE',
     path: `/api/accounts/${id}`,
     csrfToken,
-    fields: FORM_FIELDS,
     gone: ACCOUNT_GONE,
     read: async (response): Promise<Removal> => {
       if (response.status === 204) return { result: 'deleted' }
