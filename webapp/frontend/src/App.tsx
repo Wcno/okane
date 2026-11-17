@@ -5,6 +5,10 @@ import { AccountCreate } from './pages/AccountCreate'
 import { AccountDelete } from './pages/AccountDelete'
 import { AccountEdit } from './pages/AccountEdit'
 import { Accounts } from './pages/Accounts'
+import { BudgetCreate } from './pages/BudgetCreate'
+import { BudgetDelete } from './pages/BudgetDelete'
+import { BudgetEdit } from './pages/BudgetEdit'
+import { Budgets } from './pages/Budgets'
 import { ChangePassword } from './pages/ChangePassword'
 import { Dashboard } from './pages/Dashboard'
 import { ExpenseCreate } from './pages/ExpenseCreate'
@@ -24,6 +28,12 @@ import { AssetPrice } from './pages/AssetPrice'
 import { InvestmentsDashboard } from './pages/InvestmentsDashboard'
 import { InvestmentsPerformance } from './pages/InvestmentsPerformance'
 import { Positions } from './pages/Positions'
+import { OccurrenceCancel } from './pages/OccurrenceCancel'
+import { OccurrenceConfirm } from './pages/OccurrenceConfirm'
+import { RecurringPaymentCreate } from './pages/RecurringPaymentCreate'
+import { RecurringPaymentDelete } from './pages/RecurringPaymentDelete'
+import { RecurringPaymentEdit } from './pages/RecurringPaymentEdit'
+import { RecurringPayments } from './pages/RecurringPayments'
 import { Register } from './pages/Register'
 import { ResetPassword } from './pages/ResetPassword'
 import { Trade } from './pages/Trade'
@@ -77,6 +87,16 @@ export default function App() {
             <Route path="/investments/transactions" element={<Transactions />} />
             <Route path="/investments/transactions/:id/edit" element={<TransactionEdit />} />
             <Route path="/investments/transactions/:id/delete" element={<TransactionDelete />} />
+            <Route path="/budgets" element={<Budgets />} />
+            <Route path="/budgets/create" element={<BudgetCreate />} />
+            <Route path="/budgets/:id/edit" element={<BudgetEdit />} />
+            <Route path="/budgets/:id/delete" element={<BudgetDelete />} />
+            <Route path="/recurring-payments" element={<RecurringPayments />} />
+            <Route path="/recurring-payments/create" element={<RecurringPaymentCreate />} />
+            <Route path="/recurring-payments/occurrences/:id/confirm" element={<OccurrenceConfirm />} />
+            <Route path="/recurring-payments/occurrences/:id/cancel" element={<OccurrenceCancel />} />
+            <Route path="/recurring-payments/:id/edit" element={<RecurringPaymentEdit />} />
+            <Route path="/recurring-payments/:id/delete" element={<RecurringPaymentDelete />} />
             <Route path="/incomes" element={<Incomes />} />
             <Route path="/incomes/create" element={<IncomeCreate />} />
             <Route path="/incomes/:id/edit" element={<IncomeEdit />} />

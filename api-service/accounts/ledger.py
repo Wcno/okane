@@ -156,3 +156,15 @@ def movements(user_id, wanted, limit):
         total += count
         rows.extend(found)
     return total, sorted(rows, key=movement_sort_key)[:limit]
+
+def archive_blockers(account):
+    """Messages for what must be resolved before `account` can be archived.
+
+    A source may define `archive_blockers(account)`; sources without it never block.
+    """
+    blockers = []
+    for source in _sources:
+        check = getattr(source, "archive_blockers", None)
+        if check is not None:
+            blockers.extend(check(account))
+    return blockers

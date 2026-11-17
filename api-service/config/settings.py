@@ -39,8 +39,11 @@ INSTALLED_APPS = [
     "expenses",
     "investments",
     "transfers",
-    "incomes",
     "erasure",
+    "budgets",
+    "recurring_payments",
+    "incomes",
+    "dashboard",
 ]
 
 MIDDLEWARE = [
