@@ -4,20 +4,21 @@ import type { Account } from '../accounts/api'
 import { useSignedInUser } from '../auth/context'
 import { primaryButtonClassName, secondaryButtonClassName } from '../components/buttons'
 import { CategoryChip } from '../components/expenses/CategoryChip'
-import { FieldError, AmountField, borderClassName, fieldClassName } from '../components/expenses/fieldParts'
+import { AccountAndDateFields, AmountField } from '../components/record/RecordFields'
 import { FormAlert } from '../components/FormAlert'
-import { OneOccurrenceScreen } from '../components/recurringPayments/OneOccurrenceScreen'
+import { OneOccurrenceScreen } from '../components/recurringPayments/OneRecurringPaymentScreen'
 import { ConfirmCard, RecordSummary } from '../components/screen/ConfirmCard'
 import { ScreenHeader, cardClassName } from '../components/screen/Screen'
 import { categoryById } from '../data/categories'
-import { offeredAccounts } from '../expenses/presentation'
+import { offeredAccounts } from '../accounts/presentation'
 import { todayInPanama } from '../lib/dates'
 import { formatMoney } from '../lib/money'
 import { confirmOccurrence, type RecurringPaymentOccurrence } from '../recurringPayments/api'
 import { typedAmount } from '../expenses/form'
-import { dueText, recurringPaymentsBack, STATUS_LABELS } from '../recurringPayments/presentation'
+import { useRecordForm } from '../lib/useRecordForm'
+import { dueText, occurrenceTitle, recurringPaymentsBack, STATUS_LABELS } from '../recurringPayments/presentation'
 import { useAfterRecurringPaymentChange } from '../recurringPayments/useAfterRecurringPaymentChange'
-import { useConfirmationForm } from '../recurringPayments/useConfirmationForm'
+import { validateConfirmation, type ConfirmationDraft } from '../recurringPayments/form'
 
 function AlreadyResolved({ occurrence, name }: { occurrence: RecurringPaymentOccurrence; name: string }) {
   return (
@@ -43,26 +44,23 @@ function AlreadyResolved({ occurrence, name }: { occurrence: RecurringPaymentOcc
   )
 }
 
-function ConfirmForm({
-  occurrence,
-  accounts,
-  name,
-}: {
-  occurrence: RecurringPaymentOccurrence
-  accounts: Account[]
-  name: string
-}) {
+function ConfirmForm({ occurrence, accounts }: { occurrence: RecurringPaymentOccurrence; accounts: Account[] }) {
   const { csrfToken } = useSignedInUser()
   const { afterConfirmation } = useAfterRecurringPaymentChange()
+  const name = occurrenceTitle(occurrence)
   const offered = offeredAccounts(accounts, occurrence.accountId)
-  const { form, draft, change, errors, isSubmitting, submit } = useConfirmationForm({
-    initial: { amount: occurrence.amount, accountId: occurrence.accountId, date: todayInPanama() },
-    accounts: offered,
-    reservedFrom: occurrence.reservedFrom,
-    save: (confirmation) => confirmOccurrence(occurrence.id, confirmation, csrfToken),
-    onSaved: (_saved, confirmation) => afterConfirmation(name, confirmation),
+  const initial: ConfirmationDraft = { amount: occurrence.amount, accountId: occurrence.accountId, date: todayInPanama() }
+  const { form, draft, change, errors, isSubmitting, submit } = useRecordForm({
+    initial,
+    validate: (current) =>
+      validateConfirmation(current, { accounts: offered, reservedFrom: occurrence.reservedFrom }),
+    // The notice names what was really paid, which the occurrence does not carry back.
+    save: async (confirmation) => {
+      const outcome = await confirmOccurrence(occurrence.id, confirmation, csrfToken)
+      return outcome.ok ? { ok: true as const, value: { confirmation } } : outcome
+    },
+    onSaved: ({ confirmation }) => afterConfirmation(name, confirmation),
   })
-  const id = (field: string) => `confirm-${field}`
   const chosen = offered.find((account) => account.id === draft.accountId)
   const amount = typedAmount(draft.amount)
   const category = categoryById(occurrence.categoryId).name
@@ -84,48 +82,8 @@ function ConfirmForm({
         <form ref={form} onSubmit={submit} noValidate className="mt-5 space-y-5">
           {errors.form && <FormAlert>{errors.form.join(' ')}</FormAlert>}
 
-          <AmountField id={id} value={draft.amount} onChange={(value) => change({ amount: value })} errors={errors.amount} />
-
-          <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 min-[420px]:gap-3">
-            <div className="min-w-0">
-              <label htmlFor={id('account')} className="text-[0.9rem] font-medium text-ink-2">
-                Cuenta
-              </label>
-              <select
-                id={id('account')}
-                value={draft.accountId ?? ''}
-                onChange={(event) => change({ accountId: Number(event.target.value) })}
-                aria-invalid={Boolean(errors.accountId)}
-                aria-describedby={errors.accountId ? id('account-error') : undefined}
-                className={`${fieldClassName} ${borderClassName(Boolean(errors.accountId))} mt-1.5`}
-              >
-                {offered.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                    {account.archivedAt !== null && ' (archivada)'}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="min-w-0">
-              <label htmlFor={id('date')} className="text-[0.9rem] font-medium text-ink-2">
-                Fecha del pago
-              </label>
-              <input
-                id={id('date')}
-                type="date"
-                value={draft.date}
-                min={[occurrence.reservedFrom, chosen?.openingDate].filter(Boolean).sort().pop() ?? undefined}
-                max={todayInPanama()}
-                onChange={(event) => change({ date: event.target.value })}
-                aria-invalid={Boolean(errors.date)}
-                aria-describedby={errors.date ? id('date-error') : undefined}
-                className={`${fieldClassName} ${borderClassName(Boolean(errors.date))} mt-1.5`}
-              />
-            </div>
-          </div>
-          <FieldError id={id('account-error')} errors={errors.accountId} />
-          <FieldError id={id('date-error')} errors={errors.date} />
+          <AmountField idPrefix="confirm" draft={draft} onChange={change} errors={errors} />
+          <AccountAndDateFields idPrefix="confirm" draft={draft} onChange={change} errors={errors} accounts={offered} />
 
           <p aria-live="polite" className="text-[0.9rem] text-ink-2">
             {amount !== null &&
@@ -160,11 +118,11 @@ function ConfirmForm({
 export function OccurrenceConfirm() {
   return (
     <OneOccurrenceScreen title="Confirmar pago">
-      {(occurrence, accounts, name) =>
+      {(occurrence, accounts) =>
         occurrence.status === 'pending' || occurrence.status === 'overdue' ? (
-          <ConfirmForm key={occurrence.id} occurrence={occurrence} accounts={accounts} name={name} />
+          <ConfirmForm key={occurrence.id} occurrence={occurrence} accounts={accounts} />
         ) : (
-          <AlreadyResolved occurrence={occurrence} name={name} />
+          <AlreadyResolved occurrence={occurrence} name={occurrenceTitle(occurrence)} />
         )
       }
     </OneOccurrenceScreen>

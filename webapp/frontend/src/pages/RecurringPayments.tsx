@@ -1,12 +1,11 @@
-import { Plus, Repeat } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { Repeat } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import type { Account } from '../accounts/api'
 import { useAccounts } from '../accounts/useAccounts'
-import { smallSecondaryButtonClassName } from '../components/buttons'
 import { CategoryChip } from '../components/expenses/CategoryChip'
 import { RecordRow } from '../components/screen/RecordRow'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
-import { offeredAccounts } from '../expenses/presentation'
+import { offeredAccounts } from '../accounts/presentation'
 import { useExpenseRevision } from '../expenses/revision'
 import { formatMoney } from '../lib/money'
 import { noticeFrom } from '../lib/notice'
@@ -150,6 +149,11 @@ export function RecurringPayments() {
       <ScreenHeader
         title="Pagos recurrentes"
         intro="Reserva cada mes el dinero de tus pagos fijos. El gasto se registra cuando confirmas que lo pagaste."
+        action={
+          state.status === 'ready' && state.value.length > 0 && canCreate
+            ? { to: '/recurring-payments/create', label: 'Nuevo pago recurrente', shortLabel: 'Nuevo' }
+            : undefined
+        }
       />
 
       <NoticeBanner notice={notice} className="max-w-[44rem]" />
@@ -172,15 +176,7 @@ export function RecurringPayments() {
           }
         />
       ) : (
-        <>
-          {canCreate && (
-            <Link to="/recurring-payments/create" className={`${smallSecondaryButtonClassName} mb-5`}>
-              <Plus size={18} strokeWidth={2.4} aria-hidden="true" />
-              Nuevo pago recurrente
-            </Link>
-          )}
-          <Rules rules={state.value} accounts={known} />
-        </>
+        <Rules rules={state.value} accounts={known} />
       )}
     </>
   )

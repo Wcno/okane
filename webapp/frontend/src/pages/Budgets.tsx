@@ -1,10 +1,9 @@
-import { Plus, PiggyBank } from 'lucide-react'
-import { Link, useLocation, useSearchParams } from 'react-router-dom'
-import { hasBudget, type Budget, type BudgetLine, type BudgetMonth } from '../budgets/api'
+import { PiggyBank } from 'lucide-react'
+import { useLocation, useSearchParams } from 'react-router-dom'
+import { hasBudget, type Budget, type BudgetLine } from '../budgets/api'
 import { describeBudget, unbudgetedWithSpending } from '../budgets/presentation'
 import { useBudgetMonth } from '../budgets/useBudgetMonth'
 import { MonthSwitcher } from '../components/budgets/MonthSwitcher'
-import { smallSecondaryButtonClassName } from '../components/buttons'
 import { CategoryChip } from '../components/expenses/CategoryChip'
 import { RecordRow } from '../components/screen/RecordRow'
 import { EmptyState, NoticeBanner, Pending, ScreenHeader, cardClassName } from '../components/screen/Screen'
@@ -20,7 +19,7 @@ function BudgetRow({ budget }: { budget: Budget }) {
   return (
     <RecordRow
       to={`/budgets/${budget.id}/edit`}
-      label={`Editar Presupuesto de ${title}, Restante ${formatMoney(budget.remaining)}`}
+      label={`${title}, ${details}, ${formatMoney(budget.remaining)}`}
       icon={<CategoryChip categoryId={budget.categoryId} />}
       title={title}
       details={details}
@@ -34,7 +33,7 @@ function UnbudgetedRow({ line }: { line: BudgetLine }) {
   return (
     <RecordRow
       to={`/budgets/create?month=${line.month}&category=${line.categoryId}`}
-      label={`Crear Presupuesto de ${name}, gastado ${formatMoney(line.spent)}`}
+      label={`${name}, Sin Presupuesto · solo lo gastado, ${formatMoney(line.spent)}`}
       icon={<CategoryChip categoryId={line.categoryId} />}
       title={name}
       details="Sin Presupuesto · solo lo gastado"
@@ -98,30 +97,21 @@ function Month({ budgets, unbudgeted }: { budgets: Budget[]; unbudgeted: BudgetL
 }
 
 /** The Budgets of a month and what is left of each: Presupuesto, gastado and Restante by Category. */
-function Loaded({ data, month }: { data: BudgetMonth; month: string }) {
-  const budgets = data.lines.filter(hasBudget)
-  const unbudgeted = unbudgetedWithSpending(data.lines)
-
+function Loaded({ budgets, unbudgeted, month }: { budgets: Budget[]; unbudgeted: BudgetLine[]; month: string }) {
   if (budgets.length === 0 && unbudgeted.length === 0) {
     return (
       <EmptyState
         icon={PiggyBank}
         title={`Sin Presupuestos en ${monthName(month)}`}
         text="Ponle un límite mensual a una Categoría y verás cuánto te queda a medida que registras gastos."
-        action={{ to: `/budgets/create?month=${month}`, label: 'Crear un Presupuesto' }}
+        action={createAction(month)}
       />
     )
   }
-  return (
-    <>
-      <Month budgets={budgets} unbudgeted={unbudgeted} />
-      <Link to={`/budgets/create?month=${month}`} className={`${smallSecondaryButtonClassName} mt-5`}>
-        <Plus size={17} aria-hidden="true" />
-        Nuevo Presupuesto
-      </Link>
-    </>
-  )
+  return <Month budgets={budgets} unbudgeted={unbudgeted} />
 }
+
+const createAction = (month: string) => ({ to: `/budgets/create?month=${month}`, label: 'Crear un Presupuesto' })
 
 export function Budgets() {
   const [params] = useSearchParams()
@@ -131,11 +121,16 @@ export function Budgets() {
   const { state, retry } = useBudgetMonth(month)
   const notice = noticeFrom(useLocation().state)
 
+  const budgets = state.status === 'ready' ? state.value.lines.filter(hasBudget) : []
+  const unbudgeted = state.status === 'ready' ? unbudgetedWithSpending(state.value.lines) : []
+  const isPopulated = budgets.length > 0 || unbudgeted.length > 0
+
   return (
     <>
       <ScreenHeader
         title="Presupuestos"
         intro="Cuánto te queda en cada Categoría después de lo gastado y lo comprometido."
+        action={isPopulated ? { ...createAction(month), label: 'Nuevo Presupuesto', shortLabel: 'Nuevo' } : undefined}
       />
       <MonthSwitcher month={month} currentMonth={currentMonth} />
 
@@ -144,7 +139,7 @@ export function Budgets() {
       {state.status !== 'ready' ? (
         <Pending state={state} retry={retry} loading="Cargando tus Presupuestos…" />
       ) : (
-        <Loaded data={state.value} month={month} />
+        <Loaded budgets={budgets} unbudgeted={unbudgeted} month={month} />
       )}
     </>
   )

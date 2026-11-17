@@ -5,6 +5,7 @@ from budgets import views as budgets
 from expenses import views as expenses
 from health.views import health
 from recurring_payments import views as recurring_payments
+from incomes import views as incomes
 
 # Paths match the ones webapp exposes, so forwarding never rewrites them.
 urlpatterns = [
@@ -29,4 +30,6 @@ urlpatterns = [
         "api/recurring-payments/occurrences/<int:occurrence_id>/cancel",
         recurring_payments.occurrence_cancel,
     ),
+    path("api/incomes", incomes.income_collection),
+    path("api/incomes/<int:income_id>", incomes.income_detail),
 ]

@@ -1,20 +1,21 @@
 import type { Account } from '../accounts/api'
-import { DESCRIPTION_MAX_LENGTH } from '../expenses/form'
-import { parseExpenseAmount } from '../expenses/form'
-import { MAX_AMOUNT_TEXT } from '../lib/amount'
-import { formatDay, isCalendarDay, todayInPanama } from '../lib/dates'
+import { parsePositiveAmount } from '../lib/amount'
+import { formatDay, isCalendarDay } from '../lib/dates'
+import {
+  AMOUNT_INVALID,
+  AMOUNT_TOO_LARGE,
+  DESCRIPTION_MAX_LENGTH,
+  DESCRIPTION_TOO_LONG,
+  checkRecord,
+  type RecordWording,
+} from '../lib/recordForm'
+import type { Validated } from '../lib/useRecordForm'
 import type {
   Confirmation,
-  ConfirmationErrors,
-  RecurringPaymentErrors,
+  ConfirmationField,
+  RecurringPaymentField,
   RecurringPaymentInput,
 } from './api'
-
-const AMOUNT_TOO_LARGE = `El monto es demasiado grande. El máximo es ${MAX_AMOUNT_TEXT}.`
-const AMOUNT_INVALID = 'Escribe un monto mayor que cero, con dos decimales como máximo. Ejemplo: 12.50'
-const ACCOUNT_REQUIRED = 'Elige la Cuenta de la que sale el pago.'
-
-const amountError = (error: 'invalid' | 'too-large') => (error === 'too-large' ? AMOUNT_TOO_LARGE : AMOUNT_INVALID)
 
 /** What the form of a rule holds while the User types. */
 export interface RecurringPaymentDraft {
@@ -29,32 +30,26 @@ export interface RecurringPaymentDraft {
 
 const DAY_OF_MONTH = /^\d{1,2}$/
 
-export type RecurringPaymentOutcome =
-  | { ok: true; rule: RecurringPaymentInput }
-  | { ok: false; errors: RecurringPaymentErrors }
-
 /**
  * Checks what the browser can know before sending; api-service has the last
- * word. `accounts` are the ones the rule may name.
+ * word. `accounts` are the ones the rule may name. A rule may start in the future.
  */
 export function validateRecurringPayment(
   draft: RecurringPaymentDraft,
   context: { accounts: Account[] },
-): RecurringPaymentOutcome {
-  const errors: RecurringPaymentErrors = {}
-  const parsed = parseExpenseAmount(draft.amount)
+): Validated<RecurringPaymentInput, RecurringPaymentField> {
+  const errors: Partial<Record<RecurringPaymentField, string[]>> = {}
+  const parsed = parsePositiveAmount(draft.amount)
   const description = draft.description.trim()
   const account = context.accounts.find((candidate) => candidate.id === draft.accountId)
   const day = DAY_OF_MONTH.test(draft.dayOfMonth.trim()) ? Number(draft.dayOfMonth.trim()) : null
 
-  if ('error' in parsed) errors.amount = [amountError(parsed.error)]
+  if ('error' in parsed) errors.amount = [parsed.error === 'too-large' ? AMOUNT_TOO_LARGE : AMOUNT_INVALID]
   if (draft.categoryId === null) errors.categoryId = ['Elige la Categoría del pago.']
-  if (account === undefined) errors.accountId = [ACCOUNT_REQUIRED]
+  if (account === undefined) errors.accountId = ['Elige la Cuenta de la que sale el pago.']
   if (day === null || day < 1 || day > 31) errors.dayOfMonth = ['Escribe un día del mes entre 1 y 31.']
   if (!isCalendarDay(draft.startDate)) errors.startDate = ['Elige desde qué fecha se reserva el pago.']
-  if (description.length > DESCRIPTION_MAX_LENGTH) {
-    errors.description = [`La descripción admite hasta ${DESCRIPTION_MAX_LENGTH} caracteres.`]
-  }
+  if (description.length > DESCRIPTION_MAX_LENGTH) errors.description = [DESCRIPTION_TOO_LONG]
 
   if (
     Object.keys(errors).length > 0 ||
@@ -67,7 +62,7 @@ export function validateRecurringPayment(
   }
   return {
     ok: true,
-    rule: {
+    value: {
       description,
       amount: parsed.amount,
       accountId: account.id,
@@ -85,34 +80,23 @@ export interface ConfirmationDraft {
   date: string
 }
 
-export type ConfirmationOutcome =
-  | { ok: true; confirmation: Confirmation }
-  | { ok: false; errors: ConfirmationErrors }
+const confirmationWording: RecordWording = {
+  accountRequired: 'Elige la Cuenta de la que salió el dinero.',
+  dateInvalid: 'Elige el día en que pagaste.',
+}
 
 /**
- * The real payment: a positive amount, an Account that takes Expenses and a
- * day that is today or past, never before the reservation began nor before the
- * Account did. "Today" is the Panama day when the User presses the button.
+ * The real payment: it is checked like any Expense, and its day is never
+ * before the reservation began. "Today" is the Panama day when the User presses the button.
  */
 export function validateConfirmation(
   draft: ConfirmationDraft,
-  context: { accounts: Account[]; reservedFrom: string | null },
-): ConfirmationOutcome {
-  const today = todayInPanama()
-  const errors: ConfirmationErrors = {}
-  const parsed = parseExpenseAmount(draft.amount)
-  const account = context.accounts.find((candidate) => candidate.id === draft.accountId)
-
-  if ('error' in parsed) errors.amount = [amountError(parsed.error)]
-  if (account === undefined) errors.accountId = [ACCOUNT_REQUIRED]
-  if (!isCalendarDay(draft.date)) errors.date = ['Elige el día en que pagaste.']
-  else if (draft.date > today) errors.date = ['La fecha no puede ser futura. Elige hoy o un día anterior.']
-  else if (context.reservedFrom !== null && draft.date < context.reservedFrom) {
+  context: { accounts: Account[]; reservedFrom: string },
+): Validated<Confirmation, ConfirmationField> {
+  const { errors, amount, account } = checkRecord({ ...draft, description: '' }, context.accounts, confirmationWording)
+  if (errors.date === undefined && draft.date < context.reservedFrom) {
     errors.date = [`La fecha no puede ser anterior a la reserva (${formatDay(context.reservedFrom)}).`]
-  } else if (account !== undefined && draft.date < account.openingDate) {
-    errors.date = [`La fecha no puede ser anterior al inicio del registro de la Cuenta (${formatDay(account.openingDate)}).`]
   }
-
-  if (Object.keys(errors).length > 0 || 'error' in parsed || account === undefined) return { ok: false, errors }
-  return { ok: true, confirmation: { amount: parsed.amount, accountId: account.id, date: draft.date } }
+  if (Object.keys(errors).length > 0 || amount === null || account === undefined) return { ok: false, errors }
+  return { ok: true, value: { amount, accountId: account.id, date: draft.date } }
 }

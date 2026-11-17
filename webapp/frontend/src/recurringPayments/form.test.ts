@@ -39,7 +39,7 @@ describe('validateRecurringPayment', () => {
   it('accepts a rule and turns it into what the API takes', () => {
     expect(validateRecurringPayment(draft, { accounts })).toEqual({
       ok: true,
-      rule: { description: 'Alquiler', amount: '100.00', accountId: 3, categoryId: 1, dayOfMonth: 31, startDate: '2026-11-01' },
+      value: { description: 'Alquiler', amount: '100.00', accountId: 3, categoryId: 1, dayOfMonth: 31, startDate: '2026-11-01' },
     })
   })
 
@@ -75,12 +75,12 @@ describe('validateRecurringPayment', () => {
 
 describe('validateConfirmation', () => {
   const draft = { amount: '120', accountId: 3, date: '2026-12-02' }
-  const context = { accounts, reservedFrom: '2026-11-01' as string | null }
+  const context = { accounts, reservedFrom: '2026-11-01' }
 
   it('accepts the reviewed payment, today by default', () => {
     expect(validateConfirmation(draft, context)).toEqual({
       ok: true,
-      confirmation: { amount: '120.00', accountId: 3, date: '2026-12-02' },
+      value: { amount: '120.00', accountId: 3, date: '2026-12-02' },
     })
   })
 
@@ -103,7 +103,7 @@ describe('validateConfirmation', () => {
 
   it('rejects a day before the Account began', () => {
     expect(
-      validateConfirmation({ ...draft, date: '2025-12-31' }, { accounts, reservedFrom: null }),
+      validateConfirmation({ ...draft, date: '2025-12-31' }, { accounts, reservedFrom: '2026-01-01' }),
     ).toMatchObject({ ok: false, errors: { date: [expect.stringContaining('Cuenta')] } })
   })
 

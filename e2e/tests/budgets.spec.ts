@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { expect, expectScreenQuality, knownAxeRules, test } from './support/qa.js'
+import { expect, expectScreenQuality, test } from './support/qa.js'
 import { createAccount, createBudget, createExpense } from './support/ledger.js'
 import { signUp } from './support/session.js'
 
@@ -27,7 +27,7 @@ function monthLabel(month: string) {
 const openQuickForm = (page: Page) => page.getByRole('button', { name: 'Registrar gasto' }).click()
 
 const budgetRow = (page: Page, category: string) =>
-  page.getByRole('link', { name: new RegExp(`^Editar Presupuesto de ${category},`) })
+  page.getByRole('link', { name: new RegExp(`^${category}, `) })
 
 for (const colorScheme of ['light', 'dark'] as const) {
   test(`budgets lifecycle in ${colorScheme}`, async ({ page }) => {
@@ -44,7 +44,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     await expect(page).toHaveURL(/\/budgets\/create/)
     await expect(page.getByLabel('Mes', { exact: true })).toHaveValue(month)
-    await page.getByLabel('Categoría').selectOption({ label: 'Alimentación' })
+    await page.getByText('Alimentación', { exact: true }).click()
     await page.getByLabel('Monto del Presupuesto').fill('300')
     await expectScreenQuality(page, `budgets-create-filled-${colorScheme}`)
     await page.getByRole('button', { name: 'Crear Presupuesto' }).click()
@@ -60,7 +60,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await page.goto('/budgets')
     await expect(budgetRow(page, 'Alimentación')).toContainText('Gastado $120.00 de $300.00')
     await expect(budgetRow(page, 'Alimentación')).toContainText('$180.00')
-    await expectScreenQuality(page, `budgets-list-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
+    await expectScreenQuality(page, `budgets-list-${colorScheme}`)
 
     await budgetRow(page, 'Alimentación').click()
     await expect(page.getByLabel('Monto del Presupuesto')).toHaveValue('300.00')
@@ -71,7 +71,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page.getByRole('status').filter({ hasText: 'Guardaste' })).toContainText('$100.00')
     await expect(budgetRow(page, 'Alimentación')).toContainText('Excedida por $20.00')
     await expect(budgetRow(page, 'Alimentación')).toContainText('−$20.00')
-    await expectScreenQuality(page, `budgets-list-exceeded-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
+    await expectScreenQuality(page, `budgets-list-exceeded-${colorScheme}`)
 
     await budgetRow(page, 'Alimentación').click()
     await page.getByRole('link', { name: 'Eliminar este Presupuesto' }).click()
@@ -83,9 +83,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect(page.getByRole('status').filter({ hasText: 'Eliminaste' })).toContainText('$100.00')
     // Without a Budget the Category shows only what it spent, never a Restante.
     await expect(page.getByRole('heading', { name: 'Gastado sin Presupuesto' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Crear Presupuesto de Alimentación, gastado $120.00' })).toBeVisible()
+    await expect(page.getByRole('link', { name: /^Alimentación, Sin Presupuesto.*\$120\.00$/ })).toBeVisible()
     await expect(page.getByText('Restante por Categoría')).toBeHidden()
-    await expectScreenQuality(page, `budgets-unbudgeted-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
+    await expectScreenQuality(page, `budgets-unbudgeted-${colorScheme}`)
   })
 }
 
@@ -134,7 +134,7 @@ test('a past month can be browsed and its Budget edited', async ({ page }) => {
   await page.getByRole('link', { name: 'Mes anterior' }).click()
   await expect(page.getByRole('navigation', { name: 'Mes de los Presupuestos' })).toContainText(monthLabel(previous))
   await expect(budgetRow(page, 'Servicios')).toContainText('$80.00')
-  await expectScreenQuality(page, 'budgets-past-month', { skipAxeRules: knownAxeRules.recordRowLabel })
+  await expectScreenQuality(page, 'budgets-past-month')
 
   await budgetRow(page, 'Servicios').click()
   await page.getByLabel('Monto del Presupuesto').fill('95')
@@ -157,7 +157,7 @@ test('a second Budget for the same Category and month is refused and the draft s
   await createBudget(page.request, { month: thisMonth(), category_id: 5, amount: '60.00' })
 
   await page.goto('/budgets/create')
-  await page.getByLabel('Categoría').selectOption({ label: 'Salud' })
+  await page.getByText('Salud', { exact: true }).click()
   await page.getByLabel('Monto del Presupuesto').fill('75')
   await page.getByRole('button', { name: 'Crear Presupuesto' }).click()
 
@@ -179,7 +179,7 @@ test('the form says what is missing before sending, and an unknown Budget is not
   await page.getByRole('button', { name: 'Crear Presupuesto' }).click()
   await expect(page.getByText('Elige la Categoría del Presupuesto.')).toBeVisible()
   await expect(page.getByText('Escribe un monto mayor que cero')).toBeVisible()
-  await expect(page.getByLabel('Categoría')).toBeFocused()
+  await expect(page.getByRole('radio', { name: 'Vivienda' })).toBeFocused()
   await expectScreenQuality(page, 'budgets-create-errors')
 
   await page.goto('/budgets/999999/edit')

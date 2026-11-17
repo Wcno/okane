@@ -236,7 +236,7 @@ Es una de las rutas de autenticación exceptuadas del requisito de sesión.
 
 | Caso de uso | WebApp | API | BD | Docker | Origen |
 |---|---|---|---|---|---|
-| Consultar ingresos | Sí | `GET /api/incomes` | `incomes` | api-service, api-db | N2 |
+| Consultar ingresos | Sí | `GET /api/incomes`, `GET /api/incomes/{id}` | `incomes` | api-service, api-db | N2 |
 | Registrar ingreso | Sí | `POST /api/incomes` | `incomes` | api-service, api-db | N2 |
 | Editar ingreso | Sí | `PUT /api/incomes/{id}` | `incomes` | api-service, api-db | N2 |
 | Eliminar ingreso | Sí | `DELETE /api/incomes/{id}` | `incomes` | api-service, api-db | N2 |

@@ -1,11 +1,11 @@
 import { useSignedInUser } from '../auth/context'
 import { CategoryChip } from '../components/expenses/CategoryChip'
-import { OneOccurrenceScreen } from '../components/recurringPayments/OneOccurrenceScreen'
+import { OneOccurrenceScreen } from '../components/recurringPayments/OneRecurringPaymentScreen'
 import { ConfirmCard, RecordSummary } from '../components/screen/ConfirmCard'
 import { ScreenHeader } from '../components/screen/Screen'
 import { categoryById } from '../data/categories'
 import { cancelOccurrence, type RecurringPaymentOccurrence } from '../recurringPayments/api'
-import { dueText, recurringPaymentsBack, STATUS_LABELS } from '../recurringPayments/presentation'
+import { dueText, occurrenceTitle, recurringPaymentsBack, STATUS_LABELS } from '../recurringPayments/presentation'
 import { useAfterRecurringPaymentChange } from '../recurringPayments/useAfterRecurringPaymentChange'
 
 function Confirmation({ occurrence, name }: { occurrence: RecurringPaymentOccurrence; name: string }) {
@@ -54,7 +54,7 @@ function Confirmation({ occurrence, name }: { occurrence: RecurringPaymentOccurr
 export function OccurrenceCancel() {
   return (
     <OneOccurrenceScreen title="Cancelar reserva">
-      {(occurrence, _accounts, name) => <Confirmation key={occurrence.id} occurrence={occurrence} name={name} />}
+      {(occurrence) => <Confirmation key={occurrence.id} occurrence={occurrence} name={occurrenceTitle(occurrence)} />}
     </OneOccurrenceScreen>
   )
 }

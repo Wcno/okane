@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "expenses",
     "budgets",
     "recurring_payments",
+    "incomes",
 ]
 
 MIDDLEWARE = [

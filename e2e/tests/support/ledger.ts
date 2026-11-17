@@ -59,6 +59,19 @@ export async function createBudget(request: APIRequestContext, fields: BudgetFie
   return (await response.json()) as { id: number }
 }
 
+interface IncomeFields {
+  account_id: number
+  amount?: string
+  date?: string
+  description?: string
+}
+
+export async function createIncome(request: APIRequestContext, fields: IncomeFields) {
+  const response = await send(request, 'POST', '/api/incomes', { amount: '10.00', ...fields })
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number }
+}
+
 /** Archives an Account that has records, as deleting it in the screen does. */
 export async function archiveAccount(request: APIRequestContext, accountId: number) {
   const response = await send(request, 'DELETE', `/api/accounts/${accountId}`)
