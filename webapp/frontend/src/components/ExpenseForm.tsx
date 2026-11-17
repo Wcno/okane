@@ -5,7 +5,7 @@ import { listAccounts, type Account } from '../accounts/api'
 import { todayInPanama } from '../accounts/form'
 import { useSignedInUser } from '../auth/context'
 import { categoryById } from '../data/categories'
-import { remainingBudget } from '../data/sample'
+import { confirmationText, previewText, sampleRemainingAfter } from '../data/sampleRemaining'
 import { createExpense, lastUsedAccountId } from '../expenses/api'
 import { announceExpenseChange } from '../expenses/changes'
 import { chooseDefaultAccount, parseAmount } from '../expenses/form'
@@ -18,27 +18,16 @@ import { primaryButtonClassName, secondaryButtonClassName } from './buttons'
 import { ExpenseFields } from './expenses/ExpenseFields'
 import { FormAlert } from './FormAlert'
 
-/**
- * The consequence of the Expense on its Category. Budgets arrive with a later
- * ticket: until then this reads the sample budgets, as the Panel does.
- */
-function RemainingHint({ categoryId, amount }: { categoryId: number | null; amount: number | null }) {
+/** The consequence of the Expense on its Category, from the sample Budgets until #9. */
+function RemainingHint({ categoryId, amount }: { categoryId: number | null; amount: string | null }) {
   const { state } = useData()
   const category = categoryId === null ? null : categoryById(categoryId).name
-  const line = state.budgets.find((budget) => budget.category === category)
-  const currentRemaining = line ? remainingBudget(line) : null
-  const nextRemaining =
-    currentRemaining !== null && amount !== null ? Math.round((currentRemaining - amount) * 100) / 100 : null
 
   return (
     <p className="min-h-[1.4em] text-[0.9rem] text-ink-2" aria-live="polite">
       {category !== null &&
         amount !== null &&
-        (currentRemaining === null || nextRemaining === null
-          ? `${category} no tiene Presupuesto este mes; el gasto se registra igual.`
-          : nextRemaining < 0
-            ? `${category} quedará excedida por ${formatMoney(-nextRemaining)}; el gasto se registra igual.`
-            : `Restante en ${category}: de ${formatMoney(currentRemaining)} a ${formatMoney(nextRemaining)}.`)}
+        previewText(category, sampleRemainingAfter(state.budgets, category, amount))}
     </p>
   )
 }
@@ -78,19 +67,12 @@ function QuickForm({ accounts, lastUsed }: { accounts: Account[]; lastUsed: numb
     save: (expense) => createExpense(expense, csrfToken),
     onSaved: (expense) => {
       const category = categoryById(expense.categoryId).name
-      const amount = Number(expense.amount)
-      const line = state.budgets.find((budget) => budget.category === category)
-      const currentRemaining = line ? remainingBudget(line) : null
-      const nextRemaining = currentRemaining !== null ? Math.round((currentRemaining - amount) * 100) / 100 : null
-      const consequence =
-        nextRemaining === null
-          ? `${category} no tiene Presupuesto este mes.`
-          : nextRemaining < 0
-            ? `${category} queda excedida por ${formatMoney(-nextRemaining)}.`
-            : `Restante en ${category}: ${formatMoney(nextRemaining)}.`
+      const consequence = confirmationText(category, sampleRemainingAfter(state.budgets, category, expense.amount))
+      // The sample Panel still follows the quick form; it takes a plain number.
+      const sampleAmount = Number(expense.amount)
       register(
-        { amount, category, accountId: sampleAccountId },
-        `Gasto de ${formatMoney(amount)} registrado. ${consequence}`,
+        { amount: sampleAmount, category, accountId: sampleAccountId },
+        `Gasto de ${formatMoney(expense.amount)} registrado. ${consequence}`,
       )
       announceExpenseChange()
       closeForm()
@@ -98,7 +80,6 @@ function QuickForm({ accounts, lastUsed }: { accounts: Account[]; lastUsed: numb
   })
 
   const amount = parseAmount(draft.amount)
-  const amountNumber = amount === null ? null : Number(amount)
 
   return (
     <form
@@ -117,7 +98,7 @@ function QuickForm({ accounts, lastUsed }: { accounts: Account[]; lastUsed: numb
         accounts={accounts}
         today={today}
         amountRef={amountField}
-        hint={<RemainingHint categoryId={draft.categoryId} amount={amountNumber} />}
+        hint={<RemainingHint categoryId={draft.categoryId} amount={amount} />}
       />
       <div className="flex gap-3 pt-1">
         <button type="button" onClick={closeForm} className={`${secondaryButtonClassName} flex-1`}>
