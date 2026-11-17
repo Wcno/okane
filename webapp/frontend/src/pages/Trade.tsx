@@ -20,9 +20,13 @@ const headings: Record<TradeKind, { title: string; intro: string }> = {
     title: 'Registrar venta',
     intro: 'Anota lo que vendiste. El importe vuelve al efectivo de la Cuenta y no puede superar las unidades que tienes.',
   },
+  dividend: {
+    title: 'Registrar dividendo',
+    intro: 'Anota el efectivo que te pagó un Activo que tienes. Entra en la Cuenta de inversión y cuenta como Rendimiento, no como Aporte.',
+  },
 }
 
-/** Records a purchase or a sale of an Asset in an investment Account. */
+/** Records a purchase, a sale or a Dividend of an Asset in an investment Account. */
 export function Trade({ kind }: { kind: TradeKind }) {
   const { csrfToken } = useSignedInUser()
   const navigate = useNavigate()
@@ -37,13 +41,13 @@ export function Trade({ kind }: { kind: TradeKind }) {
         <EmptyState
           icon={Wallet}
           title="Necesitas una Cuenta de inversión"
-          text="Una compra o una venta se registra en el efectivo de tu bróker. Crea esa Cuenta y vuelve aquí."
+          text="Una compra, una venta o un dividendo se registra en el efectivo de tu bróker. Crea esa Cuenta y vuelve aquí."
           action={{ to: '/accounts/create', label: 'Crear cuenta' }}
         />
       ) : (
         <TradeEditor
           kind={kind}
-          initial={{ accountId: state.value[0].id, asset: null, units: '', unitPrice: '', date: todayInPanama() }}
+          initial={{ accountId: state.value[0].id, asset: null, units: '', unitPrice: '', commission: '', amount: '', date: todayInPanama() }}
           accounts={state.value}
           save={(trade) => recordTrade(kind, trade, csrfToken)}
           onSaved={(trade, asset) => {

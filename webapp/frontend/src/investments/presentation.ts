@@ -1,4 +1,3 @@
-import type { Account } from '../accounts/api'
 import { formatDay } from '../lib/dates'
 import { formatMoney } from '../lib/money'
 import type { Asset, ReferencePrice, Trade, TradeKind, Transaction } from './api'
@@ -57,7 +56,7 @@ export const unitsPhrase = (units: string) => {
 export const describeAsset = (asset: Pick<Asset, 'symbol' | 'name' | 'market'>) =>
   `${asset.symbol} · ${asset.name} · ${asset.market}`
 
-const kindNames: Record<TradeKind, string> = { buy: 'Compra', sell: 'Venta' }
+const kindNames: Record<TradeKind, string> = { buy: 'Compra', sell: 'Venta', dividend: 'Dividendo' }
 
 /** "AAPL · Apple Inc · XNAS" as the title, and "Compra · 2 unidades a $100.00 · Bróker" as the details. */
 export function describeTransaction(
@@ -65,8 +64,12 @@ export function describeTransaction(
   accountName: string | undefined,
   options: { withDate?: boolean } = {},
 ): { title: string; details: string } {
+  const trade =
+    transaction.units === null || transaction.unitPrice === null
+      ? kindNames[transaction.type]
+      : `${kindNames[transaction.type]} · ${unitsPhrase(transaction.units)} a ${formatPrice(transaction.unitPrice)}`
   const details = [
-    `${kindNames[transaction.type]} · ${unitsPhrase(transaction.units)} a ${formatPrice(transaction.unitPrice)}`,
+    transaction.commission === '0.00' ? trade : `${trade} · comisión ${formatMoney(transaction.commission)}`,
     accountName,
     options.withDate && formatDay(transaction.date),
   ]
@@ -76,7 +79,7 @@ export function describeTransaction(
 /** What happened to a recorded purchase or sale; the notice says it in Spanish. */
 export type TradeChange = 'created' | 'updated' | 'deleted'
 
-const nouns: Record<TradeKind, string> = { buy: 'compra', sell: 'venta' }
+export const nouns: Record<TradeKind, string> = { buy: 'compra', sell: 'venta', dividend: 'dividendo' }
 
 /**
  * What the notice says after a purchase or a sale, with the cash the Account has left.
@@ -88,11 +91,15 @@ export function tradeNotice(
   asset: Pick<Asset, 'symbol'>,
   account: { name: string; balance: string } | undefined,
 ): string {
-  const amount = `${unitsPhrase(trade.units)} de ${asset.symbol} por ${formatMoney(trade.cashAmount)}`
+  const amount =
+    trade.units === null
+      ? `${asset.symbol} por ${formatMoney(trade.cashAmount)}`
+      : `${unitsPhrase(trade.units)} de ${asset.symbol} por ${formatMoney(trade.cashAmount)}`
+  const created = { buy: 'Compraste', sell: 'Vendiste', dividend: 'Registraste el dividendo de' }[trade.type]
   const sentence =
     change === 'created'
-      ? `${trade.type === 'buy' ? 'Compraste' : 'Vendiste'} ${amount}.`
-      : `${change === 'updated' ? 'Guardaste' : 'Eliminaste'} la ${nouns[trade.type]} de ${amount}.`
+      ? `${created} ${amount}.`
+      : `${change === 'updated' ? 'Guardaste' : 'Eliminaste'} ${trade.type === 'dividend' ? 'el' : 'la'} ${nouns[trade.type]} de ${amount}.`
   if (!account) return sentence
   const balance = `Saldo de ${account.name}: ${formatMoney(account.balance)}.`
   const negative = change === 'created' && trade.type === 'buy' && account.balance.startsWith('-')

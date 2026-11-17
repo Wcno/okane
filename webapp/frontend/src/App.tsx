@@ -66,6 +66,7 @@ export default function App() {
             <Route path="/investments/positions" element={<Positions />} />
             <Route path="/investments/transactions/buy" element={<Trade kind="buy" />} />
             <Route path="/investments/transactions/sell" element={<Trade kind="sell" />} />
+            <Route path="/investments/transactions/dividend" element={<Trade kind="dividend" />} />
             <Route path="/transfers" element={<Transfers />} />
             <Route path="/transfers/create" element={<TransferCreate />} />
             <Route path="/transfers/:id/edit" element={<TransferEdit />} />

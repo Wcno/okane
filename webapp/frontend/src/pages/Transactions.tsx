@@ -1,6 +1,7 @@
-import { ChartLine } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
+import { ChartLine, Coins } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 import { useAccounts } from '../accounts/useAccounts'
+import { smallSecondaryButtonClassName } from '../components/buttons'
 import { TradeChip } from '../components/investments/TradeChip'
 import { DayFeed } from '../components/record/DayFeed'
 import { RecordRow } from '../components/screen/RecordRow'
@@ -41,10 +42,19 @@ export function Transactions() {
     <>
       <ScreenHeader
         title="Transacciones de inversión"
-        intro="Tus compras y ventas, de la más reciente a la más antigua."
+        intro="Tus compras, ventas y dividendos, de la más reciente a la más antigua."
         // With nothing registered, the empty state already asks for the first purchase.
         action={hasRecords ? { to: '/investments/transactions/buy', label: 'Registrar compra', shortLabel: 'Comprar' } : undefined}
       />
+
+      {hasRecords && (
+        <div className="mb-5 lg:mb-6">
+          <Link to="/investments/transactions/dividend" className={smallSecondaryButtonClassName}>
+            <Coins size={17} aria-hidden="true" />
+            Registrar dividendo
+          </Link>
+        </div>
+      )}
 
       <NoticeBanner notice={notice} className="max-w-[44rem]" />
 
