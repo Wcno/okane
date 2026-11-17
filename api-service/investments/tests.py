@@ -1,14 +1,21 @@
+import datetime
+import io
 import json
 import threading
 import time
+import urllib.error
+from decimal import Decimal
+from io import StringIO
 from unittest import mock
 
+from django.core.management import call_command
 from django.db import connection
 from django.test import Client, TransactionTestCase, override_settings, tag
 
 from expenses.tests import FOOD, TODAY, ExpenseApiTestCase
 from investments import quotes
-from investments.models import Asset, InvestmentTransaction
+from investments.models import Asset, InvestmentTransaction, QuotedPrice
+from investments.prices import refresh_prices
 from investments.serializers import InvestmentTransactionSerializer
 
 
@@ -1312,6 +1319,225 @@ class ReferencePriceTests(PerformanceTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("value", response.json()["errors"])
 
+
+class StubClosings:
+    """Replaces the quotes service: answers each Asset with a canned closing or a failure."""
+
+    def __init__(self, closings=None, failure=None):
+        self.closings = closings or {}
+        self.failure = failure
+        self.asked = []
+
+    def latest_close(self, asset):
+        self.asked.append(asset.id)
+        if self.failure:
+            raise self.failure
+        return self.closings[asset.symbol]
+
+
+def closing(value, date="2026-11-13"):
+    return quotes.Closing(value=Decimal(value), date=datetime.date.fromisoformat(date))
+
+
+class RefreshPricesTests(PerformanceTestCase):
+    def setUp(self):
+        super().setUp()
+        self.broker = self.investment_account(opening_balance="1000.00", opening_date="2026-11-01")
+        self.asset_held = self.asset()
+        self.bought(self.broker, self.asset_held, "2", "100", date="2026-11-02")
+        self.sleeps = []
+
+    def refresh(self, service, **kwargs):
+        return refresh_prices(service, sleep=self.sleeps.append, **kwargs)
+
+    def price(self, user=1):
+        return self.read("positions", user=user)["results"][0]["price"]
+
+    def test_a_refresh_stores_the_closing_with_its_own_date_and_valuations_use_it(self):
+        report = self.refresh(StubClosings({"AAPL": closing("125.5")}))
+
+        self.assertEqual(report.updated, 1)
+        self.assertEqual(
+            self.price(),
+            {"value": "125.50000000", "source": "provider", "date": "2026-11-13", "estimated": False},
+        )
+        self.assertEqual(self.read("dashboard")["positions_value"], "251.00")
+        self.assertFalse(self.read("dashboard")["estimated"])
+
+    def test_each_asset_is_asked_once_however_many_users_hold_it(self):
+        other = self.investment_account(user=2, opening_balance="500.00", opening_date="2026-11-01")
+        self.bought(other, self.asset_held, "1", "90", user=2, date="2026-11-03")
+        service = StubClosings({"AAPL": closing("125")})
+
+        self.refresh(service)
+
+        self.assertEqual(service.asked, [self.asset_held.id])
+        self.assertEqual(self.price(user=1)["source"], "provider")
+        self.assertEqual(self.price(user=2)["source"], "provider")
+
+    def test_an_asset_nobody_holds_is_not_asked(self):
+        self.asset("MSFT", name="Microsoft")
+        service = StubClosings({"AAPL": closing("125")})
+
+        self.refresh(service)
+
+        self.assertEqual(service.asked, [self.asset_held.id])
+
+    def test_a_second_run_the_same_day_does_not_ask_again(self):
+        service = StubClosings({"AAPL": closing("125")})
+        self.refresh(service)
+
+        report = self.refresh(service)
+
+        self.assertEqual(service.asked, [self.asset_held.id])
+        self.assertEqual(report.skipped, 1)
+
+    def test_a_failing_service_keeps_the_last_known_price_and_its_date(self):
+        self.refresh(StubClosings({"AAPL": closing("125", "2026-11-12")}))
+        QuotedPrice.objects.update(fetched_at="2026-11-15T10:00:00Z")
+
+        report = self.refresh(StubClosings(failure=quotes.QuotesUnavailable()))
+
+        self.assertEqual(report.failed, 1)
+        self.assertEqual(self.price()["value"], "125.00000000")
+        self.assertEqual(self.price()["date"], "2026-11-12")
+
+    def test_a_failure_with_no_quote_leaves_the_last_transaction_estimate_never_zero(self):
+        self.refresh(StubClosings(failure=quotes.QuotesUnavailable()))
+
+        self.assertEqual(QuotedPrice.objects.count(), 0)
+        self.assertEqual(
+            self.price(),
+            {"value": "100.00000000", "source": "last_transaction", "date": "2026-11-02", "estimated": True},
+        )
+
+    def test_a_spent_limit_stops_the_run(self):
+        second = self.asset("MSFT", name="Microsoft")
+        self.bought(self.broker, second, "1", "50", date="2026-11-03")
+        service = StubClosings(failure=quotes.QuotesRateLimited())
+
+        report = self.refresh(service)
+
+        self.assertTrue(report.rate_limited)
+        self.assertEqual(len(service.asked), 1)
+
+    def test_requests_are_spaced_to_the_minute_limit(self):
+        second = self.asset("MSFT", name="Microsoft")
+        self.bought(self.broker, second, "1", "50", date="2026-11-03")
+
+        self.refresh(StubClosings({"AAPL": closing("125"), "MSFT": closing("60")}))
+
+        self.assertEqual(self.sleeps, [60 / quotes.CREDITS_PER_MINUTE])
+
+    def test_a_future_or_non_positive_closing_is_never_stored(self):
+        for bad in (closing("125", "2026-11-17"), closing("0"), closing("-3")):
+            with self.subTest(bad=bad):
+                report = self.refresh(StubClosings({"AAPL": bad}))
+                self.assertEqual(report.failed, 1)
+                self.assertEqual(QuotedPrice.objects.count(), 0)
+
+    def test_an_older_quote_does_not_override_a_newer_manual_price(self):
+        self.set_price(self.asset_held, "150", date="2026-11-14")
+
+        self.refresh(StubClosings({"AAPL": closing("125", "2026-11-13")}))
+
+        self.assertEqual(
+            self.price(),
+            {"value": "150.00000000", "source": "manual", "date": "2026-11-14", "estimated": False},
+        )
+
+    def test_a_newer_quote_beats_an_older_manual_price(self):
+        self.set_price(self.asset_held, "150", date="2026-11-10")
+
+        self.refresh(StubClosings({"AAPL": closing("125", "2026-11-13")}))
+
+        self.assertEqual(self.price()["source"], "provider")
+
+    def test_manual_wins_a_tie_on_the_same_date(self):
+        self.set_price(self.asset_held, "150", date="2026-11-13")
+
+        self.refresh(StubClosings({"AAPL": closing("125", "2026-11-13")}))
+
+        self.assertEqual(self.price()["source"], "manual")
+
+    def test_a_manual_price_of_one_user_does_not_hide_the_quote_from_another(self):
+        other = self.investment_account(user=2, opening_balance="500.00", opening_date="2026-11-01")
+        self.bought(other, self.asset_held, "1", "90", user=2, date="2026-11-03")
+        self.set_price(self.asset_held, "150", date="2026-11-14")
+
+        self.refresh(StubClosings({"AAPL": closing("125", "2026-11-13")}))
+
+        self.assertEqual(self.price(user=1)["source"], "manual")
+        self.assertEqual(self.price(user=2)["source"], "provider")
+
+    def test_a_closing_never_sees_a_quote_from_a_later_day(self):
+        self.refresh(StubClosings({"AAPL": closing("125", "2026-11-13")}))
+
+        [position] = self.read("positions", query="?as_of=2026-11-10")["results"]
+
+        self.assertEqual(position["price"]["source"], "last_transaction")
+
+    def test_the_sample_provider_refreshes_without_network_or_key(self):
+        sample = Asset.objects.create(
+            provider="sample", market="XNAS", symbol="AAPL", name="Apple Inc", currency="USD"
+        )
+        self.bought(self.broker, sample, "1", "100", date="2026-11-03")
+
+        with override_settings(QUOTES_PROVIDER="sample"):
+            call_command("refresh_prices", stdout=StringIO())
+
+        quoted = QuotedPrice.objects.get(asset=sample)
+        self.assertEqual(quoted.date.isoformat(), "2026-11-16")
+        self.assertEqual(quoted.provider, "sample")
+
+    def test_without_a_service_the_command_changes_nothing(self):
+        with override_settings(QUOTES_PROVIDER="twelvedata", TWELVE_DATA_API_KEY=""):
+            call_command("refresh_prices", stdout=StringIO())
+
+        self.assertEqual(QuotedPrice.objects.count(), 0)
+
+
+class TwelveDataClosingTests(InvestmentApiTestCase):
+    def setUp(self):
+        super().setUp()
+        self.held = self.asset()
+
+    def reply(self, body):
+        response = mock.MagicMock()
+        response.__enter__.return_value = io.BytesIO(json.dumps(body).encode())
+        return mock.patch("urllib.request.urlopen", return_value=response)
+
+    def test_the_last_close_and_its_day_are_read_from_the_time_series(self):
+        body = {"values": [{"datetime": "2026-11-13", "close": "187.35000"}]}
+
+        with self.reply(body) as urlopen:
+            result = quotes.TwelveDataQuotes("secret").latest_close(self.held)
+
+        self.assertEqual(result, closing("187.35"))
+        self.assertIn("mic_code=XNAS", urlopen.call_args.args[0])
+
+    def test_a_limit_reply_is_reported_as_rate_limited(self):
+        with self.reply({"code": 429, "status": "error"}):
+            with self.assertRaises(quotes.QuotesRateLimited):
+                quotes.TwelveDataQuotes("secret").latest_close(self.held)
+
+    def test_an_http_limit_status_is_reported_as_rate_limited(self):
+        limit = urllib.error.HTTPError("https://x/?apikey=secret", 429, "Too Many Requests", {}, None)
+
+        with mock.patch("urllib.request.urlopen", side_effect=limit):
+            with self.assertRaises(quotes.QuotesRateLimited) as raised:
+                quotes.TwelveDataQuotes("secret").latest_close(self.held)
+        self.assertIsNone(raised.exception.__cause__)
+
+    def test_a_network_failure_or_malformed_reply_is_unavailable_and_carries_no_key(self):
+        failures = [urllib.error.URLError("https://x/?apikey=secret"), TimeoutError()]
+        for failure in failures:
+            with self.subTest(failure=failure), mock.patch("urllib.request.urlopen", side_effect=failure):
+                with self.assertRaises(quotes.QuotesUnavailable) as raised:
+                    quotes.TwelveDataQuotes("secret").latest_close(self.held)
+                self.assertIsNone(raised.exception.__cause__)
+        with self.reply({"values": []}), self.assertRaises(quotes.QuotesUnavailable):
+            quotes.TwelveDataQuotes("secret").latest_close(self.held)
 
 class PastDayAndPeriodTests(PerformanceTestCase):
     def test_a_past_day_uses_the_cash_and_net_contribution_of_that_day(self):

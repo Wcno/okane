@@ -11,6 +11,7 @@ from accounts.models import Account
 from budgets import remaining
 from expenses.models import Expense
 from incomes.models import Income
+from net_worth.history import net_worth_at
 from recurring_payments import reservations, schedule
 from recurring_payments.serializers import represent_occurrence
 
@@ -79,7 +80,7 @@ def dashboard(request):
             "committed": str(committed),
             "committed_count": len(on_spending),
             "per_day": str(per_day),
-            "net_worth": str(total(balances.values())),
+            "net_worth": str(net_worth_at(user_id, today)),
             "income": str(income),
             "expenses": str(expenses),
             "net_savings": str(income - expenses),

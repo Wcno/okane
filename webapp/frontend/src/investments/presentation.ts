@@ -16,9 +16,15 @@ export function formatPercent(percent: string | null): string {
   return Number(percent) > 0 ? `+${percent} %` : `${percent} %`
 }
 
+const PRICE_ORIGINS: Record<ReferencePrice['source'], string> = {
+  manual: 'fijado por ti',
+  provider: 'del servicio de cotizaciones',
+  last_transaction: 'de tu última operación',
+}
+
 /** Where a price comes from and its day: what every price shown on screen says. */
 export function priceOrigin(price: ReferencePrice): string {
-  const origin = price.source === 'manual' ? 'fijado por ti' : 'de tu última operación'
+  const origin = PRICE_ORIGINS[price.source]
   return `Precio ${formatPrice(price.value)} ${origin}, ${formatDay(price.date)}${price.estimated ? ' (estimado)' : ''}`
 }
 

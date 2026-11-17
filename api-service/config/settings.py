@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "public_api",
     "erasure",
     "dashboard",
+    "net_worth",
 ]
 
 MIDDLEWARE = [

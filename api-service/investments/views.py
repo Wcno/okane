@@ -17,11 +17,10 @@ from investments.chronology import (
     first_problem,
     history,
 )
-from investments.models import Asset, InvestmentTransaction, ReferencePrice
+from investments.models import Asset, InvestmentTransaction, QuotedPrice, ReferencePrice
 from investments.performance import dashboard_of, performance_of
 from investments.projection import ProjectionSerializer, projection_of, savings_projection_of
 from investments.positions import (
-    MANUAL,
     positions_of,
     reference_price,
     represent_asset,
@@ -239,26 +238,24 @@ def performance(request):
 
 def current_price(user_id, asset):
     """The price the User's valuations use today, or None when there is nothing to base one on."""
+    today = clock.today()
     manual = (
-        ReferencePrice.objects.filter(user_id=user_id, asset=asset, date__lte=clock.today())
+        ReferencePrice.objects.filter(user_id=user_id, asset=asset, date__lte=today)
         .order_by("-date")
         .first()
     )
+    quoted = QuotedPrice.objects.filter(asset=asset, date__lte=today).order_by("-date").first()
     last = (
         InvestmentTransaction.objects.filter(
             user_id=user_id,
             asset=asset,
-            date__lte=clock.today(),
+            date__lte=today,
             type__in=[InvestmentTransaction.Type.BUY, InvestmentTransaction.Type.SELL],
         )
         .order_by("-date", "-id")
         .first()
     )
-    if last is not None:
-        return reference_price(last, manual)
-    if manual is None:
-        return None
-    return {"value": manual.value, "source": MANUAL, "date": manual.date}
+    return reference_price(last, manual, quoted)
 
 
 def represent_asset_price(user_id, asset):

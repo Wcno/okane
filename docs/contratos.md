@@ -319,7 +319,10 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `days_left`: días desde hoy hasta el último del mes, incluido hoy.
   `per_day`: `available` entre `days_left`, truncado a centavos hacia cero; el
   último día divide entre uno y un `available` negativo da un importe negativo.
-- `net_worth`: suma de los Saldos de todas las Cuentas, archivadas incluidas.
+- `net_worth`: el Patrimonio al cierre de hoy, el de la serie de
+  `GET /api/net-worth/history`: Saldos de las Cuentas que no son de inversión
+  más el valor de las de inversión, archivadas incluidas; puede apoyarse en
+  un precio estimado.
 - `income`, `expenses` y `net_savings`: Ingresos y Gastos con fecha del mes y su
   diferencia (Ingresos − Gastos).
 - `budgets`: una fila por Presupuesto del mes, con la forma de `GET /api/budgets`
@@ -330,7 +333,7 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `accounts`: `id`, `name`, `type`, `balance` y `archived` de cada Cuenta. Una
   Cuenta archivada se lista solo si su Saldo no es cero.
 - No incluye Rendimiento ni evolución del Patrimonio; `GET /api/net-worth/history`
-  las ofrece cuando exista.
+  las ofrece.
 
 ## Vista de Movimientos y preferencias
 
@@ -456,7 +459,7 @@ los Saldos iniciales y el Rendimiento mensual está en el
   mayor que cero) y `date` (por defecto hoy, nunca futura); guardar otro valor
   el mismo día lo corrige. `GET` en la misma ruta devuelve `{asset, price}` con
   el precio que usan las valoraciones de ese Usuario:
-  `price = {value, source: "manual" | "last_transaction", date, estimated}`.
+  `price = {value, source: "manual" | "provider" | "last_transaction", date, estimated}`.
 - `GET /api/investments/dashboard` y `GET /api/investments/performance` aceptan
   `as_of` (hoy por defecto, nunca futuro) y calculan efectivo, Aporte neto,
   Posiciones y precios al cierre de ese día; una Cuenta que empieza después no
@@ -467,6 +470,14 @@ los Saldos iniciales y el Rendimiento mensual está en el
   `performance` añade `positions` con ganancia contra costo. Con `from` (primer
   día del período), `performance` añade `period`: el Rendimiento acumulado al
   cierre menos el acumulado al cierre del día anterior a `from`.
+- `refresh_prices` (comando de gestión, a diario en el servicio `price-refresher`
+  de Compose) consulta una vez por Activo con operaciones, sin importar cuántos
+  Usuarios lo tengan, y guarda en `asset_quotes` el cierre con su fecha real y
+  su proveedor (`source: "provider"`, `estimated: false`). Respeta los créditos
+  del proveedor (ADR 0006), descarta fechas futuras y valores no positivos, y
+  si el servicio falla conserva el último cierre conocido con su fecha. Con la
+  misma fecha, el precio manual del Usuario gana al del proveedor y este a la
+  última operación.
 - La consulta automática guarda la fecha real del dato y su origen; una
   respuesta tardía no reemplaza un dato manual más reciente por uno anterior.
   Cada cierre histórico usa datos conocidos a esa fecha. Un respaldo estimado
@@ -489,6 +500,24 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `GET /api/net-worth/history` devuelve períodos, fechas de corte, Patrimonio,
   Ahorro neto, Rendimiento del período, incorporación de Saldos iniciales y
   procedencia de los precios. Las cifras del Panel coinciden con esa serie.
+- Respuesta: `{as_of, periods}`, con `as_of` igual a hoy y `periods` ordenados del
+  mes más antiguo al actual (vacío sin Cuentas). La serie empieza en el mes de la
+  Cuenta más antigua, aunque sea anterior al primer uso. Cada período tiene
+  `month` (`2026-11`), `opening_cut` (cierre que lo abre: el día anterior al
+  primero del mes) y `closing_cut` (fin de mes; hoy en el mes actual),
+  `opening_net_worth`, `net_worth` (al cierre), `opening_balances_added`
+  (Saldos iniciales de las Cuentas que empiezan en el período), `net_savings`
+  (Ingresos − Gastos del período), `return` (Rendimiento del período, no el
+  acumulado) y `estimated`. Todos los importes son cadenas decimales exactas y se
+  cumple `net_worth − opening_net_worth = opening_balances_added + net_savings +
+  return`.
+- Patrimonio al cierre = Saldos de las Cuentas que no son de inversión + valor
+  de las Cuentas de inversión (efectivo y Posiciones al precio de referencia de
+  ese cierre). Una Transferencia no lo cambia. `estimated` es `true` si algún
+  precio del cierre del período sale de la última Transacción de inversión (el
+  cierre inicial se juzga en el período anterior); nunca se usa un precio posterior al corte ni se valora en cero.
+- `net_worth` de `GET /api/dashboard` es el Patrimonio al cierre de hoy de esa
+  serie, con inversiones.
 
 ## Eliminar un Usuario entre las dos bases
 

@@ -76,7 +76,7 @@ export interface PositionAccount {
 /** The price a valuation uses, with the day it is from; one taken from the last transaction is an estimate. */
 export interface ReferencePrice {
   value: string
-  source: 'manual' | 'last_transaction'
+  source: 'manual' | 'provider' | 'last_transaction'
   date: string
   estimated: boolean
 }
