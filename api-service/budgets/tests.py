@@ -154,7 +154,7 @@ class MonthlyListTests(BudgetApiTestCase):
                 self.assert_rejected(self.call("GET", f"{BUDGETS}?month={month}"), "month")
 
     def test_budgets_of_other_months_and_users_stay_out(self):
-        self.budget(month="2026-10")
+        self.budget(month="2026-09")
         self.budget(user=2)
 
         self.assertIsNone(self.row(self.FOOD)["amount"])

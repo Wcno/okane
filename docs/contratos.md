@@ -270,6 +270,11 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - La inicialización se registra incluso si no hay nada para copiar. Eliminar
   todos los Presupuestos de un mes no vuelve a disparar la copia. Reintentos y
   consultas simultáneas no duplican filas; archivar Categorías las excluye.
+  No hay endpoint propio ni cambia la forma de `GET /api/budgets`: la copia
+  ocurre al listar el mes actual (`month` omitido o igual al mes en America/Panama)
+  o al crear en él un Presupuesto, que lo marca sin copiar. Listar, leer, editar
+  o eliminar otros meses no la dispara. Se copian los montos exactos de las
+  Categorías no archivadas, como filas independientes.
 - La Proyección usa una tasa anual nominal: tasa mensual = anual / 12.
   El aporte hipotético se incorpora al final de cada mes, después del interés.
   Los meses son enteros positivos y el aporte es no negativo. Se redondean solo

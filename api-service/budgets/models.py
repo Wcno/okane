@@ -22,3 +22,21 @@ class Budget(models.Model):
             models.CheckConstraint(condition=Q(amount__gt=0), name="budget_amount_positive"),
             models.CheckConstraint(condition=Q(month__day=1), name="budget_month_is_first_day"),
         ]
+
+
+class BudgetMonth(models.Model):
+    """Marks that a User's month was initialized, even when it ended up with no Budgets.
+
+    The mark outlives the Budgets, so deleting them all never triggers a second copy.
+    """
+
+    user_id = models.PositiveBigIntegerField()
+    # First day of the initialized month.
+    month = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user_id", "month"], name="budget_month_once_per_user"),
+            models.CheckConstraint(condition=Q(month__day=1), name="budget_month_mark_is_first_day"),
+        ]
