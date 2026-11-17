@@ -113,4 +113,10 @@ describe('tradingAccounts', () => {
 
     expect(offered.map((item) => item.id)).toEqual([1])
   })
+
+  it('keeps the Account of a recorded purchase or sale even when it is archived', () => {
+    const offered = tradingAccounts([account({ id: 1 }), account({ id: 3, archivedAt: '2026-02-01T00:00:00Z' })], 3)
+
+    expect(offered.map((item) => item.id)).toEqual([1, 3])
+  })
 })

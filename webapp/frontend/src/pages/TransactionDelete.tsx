@@ -1,0 +1,59 @@
+import type { Account } from '../accounts/api'
+import { useSignedInUser } from '../auth/context'
+import { OneTransactionScreen } from '../components/investments/OneTransactionScreen'
+import { TradeChip } from '../components/investments/TradeChip'
+import { ConfirmCard, RecordSummary } from '../components/screen/ConfirmCard'
+import { ScreenHeader } from '../components/screen/Screen'
+import { deleteTrade, type Transaction } from '../investments/api'
+import { describeTransaction, transactionsBack } from '../investments/presentation'
+import { useAfterTradeChange } from '../investments/useAfterTradeChange'
+import { formatMoney } from '../lib/money'
+
+function Confirmation({ transaction, accounts }: { transaction: Transaction; accounts: Account[] }) {
+  const { csrfToken } = useSignedInUser()
+  const afterChange = useAfterTradeChange()
+  const account = accounts.find((candidate) => candidate.id === transaction.accountId)
+  const { title, details } = describeTransaction(transaction, account?.name, { withDate: true })
+  const kindNoun = transaction.type === 'buy' ? 'compra' : 'venta'
+  // Deleting a purchase gives its cash back to the Account; deleting a sale takes the cash it returned.
+  const direction = transaction.type === 'buy' ? 'subirá' : 'bajará'
+
+  return (
+    <>
+      <ScreenHeader title={`Eliminar ${kindNoun}`} back={transactionsBack} />
+      <ConfirmCard
+        summary={
+          <RecordSummary
+            icon={<TradeChip kind={transaction.type} />}
+            title={title}
+            details={details}
+            amount={transaction.cashAmount}
+          />
+        }
+        message={
+          <>
+            Se borrará por completo y no podrás recuperarla. Tus Posiciones se recalcularán sin ella.
+            {account && ` El Saldo de ${account.name} ${direction} ${formatMoney(transaction.cashAmount)}.`}
+          </>
+        }
+        cancel={{ to: transactionsBack.to, label: 'Cancelar' }}
+        confirm={{
+          label: `Eliminar ${kindNoun}`,
+          busyLabel: 'Eliminando…',
+          run: () => deleteTrade(transaction.id, csrfToken),
+          onSaved: () => afterChange('deleted', transaction, transaction.asset),
+          failure: 'No pudimos eliminar la transacción de inversión. Inténtalo de nuevo.',
+        }}
+      />
+    </>
+  )
+}
+
+/** Deletes a purchase or a sale on its own screen, saying what happens to the Balance first. */
+export function TransactionDelete() {
+  return (
+    <OneTransactionScreen title="Eliminar transacción">
+      {(transaction, accounts) => <Confirmation transaction={transaction} accounts={accounts} />}
+    </OneTransactionScreen>
+  )
+}

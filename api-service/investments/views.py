@@ -3,13 +3,15 @@ import datetime
 from django.db import transaction
 from django.db.models import Q
 from rest_framework import exceptions
-from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
 from accounts import clock, ledger
+from accounts.models import Account
 from config.rest import paginate
 from investments import quotes
+from investments.chronology import DELETE_LEAVES_SALE_SHORT, first_shortfall, history
 from investments.models import Asset, InvestmentTransaction, ReferencePrice
 from investments.performance import dashboard_of, performance_of
 from investments.positions import (
@@ -74,16 +76,20 @@ def asset_search(request):
     )
 
 
+def with_balance(recorded, status=200):
+    """The operation as api-service answers a write: with the Balance its Account has now."""
+    balance = ledger.balances([recorded.account])[recorded.account_id]
+    body = {**InvestmentTransactionSerializer(recorded).data, "account_balance": f"{balance:.2f}"}
+    return Response(body, status=status)
+
+
 def record(request, kind):
     with transaction.atomic():
         serializer = InvestmentTransactionSerializer(
             data=request.data, context={"user_id": request.okane_user_id, "type": kind}
         )
         serializer.is_valid(raise_exception=True)
-        created = serializer.save()
-        balance = ledger.balances([created.account])[created.account_id]
-    body = {**InvestmentTransactionSerializer(created).data, "account_balance": f"{balance:.2f}"}
-    return Response(body, status=201)
+        return with_balance(serializer.save(), status=201)
 
 
 @api_view(["POST"])
@@ -94,6 +100,73 @@ def buy(request):
 @api_view(["POST"])
 def sell(request):
     return record(request, InvestmentTransaction.Type.SELL)
+
+
+def represented(recorded):
+    """An operation as the list and the read-one screens show it: with the Asset it refers to."""
+    return {**InvestmentTransactionSerializer(recorded).data, "asset": represent_asset(recorded.asset)}
+
+
+def owned_transaction(request, transaction_id, lock=False):
+    """The User's operation; another User's id is as absent as an unknown one."""
+    records = InvestmentTransaction.objects.filter(user_id=request.okane_user_id, pk=transaction_id)
+    recorded = (records.select_for_update() if lock else records.select_related("asset")).first()
+    if recorded is None:
+        raise NotFound
+    return recorded
+
+
+def lock_investment_accounts(user_id):
+    """Holds every investment Account of the User until the change ends, always in the same order.
+
+    A change may move a record between Accounts or delete one, so it cannot lock
+    only the Account it starts in. The fixed order keeps two changes from waiting
+    on each other.
+    """
+    list(
+        Account.objects.select_for_update()
+        .filter(user_id=user_id, type=Account.Type.INVESTMENT)
+        .order_by("id")
+        .values_list("id", flat=True)
+    )
+
+
+@api_view(["GET"])
+def transaction_collection(request):
+    records = (
+        InvestmentTransaction.objects.filter(user_id=request.okane_user_id)
+        .select_related("asset")
+        .order_by("-date", "-id")
+    )
+    items, page = paginate(request, records)
+    return Response({"results": [represented(item) for item in items], **page})
+
+
+@api_view(["GET", "PUT", "DELETE"])
+@transaction.atomic
+def transaction_detail(request, transaction_id):
+    user_id = request.okane_user_id
+    if request.method == "GET":
+        return Response(represented(owned_transaction(request, transaction_id)))
+
+    lock_investment_accounts(user_id)
+    recorded = owned_transaction(request, transaction_id, lock=True)
+    if request.method == "PUT":
+        serializer = InvestmentTransactionSerializer(
+            recorded, data=request.data, context={"user_id": user_id, "type": recorded.type}
+        )
+        serializer.is_valid(raise_exception=True)
+        return with_balance(serializer.save())
+
+    shortfall = first_shortfall(
+        history(user_id, recorded.account_id, recorded.asset_id, except_id=recorded.pk)
+    )
+    if shortfall is not None:
+        raise exceptions.ValidationError(shortfall.explain(DELETE_LEAVES_SALE_SHORT))
+    recorded.delete()
+    return Response(status=204)
+
+
 
 
 def requested_day(request):

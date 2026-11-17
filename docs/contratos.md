@@ -153,6 +153,19 @@ los Saldos iniciales y el Rendimiento mensual está en el
   pantallas de edición y eliminación desde un enlace; el identificador de otro
   Usuario responde `404`.
 
+- `GET /api/investments/transactions` lista las Transacciones de inversión del
+  Usuario, de la más reciente a la más antigua, cada una con su Activo.
+  `GET /api/investments/transactions/{id}` devuelve una para abrir sus pantallas
+  de edición y eliminación; un identificador ajeno responde `404`.
+- `PUT /api/investments/transactions/{id}` reemplaza la operación completa y
+  exige la fecha. Su tipo, compra o venta, no cambia: enviarlo es un dato
+  desconocido y responde `400`; para cambiarlo se elimina y se registra de nuevo.
+- Corregir o eliminar una Transacción de inversión revalida cronológicamente
+  cada Posición que toca, por Cuenta y Activo, desde su primer día hasta el último.
+  Si alguna venta quedara sin unidades en ese orden, se responde `400` con el
+  motivo y no cambia nada. Al mover una operación de Cuenta o de Activo se revalidan
+  las dos Posiciones.
+
 ## Pagos recurrentes
 
 - La regla guarda fecha de inicio, monto, Cuenta, Categoría y día mensual.

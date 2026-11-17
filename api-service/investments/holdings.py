@@ -60,6 +60,18 @@ def replay(transactions):
     return holding
 
 
+def trimmed(units):
+    """Units as a User reads them: no trailing zeros, at least one digit."""
+    text = f"{units:f}"
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+def units_phrase(units):
+    """"1 unidad" or "2.5 unidades", the way a Spanish sentence reads them."""
+    text = trimmed(units)
+    return f"{text} {'unidad' if text == '1' else 'unidades'}"
+
+
 def sellable_units(transactions, sale_date):
     """Most units a sale on `sale_date` can take without any later moment going negative.
 

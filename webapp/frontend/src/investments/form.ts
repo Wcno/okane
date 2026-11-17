@@ -104,6 +104,11 @@ export function validateTrade(draft: TradeDraft, context: { accounts: Account[] 
   }
 }
 
-/** Accounts that take purchases and sales: investment ones that are not archived. */
-export const tradingAccounts = (accounts: Account[]) =>
-  accounts.filter((account) => account.type === 'investment' && account.archivedAt === null)
+/**
+ * Accounts that take purchases and sales: investment ones that are not archived.
+ * `keep` stays even if archived: a correction keeps the Account it already has.
+ */
+export const tradingAccounts = (accounts: Account[], keep?: number) =>
+  accounts.filter(
+    (account) => account.id === keep || (account.type === 'investment' && account.archivedAt === null),
+  )
