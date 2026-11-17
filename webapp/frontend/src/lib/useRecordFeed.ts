@@ -19,6 +19,8 @@ export interface RecordFeed<Entry> {
   more: LaterPages<Entry>['more']
 }
 
+const byId = (record: { id: number }) => record.id
+
 /**
  * The User's records of one kind, newest first. The first page loads like any
  * screen's data (and again when `revision` changes, because one changed
@@ -26,7 +28,9 @@ export interface RecordFeed<Entry> {
  */
 export function useRecordFeed<Entry extends { id: number }>(
   load: (page: number) => Promise<RecordPage<Entry>>,
-  revision: number,
+  revision: number | string,
+  /** What tells two records apart; an `id` alone when every record is of one kind. */
+  identify: (record: Entry) => string | number = byId,
 ) {
   const endSession = useSessionEnd()
   const { state, retry } = useLoaded(() => load(1), revision)
@@ -50,11 +54,11 @@ export function useRecordFeed<Entry extends { id: number }>(
     try {
       const page = await load(base.nextPage)
       setLater((now) => {
-        const shown = new Set([...firstPage.records, ...(now?.records ?? [])].map((record) => record.id))
+        const shown = new Set([...firstPage.records, ...(now?.records ?? [])].map(identify))
         return {
           firstPage,
           // A registration between two pages shifts the offsets; never show a row twice.
-          records: [...(now?.records ?? []), ...page.records.filter((record) => !shown.has(record.id))],
+          records: [...(now?.records ?? []), ...page.records.filter((record) => !shown.has(identify(record)))],
           nextPage: page.nextPage,
           total: page.total,
           more: { status: 'idle' },
@@ -64,7 +68,7 @@ export function useRecordFeed<Entry extends { id: number }>(
       if (endSession(error)) return
       setLater({ ...base, more: { status: 'failed', message: (error as Error).message } })
     }
-  }, [firstPage, current, load, endSession])
+  }, [firstPage, current, load, identify, endSession])
 
   const feed: Loaded<RecordFeed<Entry>> =
     state.status !== 'ready'

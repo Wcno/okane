@@ -1,5 +1,6 @@
 from django.urls import path
 
+from accounts import movements
 from accounts import views as accounts
 from expenses import views as expenses
 from health.views import health
@@ -12,6 +13,7 @@ urlpatterns = [
     path("api/health", health),
     path("api/accounts", accounts.account_collection),
     path("api/accounts/<int:account_id>", accounts.account_detail),
+    path("api/movements", movements.movement_collection),
     path("api/expenses", expenses.expense_collection),
     path("api/expenses/<int:expense_id>", expenses.expense_detail),
     path("api/investments/assets/search", investments.asset_search),

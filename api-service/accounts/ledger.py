@@ -4,9 +4,15 @@ Each module that records money (Income, Expense, Transfer, Investment
 Transaction) registers a source here. Accounts never import those modules.
 """
 
+from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 
+from django.db.models import Q
+
 from accounts.models import Account
+
+MOVEMENT_TYPES = ("buy", "dividend", "expense", "income", "sell", "transfer")
 
 _sources = []
 
@@ -22,6 +28,8 @@ def register(source):
     has `net_contribution_changes(account_ids)`, shaped like `balance_changes`.
     Both change methods also take `as_of`, a day: only records dated up to and
     including it count. It is passed only when a past closing is asked for.
+    A source that also lists records for the Movements view has
+    `movements(user_id, wanted, limit)`, described at `movements`.
     """
     _sources.append(source)
 
@@ -76,3 +84,75 @@ def accounts_with_records(accounts):
     for source in _sources:
         found |= set(source.accounts_with_records(ids))
     return found & ids
+
+
+@dataclass(frozen=True)
+class MovementFilter:
+    """What the Movements view asks for; an empty filter asks for everything of the User."""
+
+    types: frozenset = frozenset(MOVEMENT_TYPES)
+    account_id: int | None = None
+    start: date | None = None
+    end: date | None = None
+
+    def wants(self, *types):
+        return bool(self.types.intersection(types))
+
+    def narrow(self, records, account_fields):
+        """The records of the period and of the Account, when it is any of `account_fields`."""
+        if self.start is not None:
+            records = records.filter(date__gte=self.start)
+        if self.end is not None:
+            records = records.filter(date__lte=self.end)
+        if self.account_id is not None:
+            matches = Q()
+            for field in account_fields:
+                matches |= Q(**{f"{field}_id": self.account_id})
+            records = records.filter(matches)
+        return records
+
+
+def movement_row(type, id, date, amount, account_id, **specific):
+    """One Movement as the view lists it; what a type does not have is `None`.
+
+    A Transfer's `account_id` is the Account the money left.
+    """
+    return {
+        "type": type,
+        "id": id,
+        "date": date,
+        "amount": f"{amount:f}",
+        "account_id": account_id,
+        "destination_account_id": None,
+        "category_id": None,
+        "description": "",
+        "asset": None,
+        "units": None,
+        "unit_price": None,
+        "commission": None,
+        **specific,
+    }
+
+
+def movement_sort_key(movement):
+    """Newest day first, then by type and the highest id first: stable across pages."""
+    return (-movement["date"].toordinal(), movement["type"], -movement["id"])
+
+
+def movements(user_id, wanted, limit):
+    """Return `(total, first `limit` movements)` of the User's records matching `wanted`.
+
+    Each source answers `(count, rows)` for its own records already in the
+    shared order; the first `limit` of all of them is found by merging. A row
+    is a dict with `type`, `id`, `date`, `amount` and the Accounts it touches.
+    """
+    total = 0
+    rows = []
+    for source in _sources:
+        listing = getattr(source, "movements", None)
+        if listing is None:
+            continue
+        count, found = listing(user_id, wanted, limit)
+        total += count
+        rows.extend(found)
+    return total, sorted(rows, key=movement_sort_key)[:limit]

@@ -253,6 +253,19 @@ los Saldos iniciales y el Rendimiento mensual está en el
   por cualquiera de sus Cuentas y aparece una vez aun cuando ambas coincidan.
   Orden: fecha descendente y desempate estable por tipo e ID; la paginación
   mantiene ese orden. Filtros con referencias ajenas devuelven `404`.
+- Parámetros: `type` (repetible; omitido son los seis), `account_id`, `from` y
+  `to` (`YYYY-MM-DD`, ambos inclusivos), `page` y `page_size` como las demás
+  listas. Un parámetro mal formado responde `400` con `{"errors": {campo: [...]}}`;
+  una Cuenta ajena o inexistente, `404`. Las Cuentas archivadas filtran.
+- Respuesta: `{results, total, page, page_size, next_page}`. Cada elemento tiene
+  siempre `type`, `id`, `date`, `amount` (cadena decimal exacta; el efectivo de
+  una compra, venta o Dividendo, antes de la comisión), `account_id` (en una
+  Transferencia, la Cuenta de origen), `destination_account_id`, `category_id`
+  (solo Gasto), `description`, `asset`, `units`, `unit_price` y `commission`
+  (solo operaciones de inversión); lo que un tipo no tiene es `null` y la
+  descripción vacía es `""`. El desempate de un mismo día es el tipo en orden
+  alfabético y luego el ID descendente. Cada tipo sale de su fuente del libro,
+  sin tabla común.
 - Las rutas de consulta previas son alias filtrados de `/movements`; sus
   endpoints y formularios especializados siguen disponibles para el curso.
 - `/settings` guarda preferencias por Usuario: filtros predeterminados,

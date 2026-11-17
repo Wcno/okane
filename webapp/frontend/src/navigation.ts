@@ -6,6 +6,7 @@ import {
   ChartPie,
   House,
   KeyRound,
+  List,
   PiggyBank,
   ReceiptText,
   Repeat,
@@ -34,6 +35,7 @@ export const navigationGroups: NavigationGroup[] = [
   {
     title: 'Movimientos',
     destinations: [
+      { path: '/movements', name: 'Movimientos', icon: List },
       spending,
       { path: '/incomes', name: 'Ingresos', icon: ArrowDownToLine },
       { path: '/transfers', name: 'Transferencias', icon: ArrowLeftRight },

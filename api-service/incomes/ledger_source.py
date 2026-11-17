@@ -1,5 +1,6 @@
 from django.db.models import Sum
 
+from accounts.ledger import movement_row
 from incomes.models import Income
 
 
@@ -23,3 +24,15 @@ class IncomeLedgerSource:
             .values_list("account_id", flat=True)
             .distinct()
         )
+
+    def movements(self, user_id, wanted, limit):
+        if not wanted.wants("income"):
+            return 0, []
+        records = wanted.narrow(Income.objects.filter(user_id=user_id), ["account"])
+        return records.count(), [
+            movement_row(
+                "income", income.id, income.date, income.amount, income.account_id,
+                description=income.description,
+            )
+            for income in records.order_by("-date", "-id")[:limit]
+        ]

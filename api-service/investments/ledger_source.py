@@ -1,6 +1,8 @@
 from django.db.models import Case, DecimalField, F, Sum, When
 
+from accounts.ledger import movement_row
 from investments.models import InvestmentTransaction
+from investments.positions import represent_asset
 
 
 class InvestmentLedgerSource:
@@ -29,3 +31,22 @@ class InvestmentLedgerSource:
             .values_list("account_id", flat=True)
             .distinct()
         )
+
+    def movements(self, user_id, wanted, limit):
+        types = wanted.types & {"buy", "sell", "dividend"}
+        if not types:
+            return 0, []
+        records = wanted.narrow(
+            InvestmentTransaction.objects.filter(user_id=user_id, type__in=types), ["account"]
+        )
+        return records.count(), [
+            movement_row(
+                transaction.type, transaction.id, transaction.date, transaction.cash_amount,
+                transaction.account_id,
+                asset=represent_asset(transaction.asset),
+                units=None if transaction.units is None else f"{transaction.units:f}",
+                unit_price=None if transaction.unit_price is None else f"{transaction.unit_price:f}",
+                commission=f"{transaction.commission:f}",
+            )
+            for transaction in records.select_related("asset").order_by("-date", "type", "-id")[:limit]
+        ]

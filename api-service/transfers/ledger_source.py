@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db.models import Sum
 
+from accounts.ledger import movement_row
 from transfers.models import Transfer
 
 
@@ -36,3 +37,19 @@ class TransferLedgerSource:
         return set(_totals(account_ids, "source_account_id")) | set(
             _totals(account_ids, "destination_account_id")
         )
+
+    def movements(self, user_id, wanted, limit):
+        if not wanted.wants("transfer"):
+            return 0, []
+        # One query row per Transfer, whichever of its two Accounts matched.
+        records = wanted.narrow(
+            Transfer.objects.filter(user_id=user_id), ["source_account", "destination_account"]
+        )
+        return records.count(), [
+            movement_row(
+                "transfer", transfer.id, transfer.date, transfer.amount, transfer.source_account_id,
+                destination_account_id=transfer.destination_account_id,
+                description=transfer.description,
+            )
+            for transfer in records.order_by("-date", "-id")[:limit]
+        ]

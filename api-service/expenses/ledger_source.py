@@ -1,5 +1,6 @@
 from django.db.models import Sum
 
+from accounts.ledger import movement_row
 from expenses.models import Expense
 
 
@@ -23,3 +24,15 @@ class ExpenseLedgerSource:
             .values_list("account_id", flat=True)
             .distinct()
         )
+
+    def movements(self, user_id, wanted, limit):
+        if not wanted.wants("expense"):
+            return 0, []
+        records = wanted.narrow(Expense.objects.filter(user_id=user_id), ["account"])
+        return records.count(), [
+            movement_row(
+                "expense", expense.id, expense.date, expense.amount, expense.account_id,
+                category_id=expense.category_id, description=expense.description,
+            )
+            for expense in records.order_by("-date", "-id")[:limit]
+        ]

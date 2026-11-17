@@ -10,6 +10,7 @@ import { listTransactions, type Transaction } from '../investments/api'
 import { describeTransaction } from '../investments/presentation'
 import { useTransactionRevision } from '../investments/transactionRevision'
 import { noticeFrom } from '../lib/notice'
+import { editActions } from '../movements/presentation'
 import { useRecordFeed } from '../lib/useRecordFeed'
 
 const rowId = (transaction: Transaction) => `transaction-${transaction.id}`
@@ -21,6 +22,7 @@ function Row({ transaction, accountName }: { transaction: Transaction; accountNa
     <RecordRow
       id={rowId(transaction)}
       to={`/investments/transactions/${transaction.id}/edit`}
+      action={editActions[transaction.type]}
       icon={<TradeChip kind={transaction.type} />}
       title={title}
       details={details}
