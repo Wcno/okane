@@ -140,7 +140,7 @@ class MonthlyListTests(BudgetApiTestCase):
                 self.assert_rejected(self.call("GET", f"{BUDGETS}?month={month}"), "month")
 
     def test_budgets_of_other_months_and_users_stay_out(self):
-        self.budget(month="2026-10")
+        self.budget(month="2026-09")
         self.budget(user=2)
 
         self.assertIsNone(self.row(FOOD)["amount"])
@@ -296,6 +296,9 @@ class RemainingTests(BudgetApiTestCase):
 @override_settings(INTERNAL_SERVICE_KEY="expected-key")
 class ConcurrentBudgetTests(TransactionTestCase):
     """Simultaneous requests hit the database, so each one commits for real."""
+
+    # The flush after each test would otherwise erase the Categories seeded by a migration.
+    serialized_rollback = True
 
     def setUp(self):
         clock = mock.patch("accounts.clock.today", return_value=TODAY)

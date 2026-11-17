@@ -4,7 +4,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 
 from accounts import clock
-from budgets import remaining
+from budgets import month_copy, remaining
 from budgets.models import Budget
 from budgets.serializers import BUDGET_EXISTS, MONTH_INVALID, BudgetSerializer, parse_month
 from recurring_payments import reservations, schedule
@@ -48,9 +48,14 @@ def budget_collection(request):
         budget, conflict = save_unique(serializer)
         if conflict:
             return conflict
+        if budget.month == month_copy.current_month():
+            # A hand-made Budget personalizes the month, so it is marked without copying over it.
+            month_copy.initialize_current_month(user_id)
         reservations.materialize(user_id)
         return Response(remaining.represent_budget(budget), status=201)
     month = requested_month(request)
+    if month == month_copy.current_month():
+        month_copy.initialize_current_month(user_id)
     reservations.materialize(user_id)
     return Response(
         {"month": month.strftime("%Y-%m"), "results": remaining.represent_month(user_id, month)}

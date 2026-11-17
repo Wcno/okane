@@ -106,6 +106,12 @@ export async function createCategory(request: APIRequestContext, name: string) {
   return (await response.json()) as { id: number; name: string }
 }
 
+/** Archives one of the User's own Categories. */
+export async function archiveCategory(request: APIRequestContext, categoryId: number) {
+  const response = await send(request, 'POST', `/api/categories/${categoryId}/archive`)
+  expect(response.status()).toBe(200)
+}
+
 /** The ids of the occurrences the list shows for a rule, oldest due first. */
 export async function listOccurrenceIds(request: APIRequestContext, ruleId: number) {
   const response = await request.get('/api/recurring-payments?page_size=50')
