@@ -11,7 +11,7 @@ import { cardClassName } from '../screen/Screen'
  * there are more pages, else on the first row that arrived, so it does not
  * fall back to the top of the page.
  */
-function useKeepFocusAfterMore<Record>(feed: RecordFeed<Record>, rowId: (record: Record) => string) {
+function useKeepFocusAfterMore<Entry>(feed: RecordFeed<Entry>, rowId: (record: Entry) => string) {
   const asked = useRef(false)
   const shown = useRef(feed.records.length)
 
@@ -32,17 +32,17 @@ function useKeepFocusAfterMore<Record>(feed: RecordFeed<Record>, rowId: (record:
  * The records of a feed under a heading for each day, then the count and
  * "Mostrar más". `row` renders one record as a RecordRow whose link has `rowId`.
  */
-export function DayFeed<Record extends { id: number; date: string }>({
+export function DayFeed<Entry extends { id: number; date: string }>({
   feed,
   showMore,
   row,
   rowId,
   countText,
 }: {
-  feed: RecordFeed<Record>
+  feed: RecordFeed<Entry>
   showMore: () => void
-  row: (record: Record) => ReactNode
-  rowId: (record: Record) => string
+  row: (record: Entry) => ReactNode
+  rowId: (record: Entry) => string
   /** "Mostrando 50 de 51 gastos." */
   countText: (shown: number, total: number) => string
 }) {

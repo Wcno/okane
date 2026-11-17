@@ -30,14 +30,13 @@ interface Names {
 function PendingRow({ occurrence, names }: { occurrence: RecurringPaymentOccurrence; names: Names }) {
   const title = names.rule(occurrence)
   const account = names.account(occurrence.accountId)
-  const status = STATUS_LABELS[occurrence.status]
   const due = dueText(occurrence)
 
   return (
     <RecordRow
       id={`occurrence-${occurrence.id}`}
       to={`/recurring-payments/occurrences/${occurrence.id}/confirm`}
-      label={`Revisar pago ${title}, ${formatMoney(occurrence.amount)}, ${status.toLowerCase()}, ${due.toLowerCase()}`}
+      action="Revisar pago"
       icon={<CategoryChip categoryId={occurrence.categoryId} />}
       title={title}
       details={[due, account].filter(Boolean).join(' · ')}
@@ -54,7 +53,7 @@ function ResolvedRow({ occurrence, names }: { occurrence: RecurringPaymentOccurr
       <span className="min-w-0 flex-1">
         <span className="line-clamp-2 break-words text-[1rem] font-medium">{names.rule(occurrence)}</span>
         <span className="mt-0.5 block break-words text-[0.87rem] leading-snug text-ink-3">
-          {[STATUS_LABELS[occurrence.status], dueText({ dueDate: occurrence.dueDate, status: 'pending' }), account]
+          {[STATUS_LABELS[occurrence.status], dueText(occurrence), account]
             .filter(Boolean)
             .join(' · ')}
         </span>
@@ -95,27 +94,27 @@ function Rules({ rules, accounts }: { rules: RecurringPayment[]; accounts: Accou
       )}
 
       {active.length > 0 && (
-      <section aria-labelledby="rules" className={cardClassName}>
-        <h2 id="rules" className="text-[1rem] font-medium text-ink-2">
-          Tus pagos recurrentes
-        </h2>
-        <ul className="mt-3 divide-y divide-line">
-          {active.map((rule) => {
-            const { title, details } = describeRule(rule, names.get(rule.accountId))
-            return (
-              <RecordRow
-                key={rule.id}
-                to={`/recurring-payments/${rule.id}/edit`}
-                label={`Editar pago recurrente ${title}, ${formatMoney(rule.amount)}`}
-                icon={<CategoryChip categoryId={rule.categoryId} />}
-                title={title}
-                details={details}
-                amount={rule.amount}
-              />
-            )
-          })}
-        </ul>
-      </section>
+        <section aria-labelledby="rules" className={cardClassName}>
+          <h2 id="rules" className="text-[1rem] font-medium text-ink-2">
+            Tus pagos recurrentes
+          </h2>
+          <ul className="mt-3 divide-y divide-line">
+            {active.map((rule) => {
+              const { title, details } = describeRule(rule, names.get(rule.accountId))
+              return (
+                <RecordRow
+                  key={rule.id}
+                  to={`/recurring-payments/${rule.id}/edit`}
+                  action="Editar pago recurrente"
+                  icon={<CategoryChip categoryId={rule.categoryId} />}
+                  title={title}
+                  details={details}
+                  amount={rule.amount}
+                />
+              )
+            })}
+          </ul>
+        </section>
       )}
 
       {answered.length > 0 && (

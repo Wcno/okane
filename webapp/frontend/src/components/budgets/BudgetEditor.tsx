@@ -3,7 +3,7 @@ import type { Budget, BudgetField, BudgetInput } from '../../budgets/api'
 import type { BudgetDraft } from '../../budgets/form'
 import { useBudgetForm } from '../../budgets/useBudgetForm'
 import type { Outcome } from '../../lib/http'
-import { CategoryField } from '../expenses/CategoryField'
+import { CategoryField } from '../record/CategoryField'
 import { RecordEditor } from '../record/RecordEditor'
 import { TextField } from '../TextField'
 

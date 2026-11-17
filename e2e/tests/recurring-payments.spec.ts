@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
-import { expect, expectScreenQuality, knownAxeRules, test } from './support/qa.js'
-import { cancelOccurrence, createAccount, createRecurringPayment, listOccurrenceIds } from './support/ledger.js'
+import { expect, expectScreenQuality, test } from './support/qa.js'
+import { cancelOccurrence, createAccount, createExpense, createRecurringPayment, listOccurrenceIds } from './support/ledger.js'
 import { signUp } from './support/session.js'
 
 /** A calendar day in America/Panama, `daysAgo` days before today. */
@@ -19,8 +19,8 @@ function forbidBrowserDialogs(page: Page) {
 }
 
 const accountRow = (page: Page, name: string) => page.getByRole('listitem').filter({ hasText: name })
-const reviewLink = (page: Page, title: string) => page.getByRole('link', { name: new RegExp(`^Revisar pago ${title},`) })
-const ruleLink = (page: Page, title: string) => page.getByRole('link', { name: new RegExp(`^Editar pago recurrente ${title},`) })
+const reviewLink = (page: Page, title: string) => page.getByRole('link', { name: new RegExp(`^${title}\\b.*Revisar pago$`) })
+const ruleLink = (page: Page, title: string) => page.getByRole('link', { name: new RegExp(`^${title}\\b.*Editar pago recurrente$`) })
 
 for (const colorScheme of ['light', 'dark'] as const) {
   test(`rules lifecycle in ${colorScheme}`, async ({ page }) => {
@@ -48,7 +48,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       'Creaste el pago recurrente Internet de $45.00.',
     )
     await expect(ruleLink(page, 'Internet')).toContainText('Día 31 de cada mes')
-    await expectScreenQuality(page, `recurring-list-rules-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
+    await expectScreenQuality(page, `recurring-list-rules-${colorScheme}`)
 
     // A populated list keeps its create action at the top right.
     await page.getByRole('link', { name: 'Nuevo pago recurrente' }).click()
@@ -57,6 +57,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
 
     await ruleLink(page, 'Internet').click()
     await expect(page.getByLabel('Monto')).toHaveValue('45.00')
+    await expect(page.getByRole('button', { name: 'Guardar cambios' })).toBeVisible()
     await page.getByLabel('Monto').fill('50')
     await expectScreenQuality(page, `recurring-edit-${colorScheme}`)
     await page.getByRole('button', { name: 'Guardar cambios' }).click()
@@ -67,6 +68,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await ruleLink(page, 'Internet').click()
     await page.getByRole('link', { name: 'Eliminar este pago recurrente' }).click()
     await expect(page).toHaveURL(/\/recurring-payments\/\d+\/delete$/)
+    await expect(page.getByRole('button', { name: 'Eliminar pago recurrente' })).toBeVisible()
     await expectScreenQuality(page, `recurring-delete-${colorScheme}`)
     await page.getByRole('button', { name: 'Eliminar pago recurrente' }).click()
 
@@ -74,7 +76,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     // The reservation made on creation is kept and still waits for an answer; the rule itself is gone.
     await expect(reviewLink(page, 'Internet')).toBeVisible()
     await expect(ruleLink(page, 'Internet')).toBeHidden()
-    await expectScreenQuality(page, `recurring-list-after-delete-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
+    await expectScreenQuality(page, `recurring-list-after-delete-${colorScheme}`)
   })
 
   test(`confirming and cancelling reservations in ${colorScheme}`, async ({ page }) => {
@@ -100,7 +102,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await page.goto('/recurring-payments')
     await expect(page.getByRole('heading', { name: 'Por confirmar' })).toBeVisible()
     await expect(reviewLink(page, 'Luz')).toContainText(/Vence|Venció/)
-    await expectScreenQuality(page, `recurring-list-pending-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
+    await expectScreenQuality(page, `recurring-list-pending-${colorScheme}`)
 
     // Confirming reviews the amount; the Expense lowers the Balance by what was really paid.
     await reviewLink(page, 'Luz').click()
@@ -122,19 +124,29 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await page.goto('/accounts')
     await expect(accountRow(page, 'Cuenta corriente')).toContainText('$880.00')
     await page.goto('/expenses')
-    await expect(page.getByRole('link', { name: /^Editar gasto Luz,/ })).toContainText('$120.00')
+    await expect(page.getByRole('link', { name: /^Luz.*Editar gasto$/ })).toContainText('$120.00')
+
+    // The Expense says where it came from, on the edit and the delete screens.
+    await page.getByRole('link', { name: /^Luz.*Editar gasto$/ }).click()
+    await expect(page.getByText('Este gasto viene de un pago recurrente confirmado. Cambiarlo no reabre la reserva')).toBeVisible()
+    await expectScreenQuality(page, `recurring-expense-edit-origin-${colorScheme}`)
+    await page.getByRole('link', { name: 'Eliminar este gasto' }).click()
+    await expect(page.getByText('Este gasto viene de un pago recurrente confirmado. Eliminarlo no reabre la reserva')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Eliminar gasto' })).toBeVisible()
+    await expectScreenQuality(page, `recurring-expense-delete-origin-${colorScheme}`)
 
     // Cancelling releases the reservation and registers nothing.
     await page.goto('/recurring-payments')
     await reviewLink(page, 'Streaming').click()
     await page.getByRole('link', { name: /cancelar esta reserva/ }).click()
     await expect(page).toHaveURL(/\/occurrences\/\d+\/cancel$/)
+    await expect(page.getByRole('button', { name: 'Cancelar reserva' })).toBeVisible()
     await expectScreenQuality(page, `recurring-cancel-${colorScheme}`)
     await page.getByRole('button', { name: 'Cancelar reserva' }).click()
 
     await expect(page.getByRole('status').filter({ hasText: 'Cancelaste' })).toContainText('no se registró ningún gasto')
     await expect(page.getByRole('listitem').filter({ hasText: 'Streaming' }).filter({ hasText: 'Cancelado' })).toBeVisible()
-    await expectScreenQuality(page, `recurring-list-resolved-${colorScheme}`, { skipAxeRules: knownAxeRules.recordRowLabel })
+    await expectScreenQuality(page, `recurring-list-resolved-${colorScheme}`)
     await page.goto('/accounts')
     await expect(accountRow(page, 'Cuenta corriente')).toContainText('$880.00')
   })
@@ -151,10 +163,20 @@ test('reservations from earlier months stay pending, oldest first', async ({ pag
 
   await page.goto('/recurring-payments')
   await expect(page.getByRole('heading', { name: 'Por confirmar' })).toBeVisible()
-  const rows = page.getByRole('link', { name: /^Revisar pago Alquiler,/ })
-  await expect(rows.first()).toContainText('Venció')
+  const rows = page.getByRole('link', { name: /^Alquiler\b.*Revisar pago$/ })
+  // Day 1 of each month since the start: the first row is the oldest, each next one is a month later.
+  const first = new Date(Date.parse(`${panamaDay(70)}T00:00:00Z`))
+  const oldest = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + (first.getUTCDate() > 1 ? 1 : 0), 1))
+  const monthLabel = (offset: number) => {
+    const day = new Date(Date.UTC(oldest.getUTCFullYear(), oldest.getUTCMonth() + offset, 1))
+    const parts = new Intl.DateTimeFormat('es', { timeZone: 'UTC', month: 'short', year: 'numeric' }).formatToParts(day)
+    const part = (type: string) => (parts.find((item) => item.type === type)?.value ?? '').replace('.', '')
+    return `${part('month')} ${part('year')}`
+  }
+  await expect(rows.first()).toContainText(`Venció 1 ${monthLabel(0)}`)
+  await expect(rows.nth(1)).toContainText(`1 ${monthLabel(1)}`)
   expect(await rows.count()).toBeGreaterThanOrEqual(2)
-  await expectScreenQuality(page, 'recurring-list-carried-over', { skipAxeRules: knownAxeRules.recordRowLabel })
+  await expectScreenQuality(page, 'recurring-list-carried-over')
 })
 
 test('confirming rejects a bad date and keeps what was typed; a resolved reservation says so', async ({ page, expectedProblems }) => {
@@ -181,7 +203,7 @@ test('confirming rejects a bad date and keeps what was typed; a resolved reserva
 
   await page.getByLabel('Fecha').fill(new Date(Date.parse(`${firstOfThisMonth()}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10))
   await page.getByRole('button', { name: 'Confirmar pago' }).click()
-  await expect(page.getByText('La fecha no puede ser anterior a la reserva')).toBeVisible()
+  await expect(page.getByText('La fecha no puede ser anterior a la entrada de la reserva')).toBeVisible()
 
   // Another tab cancels the reservation: the stale form is refused and says why.
   await page.getByLabel('Fecha').fill(panamaDay())
@@ -190,6 +212,9 @@ test('confirming rejects a bad date and keeps what was typed; a resolved reserva
   await page.getByRole('button', { name: 'Confirmar pago' }).click()
   await expect(page.getByRole('alert')).toContainText('ya se canceló')
   await expect(page.getByLabel('Monto')).toHaveValue('90')
+  // The reservation was answered elsewhere, so confirming is no longer offered.
+  await expect(page.getByRole('button', { name: 'Confirmar pago' })).toBeHidden()
+  await expect(page.getByRole('link', { name: 'Volver a pagos recurrentes' })).toBeVisible()
   await expectScreenQuality(page, 'recurring-confirm-conflict')
 
   await page.goto(`/recurring-payments/occurrences/${occurrenceId}/confirm`)
@@ -212,6 +237,19 @@ test('an Account with rules or pending reservations cannot be archived and says 
   await expect(page.getByRole('alert')).toContainText('Mueve o elimina los pagos recurrentes de esta Cuenta antes de archivarla.')
   await expect(page.getByRole('alert')).toContainText('Confirma o cancela los pagos recurrentes pendientes')
   await expectScreenQuality(page, 'recurring-account-archive-blocked')
+})
+
+test('an Expense registered by hand carries no recurring origin note', async ({ page }) => {
+  await signUp(page.request)
+  const account = await createAccount(page.request)
+  const expense = await createExpense(page.request, { account_id: account.id, description: 'Taxi' })
+
+  await page.goto(`/expenses/${expense.id}/edit`)
+  await expect(page.getByRole('button', { name: 'Guardar cambios' })).toBeVisible()
+  await expect(page.getByText('viene de un pago recurrente')).toBeHidden()
+  await page.goto(`/expenses/${expense.id}/delete`)
+  await expect(page.getByRole('button', { name: 'Eliminar gasto' })).toBeVisible()
+  await expect(page.getByText('viene de un pago recurrente')).toBeHidden()
 })
 
 test('creating a rule shows what is wrong without losing what was typed', async ({ page }) => {

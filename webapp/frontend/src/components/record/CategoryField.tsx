@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { categories } from '../../data/categories'
-import { FieldError } from '../record/RecordFields'
-import { CategoryChip } from './CategoryChip'
+import { CategoryChip } from '../expenses/CategoryChip'
+import { FieldError } from './RecordFields'
 
 /**
  * The two-column picker of the fixed Categories, for every form that names one
@@ -32,7 +32,7 @@ export function CategoryField({
           return (
             <label
               key={option.id}
-              className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-2xl border p-1.5 pr-2 transition-colors duration-150 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ink ${
+              className={`flex min-w-0 cursor-pointer flex-col items-start gap-1.5 rounded-2xl border p-2 transition-colors sm:flex-row sm:items-center sm:gap-2 sm:p-1.5 sm:pr-2 duration-150 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ink ${
                 selected ? 'border-ink bg-surface-2' : 'border-line hover:bg-surface-2'
               }`}
             >
@@ -47,7 +47,7 @@ export function CategoryField({
               />
               <CategoryChip categoryId={option.id} size={36} />
               <span
-                className={`min-w-0 break-words text-[0.9rem] leading-tight ${selected ? 'font-semibold text-ink' : 'font-medium text-ink-2'}`}
+                className={`min-w-0 text-[0.9rem] leading-tight ${selected ? 'font-semibold text-ink' : 'font-medium text-ink-2'}`}
               >
                 {option.name}
               </span>

@@ -297,6 +297,62 @@ class ConfirmTests(RecurringPaymentApiTestCase):
         self.assertEqual(self.balance(account), "880.00")
         self.assertEqual(self.committed("2026-11-01"), Decimal("0"))
 
+    def test_the_expense_json_names_the_occurrence_it_came_from(self):
+        account = self.account()
+        occurrence = self.pending_occurrence(account, amount="100.00")
+        plain = self.call(
+            "POST",
+            "/api/expenses",
+            {"amount": "5.00", "category_id": FOOD, "account_id": account["id"]},
+        ).json()
+        self.assertIsNone(plain["recurring_payment_occurrence_id"])
+        self.confirm(occurrence, {"amount": "120.00", "account_id": account["id"]})
+        expense_id = Expense.objects.get(amount=Decimal("120.00")).id
+
+        detail = self.call("GET", f"/api/expenses/{expense_id}").json()
+        listed = {
+            item["id"]: item for item in self.call("GET", "/api/expenses").json()["results"]
+        }
+        replaced = self.call(
+            "PUT",
+            f"/api/expenses/{expense_id}",
+            {
+                "amount": "130.00",
+                "category_id": UTILITIES,
+                "account_id": account["id"],
+                "date": detail["date"],
+            },
+        ).json()
+
+        self.assertEqual(detail["recurring_payment_occurrence_id"], occurrence["id"])
+        self.assertEqual(listed[expense_id]["recurring_payment_occurrence_id"], occurrence["id"])
+        self.assertIsNone(listed[plain["id"]]["recurring_payment_occurrence_id"])
+        self.assertEqual(replaced["recurring_payment_occurrence_id"], occurrence["id"])
+
+    def test_the_origin_is_read_only_and_survives_editing_the_expense(self):
+        account = self.account()
+        occurrence = self.pending_occurrence(account, amount="100.00")
+        self.confirm(occurrence)
+        expense_id = Expense.objects.get().id
+
+        self.call(
+            "PUT",
+            f"/api/expenses/{expense_id}",
+            {
+                "amount": "90.00",
+                "category_id": FOOD,
+                "account_id": account["id"],
+                "date": "2026-11-16",
+                "recurring_payment_occurrence_id": None,
+            },
+        )
+
+        self.assertEqual(
+            self.call("GET", f"/api/expenses/{expense_id}").json()["recurring_payment_occurrence_id"],
+            occurrence["id"],
+        )
+        self.assertEqual(self.occurrences()[0]["status"], "confirmed")
+
     def test_the_proposed_values_are_the_reserved_ones_and_today(self):
         account = self.account()
         occurrence = self.pending_occurrence(account, amount="100.00", description="Internet")
