@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Account } from '../accounts/api'
 import { savedTransferNotice } from './notices'
-import { describeTransfer, transferAccounts } from './presentation'
+import { describeTransfer, startOfRecords, transferAccounts } from './presentation'
 import type { Transfer } from './api'
 
 const account = (id: number, fields: Partial<Account> = {}): Account => ({
@@ -46,6 +46,22 @@ describe('transferAccounts', () => {
   })
 })
 
+describe('startOfRecords', () => {
+  it('is the later opening day of the two Accounts, whatever their order', () => {
+    const accounts = [account(1, { openingDate: '2026-11-01' }), account(2, { openingDate: '2026-11-10' })]
+
+    expect(startOfRecords(accounts, [1, 2])).toBe('2026-11-10')
+    expect(startOfRecords(accounts, [2, 1])).toBe('2026-11-10')
+  })
+
+  it('ignores an Account that is not offered and says nothing when neither is', () => {
+    const accounts = [account(1, { openingDate: '2026-11-01' })]
+
+    expect(startOfRecords(accounts, [1, 9])).toBe('2026-11-01')
+    expect(startOfRecords(accounts, [null, 9])).toBeUndefined()
+  })
+})
+
 describe('describeTransfer', () => {
   const byId = new Map([account(1), account(2), account(3, { type: 'investment' })].map((item) => [item.id, item]))
 
@@ -53,7 +69,6 @@ describe('describeTransfer', () => {
     expect(describeTransfer(transfer(), byId)).toEqual({
       title: 'Cuenta 1 → Cuenta 2',
       details: '',
-      label: 'de Cuenta 1 a Cuenta 2',
     })
   })
 
