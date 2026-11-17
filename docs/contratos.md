@@ -302,7 +302,7 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `accounts`: `id`, `name`, `type`, `balance` y `archived` de cada Cuenta. Una
   Cuenta archivada se lista solo si su Saldo no es cero.
 - No incluye Rendimiento ni evolución del Patrimonio; `GET /api/net-worth/history`
-  las ofrece cuando exista.
+  las ofrece.
 
 ## Vista de Movimientos y preferencias
 
@@ -439,6 +439,24 @@ los Saldos iniciales y el Rendimiento mensual está en el
 - `GET /api/net-worth/history` devuelve períodos, fechas de corte, Patrimonio,
   Ahorro neto, Rendimiento del período, incorporación de Saldos iniciales y
   procedencia de los precios. Las cifras del Panel coinciden con esa serie.
+- Respuesta: `{as_of, periods}`, con `as_of` igual a hoy y `periods` ordenados del
+  mes más antiguo al actual (vacío sin Cuentas). La serie empieza en el mes de la
+  Cuenta más antigua, aunque sea anterior al primer uso. Cada período tiene
+  `month` (`2026-11`), `opening_cut` (cierre que lo abre: el día anterior al
+  primero del mes) y `closing_cut` (fin de mes; hoy en el mes actual),
+  `opening_net_worth`, `net_worth` (al cierre), `opening_balances_added`
+  (Saldos iniciales de las Cuentas que empiezan en el período), `net_savings`
+  (Ingresos − Gastos del período), `return` (Rendimiento del período, no el
+  acumulado) y `estimated`. Todos los importes son cadenas decimales exactas y se
+  cumple `net_worth − opening_net_worth = opening_balances_added + net_savings +
+  return`.
+- Patrimonio al cierre = Saldos de las Cuentas que no son de inversión + valor
+  de las Cuentas de inversión (efectivo y Posiciones al precio de referencia de
+  ese cierre). Una Transferencia no lo cambia. `estimated` es `true` si algún
+  precio de los dos cortes del período sale de la última Transacción de
+  inversión; nunca se usa un precio posterior al corte ni se valora en cero.
+- `net_worth` de `GET /api/dashboard` es el Patrimonio al cierre de hoy de esa
+  serie, con inversiones.
 
 ## Eliminar un Usuario entre las dos bases
 

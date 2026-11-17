@@ -6,6 +6,7 @@ from dashboard import views as dashboard
 from expenses import views as expenses
 from health.views import health
 from investments import views as investments
+from net_worth import views as net_worth
 from transfers import views as transfers
 from incomes import views as incomes
 from recurring_payments import views as recurring_payments
@@ -16,6 +17,7 @@ urlpatterns = [
     path("api/accounts", accounts.account_collection),
     path("api/accounts/<int:account_id>", accounts.account_detail),
     path("api/dashboard", dashboard.dashboard),
+    path("api/net-worth/history", net_worth.net_worth_history),
     path("api/budgets", budgets.budget_collection),
     path("api/budgets/<int:budget_id>", budgets.budget_detail),
     path("api/expenses", expenses.expense_collection),

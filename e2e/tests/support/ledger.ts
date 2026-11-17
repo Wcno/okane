@@ -109,6 +109,10 @@ export async function createRecurringPayment(request: APIRequestContext, fields:
     day_of_month: 1,
     ...fields,
   })
+  expect(response.status()).toBe(201)
+  return (await response.json()) as { id: number }
+}
+
 /** The first Asset the search finds for a query; the stack serves the sample catalog. */
 export async function findAsset(request: APIRequestContext, query: string, market?: string) {
   const response = await request.get(`/api/investments/assets/search?q=${encodeURIComponent(query)}`)
@@ -159,6 +163,9 @@ export async function listOccurrenceIds(request: APIRequestContext, ruleId: numb
 /** Cancels an occurrence behind the screen's back, as another tab would. */
 export async function cancelOccurrence(request: APIRequestContext, occurrenceId: number) {
   const response = await send(request, 'POST', `/api/recurring-payments/occurrences/${occurrenceId}/cancel`)
+  expect(response.status()).toBe(200)
+}
+
 /** Sets the User's own Reference Price of an Asset for a day, as the price screen does. */
 export async function setReferencePrice(request: APIRequestContext, assetId: number, value: string, date?: string) {
   const response = await send(request, 'PUT', `/api/investments/assets/${assetId}/price`, { value, date })
