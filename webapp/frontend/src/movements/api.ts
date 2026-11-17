@@ -74,8 +74,6 @@ function toMovement(body: MovementBody): Movement {
           // The view does not say which reserve confirmed an Expense; the edit screen reads it.
           recurringPaymentOccurrenceId: null,
           description: body.description,
-          // The feed does not say which reservation an Expense confirmed; its own screen does.
-          recurringPaymentOccurrenceId: null,
         },
       }
     case 'income':
